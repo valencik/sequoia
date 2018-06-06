@@ -1,0 +1,84 @@
+[
+  {
+    "class": "org.apache.spark.sql.catalyst.plans.logical.Project",
+    "num-children": 1,
+    "projectList": [
+      [
+        {
+          "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute",
+          "num-children": 0,
+          "nameParts": "[x]"
+        }
+      ],
+      [
+        {
+          "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedAlias",
+          "num-children": 1,
+          "child": 0
+        },
+        {
+          "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedFunction",
+          "num-children": 1,
+          "name": {
+            "product-class": "org.apache.spark.sql.catalyst.FunctionIdentifier",
+            "funcName": "count"
+          },
+          "children": [
+            0
+          ],
+          "isDistinct": false
+        },
+        {
+          "class": "org.apache.spark.sql.catalyst.expressions.Literal",
+          "num-children": 0,
+          "value": "1",
+          "dataType": "integer"
+        }
+      ]
+    ],
+    "child": 0
+  },
+  {
+    "class": "org.apache.spark.sql.catalyst.plans.logical.Join",
+    "num-children": 2,
+    "left": 0,
+    "right": 1,
+    "joinType": {
+      "object": "org.apache.spark.sql.catalyst.plans.Inner$"
+    },
+    "condition": [
+      {
+        "class": "org.apache.spark.sql.catalyst.expressions.EqualTo",
+        "num-children": 2,
+        "left": 0,
+        "right": 1
+      },
+      {
+        "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute",
+        "num-children": 0,
+        "nameParts": "[foo, a]"
+      },
+      {
+        "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute",
+        "num-children": 0,
+        "nameParts": "[bar, y]"
+      }
+    ]
+  },
+  {
+    "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedRelation",
+    "num-children": 0,
+    "tableIdentifier": {
+      "product-class": "org.apache.spark.sql.catalyst.TableIdentifier",
+      "table": "foo"
+    }
+  },
+  {
+    "class": "org.apache.spark.sql.catalyst.analysis.UnresolvedRelation",
+    "num-children": 0,
+    "tableIdentifier": {
+      "product-class": "org.apache.spark.sql.catalyst.TableIdentifier",
+      "table": "bar"
+    }
+  }
+]
