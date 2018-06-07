@@ -14,8 +14,8 @@ lazy val root = (project in file(".")).
     name := "Big SQL Parse",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % ScalaTestVersion % Test,
-      "org.apache.spark" %% "spark-core"     % sparkVersion % "provided",
-      "org.apache.spark" %% "spark-sql"      % sparkVersion % "provided"
+      "org.apache.spark" %% "spark-core"     % sparkVersion,
+      "org.apache.spark" %% "spark-sql"      % sparkVersion
     )
   ).settings(repl: _*)
 
