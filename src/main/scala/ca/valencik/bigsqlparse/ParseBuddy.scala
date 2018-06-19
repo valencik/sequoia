@@ -11,9 +11,47 @@ case class Expression(text:String) extends Expr
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Expr] {
 
-  override def visitQuery(ctx: SqlBaseParser.QueryContext): Expression = {
-    val exprText: String = ctx.getText
-    Expression(exprText)
+  override def visitSingleStatement(ctx: SqlBaseParser.SingleStatementContext) = Expression(ctx.getText)
+  override def visitSingleExpression(ctx: SqlBaseParser.SingleExpressionContext) = Expression(ctx.getText)
+  override def visitStatementDefault(ctx: SqlBaseParser.StatementDefaultContext) = Expression(ctx.getText)
+  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext) = Expression(ctx.getText)
+
+  override def visitQuery(ctx: SqlBaseParser.QueryContext) = {
+    println("Called visitQuery")
+    println("children size:", ctx.children.size)
+    println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    visitQueryNoWith(ctx.queryNoWith)
+  }
+
+  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
+    println("Called visitQueryNoWith")
+    println("children size:", ctx.children.size)
+    println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    visitQueryTerm(ctx.queryTerm)
+  }
+
+  def visitQueryTerm(ctx: SqlBaseParser.QueryTermContext) = {
+    println("Called visitQueryTermDefault")
+    println("children size:", ctx.children.size)
+    println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    val qp = ctx.asInstanceOf[SqlBaseParser.QueryTermDefaultContext].queryPrimary
+    visitQueryPrimary(qp)
+  }
+
+  def visitQueryPrimary(ctx: SqlBaseParser.QueryPrimaryContext) = {
+    println("Called visitQueryPrimary")
+    println("children size:", ctx.children.size)
+    println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    val qs = ctx.asInstanceOf[SqlBaseParser.QueryPrimaryDefaultContext].querySpecification
+    visitQuerySpecification(qs)
+  }
+
+  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
+    println("Called visitQuerySpecification")
+    println("children size:", ctx.children.size)
+    println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    println("selectItem: ", ctx.selectItem.map(_.getText).toList)
+    Expression(ctx.getText)
   }
 
 }
@@ -36,7 +74,7 @@ object ParseBuddy {
 object ParseBuddyApp extends App {
   import ca.valencik.bigsqlparse.ParseBuddy._
 
-  val exp: String            = "SELECT 1;"
+  val exp: String            = "SELECT *;"
   val parsedExp: Expression  = parse(exp)
   println(exp, parsedExp)
 }
