@@ -50,7 +50,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Expr] {
     println("Called visitQuerySpecification")
     println("children size:", ctx.children.size)
     println("children iter:", ctx.children.iterator.map(_.getText).toList)
+    println("children iter classes:", ctx.children.iterator.map(_.getClass.getName).toList)
     println("selectItem: ", ctx.selectItem.map(_.getText).toList)
+    println("relations: ", ctx.relation.map(_.getText).toList)
+    println("select: ", ctx.SELECT.getSymbol.getText)
+    println("from: ", ctx.FROM.getSymbol.getText)
+    println("where (null): ", ctx.WHERE)
     Expression(ctx.getText)
   }
 
