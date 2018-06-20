@@ -59,7 +59,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Expr] {
 object ParseBuddy {
 
   def parse(input: String): Expression = {
-    val charStream = new ANTLRInputStream(input)
+    val charStream = new ANTLRInputStream(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     val tokens     = new CommonTokenStream(lexer)
     val parser     = new SqlBaseParser(tokens)
@@ -74,7 +74,7 @@ object ParseBuddy {
 object ParseBuddyApp extends App {
   import ca.valencik.bigsqlparse.ParseBuddy._
 
-  val exp: String            = "SELECT *;"
+  val exp: String            = "SELECT name, COUNT(*) FROM bar"
   val parsedExp: Expression  = parse(exp)
   println(exp, parsedExp)
 }
