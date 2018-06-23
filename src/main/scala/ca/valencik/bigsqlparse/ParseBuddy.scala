@@ -11,7 +11,8 @@ sealed trait Node
 case class NodeMessage(text: String) extends Node
 case class NodeLocation(line: Int, post: Int)
 object NodeLocation {
-  def apply(token: Token): NodeLocation = NodeLocation(token.getLine, token.getCharPositionInLine)
+  def apply(token: Token): NodeLocation =
+    NodeLocation(token.getLine, token.getCharPositionInLine)
 }
 case class SelectItem(location: NodeLocation) extends Node
 case class SingleColumn(identifier: String, expression: Expression, location: NodeLocation) extends Node
@@ -56,6 +57,13 @@ object GroupBy {
     GroupBy(g)
   }
 }
+case class Having(expression: Option[Expression]) extends Node
+object Having {
+  def apply(ctx: SqlBaseParser.QuerySpecificationContext): Having = {
+    lazy val e = Expression(ctx.having.getText, NodeLocation(ctx.having.start))
+    Having(Try(e).toOption)
+  }
+}
 case class OrderBy(location: NodeLocation) extends Node
 case class Limit(location: NodeLocation) extends Node
 case class QuerySpecification(
@@ -63,7 +71,7 @@ case class QuerySpecification(
   from: From,
   where: Where,
   groupBy: GroupBy,
-  having: Option[Expression],
+  having: Having,
   orderBy: Option[OrderBy],
   limit: Option[Limit]
 ) extends Node
@@ -74,7 +82,8 @@ object QuerySpecification {
       From(ctx),
       Where(ctx),
       GroupBy(ctx),
-      None, None, None)
+      Having(ctx),
+      None, None)
   }
 }
 
