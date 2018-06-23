@@ -89,20 +89,6 @@ object QuerySpecification {
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
-  override def visitQuery(ctx: SqlBaseParser.QueryContext) = visitQueryNoWith(ctx.queryNoWith)
-
-  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = visitQueryTerm(ctx.queryTerm)
-
-  def visitQueryTerm(ctx: SqlBaseParser.QueryTermContext) = {
-    val qp = ctx.asInstanceOf[SqlBaseParser.QueryTermDefaultContext].queryPrimary
-    visitQueryPrimary(qp)
-  }
-
-  def visitQueryPrimary(ctx: SqlBaseParser.QueryPrimaryContext) = {
-    val qs = ctx.asInstanceOf[SqlBaseParser.QueryPrimaryDefaultContext].querySpecification
-    visitQuerySpecification(qs)
-  }
-
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
     QuerySpecification(ctx)
   }
@@ -111,14 +97,14 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
 object ParseBuddy {
 
-  def parse(input: String): QuerySpecification = {
+  def parse(input: String): Node = {
     val charStream = new ANTLRInputStream(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     val tokens     = new CommonTokenStream(lexer)
     val parser     = new SqlBaseParser(tokens)
 
     val prestoVisitor = new PrestoSqlVisitorApp()
-    prestoVisitor.visitQuery(parser.query)
+    prestoVisitor.visit(parser.statement)
   }
 
 }
