@@ -9,7 +9,9 @@ import scala.collection.JavaConversions._
 
 sealed trait Node
 case class NodeMessage(text: String) extends Node
-case class NodeLocation(line: Int, post: Int)
+case class NodeLocation(line: Int, pos: Int) {
+  override def toString = s"[${line},${pos}]"
+}
 object NodeLocation {
   def apply(token: Token): NodeLocation =
     NodeLocation(token.getLine, token.getCharPositionInLine)
@@ -64,16 +66,14 @@ object Having {
     Having(Try(e).toOption)
   }
 }
-case class OrderBy(location: NodeLocation) extends Node
+case class OrderBy(name: String, location: NodeLocation) extends Node
 case class Limit(location: NodeLocation) extends Node
 case class QuerySpecification(
   select: Select,
   from: From,
   where: Where,
   groupBy: GroupBy,
-  having: Having,
-  orderBy: Option[OrderBy],
-  limit: Option[Limit]
+  having: Having
 ) extends Node
 object QuerySpecification {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
@@ -82,8 +82,8 @@ object QuerySpecification {
       From(ctx),
       Where(ctx),
       GroupBy(ctx),
-      Having(ctx),
-      None, None)
+      Having(ctx)
+    )
   }
 }
 
