@@ -126,4 +126,16 @@ object ParseBuddy {
 object ParseBuddyApp extends App {
   import ca.valencik.bigsqlparse.ParseBuddy._
 
+  private val exitCommands = Seq("exit", ":q", "q")
+  def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)
+
+  def inputLoop(): Unit = {
+    val inputQuery = scala.io.StdIn.readLine("ParseBuddy> ")
+    if (!exitCommand(inputQuery)) {
+      println(parse(inputQuery))
+      inputLoop()
+    }
+  }
+
+  inputLoop()
 }
