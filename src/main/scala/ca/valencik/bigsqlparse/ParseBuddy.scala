@@ -95,14 +95,6 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
-    println("Called visitQuerySpecification")
-    println("children size:", ctx.children.size)
-    println("children iter:", ctx.children.iterator.map(_.getText).toList)
-    println("selectItem: ", ctx.selectItem.map(_.getText).toList)
-    println("relations: ", ctx.relation.map(_.getText).toList)
-    println("select: ", ctx.SELECT.getSymbol.getText)
-    println("from: ", ctx.FROM.getSymbol.getText)
-    println("where (null): ", ctx.WHERE)
     QuerySpecification(ctx)
   }
 
@@ -125,8 +117,4 @@ object ParseBuddy {
 object ParseBuddyApp extends App {
   import ca.valencik.bigsqlparse.ParseBuddy._
 
-  val exp: String            = "SELECT name, COUNT(*) FROM bar"
-  val parsedExp: Node  = parse(exp)
-  println(exp)
-  println(parsedExp)
 }
