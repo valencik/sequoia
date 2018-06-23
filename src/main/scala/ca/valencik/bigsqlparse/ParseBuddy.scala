@@ -2,7 +2,7 @@ package ca.valencik.bigsqlparse
 
 import org.antlr.v4.runtime._
 import org.antlr.v4.runtime.tree.TerminalNode
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 import scala.collection.JavaConversions._
 
@@ -32,15 +32,37 @@ object From {
     From(rs)
   }
 }
-case class Expression(location: NodeLocation) extends Node
-case class GroupBy(location: NodeLocation) extends Node
+case class Expression(name: String, location: NodeLocation) extends Node
+case class Where(expression: Option[Expression]) extends Node
+object Where {
+  def apply(ctx: SqlBaseParser.QuerySpecificationContext): Where = {
+    lazy val w = Expression(ctx.where.getText, NodeLocation(ctx.where.start))
+    Where(Try(w).toOption)
+  }
+}
+case class GroupingElement(groupingSet: List[Expression]) extends Node
+object GroupingElement {
+  def apply(ctx: SqlBaseParser.GroupingElementContext): GroupingElement = {
+    GroupingElement(List(Expression(ctx.getText, NodeLocation(ctx.getStart))))
+  }
+}
+case class GroupBy(groupingElements: List[GroupingElement]) extends Node
+object GroupBy {
+  def apply(ctx: SqlBaseParser.QuerySpecificationContext): GroupBy = {
+    val g: List[GroupingElement] = Try(ctx.groupBy.groupingElement) match {
+      case Success(gs) => gs.map(GroupingElement(_)).toList
+      case Failure(_) => List()
+    }
+    GroupBy(g)
+  }
+}
 case class OrderBy(location: NodeLocation) extends Node
 case class Limit(location: NodeLocation) extends Node
 case class QuerySpecification(
   select: Select,
-  from: Option[From],
-  where: Option[Expression],
-  groupBy: Option[GroupBy],
+  from: From,
+  where: Where,
+  groupBy: GroupBy,
   having: Option[Expression],
   orderBy: Option[OrderBy],
   limit: Option[Limit]
@@ -49,10 +71,11 @@ object QuerySpecification {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
     QuerySpecification(
       Select(ctx),
-      Some(From(ctx)),
-      None, None, None, None, None)
+      From(ctx),
+      Where(ctx),
+      GroupBy(ctx),
+      None, None, None)
   }
-
 }
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
