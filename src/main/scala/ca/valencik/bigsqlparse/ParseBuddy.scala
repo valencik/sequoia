@@ -111,7 +111,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 object ParseBuddy {
 
   def parse(input: String): Node = {
-    val charStream = new ANTLRInputStream(input.toUpperCase)
+    val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     val tokens     = new CommonTokenStream(lexer)
     val parser     = new SqlBaseParser(tokens)
