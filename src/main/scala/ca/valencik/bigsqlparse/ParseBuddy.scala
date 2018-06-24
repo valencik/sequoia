@@ -66,8 +66,6 @@ object Having {
     Having(Try(e).toOption)
   }
 }
-case class OrderBy(name: String, location: NodeLocation) extends Node
-case class Limit(location: NodeLocation) extends Node
 case class QuerySpecification(
   select: Select,
   from: From,
@@ -86,8 +84,23 @@ object QuerySpecification {
     )
   }
 }
+case class OrderBy(name: String, location: NodeLocation) extends Node
+case class Limit(value: String, location: NodeLocation) extends Node
+case class QueryNoWith(querySpecification: Option[QuerySpecification], orderBy: Option[OrderBy], limit: Option[Limit]) extends Node
+object QueryNoWith {
+  def apply(qso: Option[QuerySpecification], ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith = {
+    val orderBy = Try(OrderBy(ctx.sortItem.map{_.expression.getText}.mkString, NodeLocation(ctx.ORDER.getSymbol))).toOption
+    val limit = Try(Limit(ctx.limit.getText, NodeLocation(ctx.limit))).toOption
+    QueryNoWith(qso, orderBy, limit)
+  }
+}
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
+
+  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
+    val qso = Try(visit(ctx.queryTerm).asInstanceOf[QuerySpecification]).toOption
+    QueryNoWith(qso, ctx)
+  }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
     QuerySpecification(ctx)
