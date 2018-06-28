@@ -8,48 +8,52 @@ import scala.collection.JavaConversions._
 
 
 sealed trait Node
-case class NodeMessage(text: String) extends Node
 case class NodeLocation(line: Int, pos: Int) {
   override def toString = s"[${line},${pos}]"
 }
+case class Name(text: String, location: NodeLocation) extends Node with Relation
+case class SelectItem(location: NodeLocation) extends Node
+case class Select(selectItems: List[String], location: NodeLocation) extends Node
+
+sealed trait Relation extends Node
+case class From(relations: List[Relation]) extends Node
+
+sealed trait Expression
+case class Identifier(name: String, location: NodeLocation) extends Node with Expression
+
+case class Where(expression: Option[Expression]) extends Node
+case class GroupingElement(groupingSet: List[Expression]) extends Node
+case class GroupBy(groupingElements: List[GroupingElement]) extends Node
+case class Having(expression: Option[Expression]) extends Node
+case class QuerySpecification(
+  select: Select,
+  from: From,
+  where: Where,
+  groupBy: GroupBy,
+  having: Having
+) extends Node
+
+
 object NodeLocation {
   def apply(token: Token): NodeLocation =
     NodeLocation(token.getLine, token.getCharPositionInLine)
 }
-case class SelectItem(location: NodeLocation) extends Node
-case class SingleColumn(identifier: String, expression: Expression, location: NodeLocation) extends Node
-
-case class Select(selectItems: List[String], location: NodeLocation) extends Node
 object Select {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): Select = {
     Select(ctx.selectItem.map(_.getText).toList, NodeLocation(ctx.getStart))
   }
 }
-case class Relation(name: String, location: NodeLocation) extends Node
-case class From(relations: List[Relation]) extends Node
-object From {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): From = {
-    val rs = ctx.relation.map { case ctx =>
-      Relation(ctx.getText, NodeLocation(ctx.getStart))
-    }.toList
-    From(rs)
-  }
-}
-case class Expression(name: String, location: NodeLocation) extends Node
-case class Where(expression: Option[Expression]) extends Node
 object Where {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): Where = {
-    lazy val w = Expression(ctx.where.getText, NodeLocation(ctx.where.start))
+    lazy val w = Identifier(ctx.where.getText, NodeLocation(ctx.where.start))
     Where(Try(w).toOption)
   }
 }
-case class GroupingElement(groupingSet: List[Expression]) extends Node
 object GroupingElement {
   def apply(ctx: SqlBaseParser.GroupingElementContext): GroupingElement = {
-    GroupingElement(List(Expression(ctx.getText, NodeLocation(ctx.getStart))))
+    GroupingElement(List(Identifier(ctx.getText, NodeLocation(ctx.getStart))))
   }
 }
-case class GroupBy(groupingElements: List[GroupingElement]) extends Node
 object GroupBy {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): GroupBy = {
     val g: List[GroupingElement] = Try(ctx.groupBy.groupingElement) match {
@@ -59,29 +63,10 @@ object GroupBy {
     GroupBy(g)
   }
 }
-case class Having(expression: Option[Expression]) extends Node
 object Having {
   def apply(ctx: SqlBaseParser.QuerySpecificationContext): Having = {
-    lazy val e = Expression(ctx.having.getText, NodeLocation(ctx.having.start))
+    lazy val e = Identifier(ctx.having.getText, NodeLocation(ctx.having.start))
     Having(Try(e).toOption)
-  }
-}
-case class QuerySpecification(
-  select: Select,
-  from: From,
-  where: Where,
-  groupBy: GroupBy,
-  having: Having
-) extends Node
-object QuerySpecification {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
-    QuerySpecification(
-      Select(ctx),
-      From(ctx),
-      Where(ctx),
-      GroupBy(ctx),
-      Having(ctx)
-    )
   }
 }
 case class OrderBy(name: String, location: NodeLocation) extends Node
@@ -95,16 +80,98 @@ object QueryNoWith {
   }
 }
 
+sealed trait JoinType
+case object LeftJoin extends JoinType
+case object RightJoin extends JoinType
+case object FullJoin extends JoinType
+case object InnerJoin extends JoinType
+case object CrossJoin extends JoinType
+sealed trait JoinCriteria
+case object NaturalJoin extends JoinCriteria
+case class JoinOn(expression: Expression) extends JoinCriteria
+case class JoinUsing(columns: List[Identifier]) extends JoinCriteria
+case class Join(jointype: JoinType, left: Relation, right: Relation, location: NodeLocation, criterea: Option[JoinCriteria]) extends Node with Relation
+case class SampledRelation(text: String, location: NodeLocation) extends Node with Relation
+
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
+  def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
+    if (ctx.CROSS != null)
+      CrossJoin
+    else {
+      val jt = ctx.joinType
+      if (jt.LEFT != null)
+        LeftJoin
+      else if (jt.RIGHT != null)
+        RightJoin
+      else if (jt.FULL != null)
+        FullJoin
+      else
+        InnerJoin
+    }
+  }
+
+  def getJoinCriteria(ctx: SqlBaseParser.JoinRelationContext): Option[JoinCriteria] = {
+    if (ctx.CROSS != null)
+      None
+    else if (ctx.NATURAL != null)
+      Some(NaturalJoin)
+    else {
+      val jc = ctx.joinCriteria
+      if (jc.ON != null)
+        Some(JoinOn(visit(ctx.joinCriteria.booleanExpression).asInstanceOf[Identifier]))
+      else if (jc.USING != null)
+        Some(JoinUsing(ctx.joinCriteria().identifier.map{
+          case ic => Identifier(ic.getText, NodeLocation(ic.getStart))
+        }.toList))
+      else
+        None
+    }
+  }
+
+  def getRight(ctx: SqlBaseParser.JoinRelationContext): Relation = {
+    // TODO FIX HACK
+    SampledRelation("RIGHT" + ctx.getText, NodeLocation(ctx.getStart))
+  }
+
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
-    val qso = Try(visit(ctx.queryTerm).asInstanceOf[QuerySpecification]).toOption
-    QueryNoWith(qso, ctx)
+    val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
+    QueryNoWith(Some(qso), ctx)
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
-    QuerySpecification(ctx)
+    val select = Select(ctx.selectItem.map(_.getText).toList, NodeLocation(ctx.getStart))
+    val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
+    val where = Where(ctx)
+    val groupBy = GroupBy(ctx)
+    val having = Having(ctx)
+    QuerySpecification(select, from, where, groupBy, having)
   }
+
+  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext) = {
+    val left = visit(ctx.left).asInstanceOf[Relation]
+    val right = getRight(ctx)
+    val joinType = getJoinType(ctx)
+    val joinCriteria = getJoinCriteria(ctx)
+    Join(joinType, left, right, NodeLocation(ctx.getStart), joinCriteria)
+  }
+
+  override def visitQualifiedName(ctx: SqlBaseParser.QualifiedNameContext) = {
+    Name(ctx.getText, NodeLocation(ctx.getStart))
+  }
+  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext) = {
+    Identifier(ctx.getText, NodeLocation(ctx.getStart))
+  }
+  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext) = {
+    Identifier(ctx.getText, NodeLocation(ctx.getStart))
+  }
+  override def visitBackQuotedIdentifier(ctx: SqlBaseParser.BackQuotedIdentifierContext) = {
+    Identifier(ctx.getText, NodeLocation(ctx.getStart))
+  }
+  override def visitDigitIdentifier(ctx: SqlBaseParser.DigitIdentifierContext) = {
+    Identifier(ctx.getText, NodeLocation(ctx.getStart))
+  }
+
 
 }
 

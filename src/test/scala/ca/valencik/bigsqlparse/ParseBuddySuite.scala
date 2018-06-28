@@ -11,7 +11,8 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18;",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 GROUP BY name;",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 GROUP BY name HAVING COUNT(name) >= 2;",
-      "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 ORDER BY age LIMIT 2;"
+      "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 ORDER BY age LIMIT 2;",
+      "select x from foo join bar on foo.a = bar.b"
     )
     queries.map{case q => ParseBuddy.parse(q)}
   }
