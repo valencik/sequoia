@@ -59,12 +59,6 @@ object Select {
     Select(ctx.selectItem.map(_.getText).toList, NodeLocation(ctx.getStart))
   }
 }
-object Where {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): Where = {
-    lazy val w = Identifier(ctx.where.getText, NodeLocation(ctx.where.start))
-    Where(Try(w).toOption)
-  }
-}
 object GroupingElement {
   def apply(ctx: SqlBaseParser.GroupingElementContext): GroupingElement = {
     GroupingElement(List(Identifier(ctx.getText, NodeLocation(ctx.getStart))))
@@ -180,7 +174,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
     val select = Select(ctx.selectItem.map(_.getText).toList, NodeLocation(ctx.getStart))
     val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
-    val where = Where(ctx)
+    val where = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
     val groupBy = GroupBy(ctx)
     val having = Having(ctx)
     QuerySpecification(select, from, where, groupBy, having)
