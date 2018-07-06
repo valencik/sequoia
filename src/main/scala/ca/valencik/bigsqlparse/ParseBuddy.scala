@@ -22,6 +22,8 @@ sealed trait Expression
 case class Identifier(name: String, location: NodeLocation) extends Node with Expression
 case class BooleanExpression(left: Expression, op: Operator, right: Expression) extends Node with Expression
 case class ComparisonExpression(left: Expression, op: Comparison, right: Expression) extends Node with Expression
+case class IsNullPredicate(value: Expression, location: NodeLocation) extends Node with Expression
+case class IsNotNullPredicate(value: Expression, location: NodeLocation) extends Node with Expression
 
 sealed trait Operator
 case object AND extends Operator
@@ -197,6 +199,13 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       visit(ctx.predicate)
     else
       visit(ctx.valueExpression)
+  }
+  override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext) = {
+    val exp = visit(ctx.value).asInstanceOf[Expression]
+    if (ctx.NOT != null)
+      IsNotNullPredicate(exp, NodeLocation(ctx.getStart))
+    else
+      IsNullPredicate(exp, NodeLocation(ctx.getStart))
   }
   override def visitComparison(ctx: SqlBaseParser.ComparisonContext) = {
     val op = getComparisonOperator(ctx.comparisonOperator)
