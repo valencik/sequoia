@@ -233,14 +233,21 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
 object ParseBuddy {
 
-  def parse(input: String): Node = {
+  case class ParseFailure(error: String)
+
+  def parse(input: String): Either[ParseFailure, QueryNoWith] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     val tokens     = new CommonTokenStream(lexer)
     val parser     = new SqlBaseParser(tokens)
 
     val prestoVisitor = new PrestoSqlVisitorApp()
-    prestoVisitor.visit(parser.statement)
+    val node: Node = prestoVisitor.visit(parser.statement)
+    val qs = Try(node.asInstanceOf[QueryNoWith])
+    qs match {
+      case Success(qs) => Right(qs)
+      case Failure(err) => Left(ParseFailure(err.toString))
+    }
   }
 
 }
