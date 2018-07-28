@@ -46,41 +46,9 @@ case class QuerySpecification(
 ) extends Node
 
 
-object Select {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): Select = {
-    Select(ctx.selectItem.map(_.getText).toList)
-  }
-}
-object GroupingElement {
-  def apply(ctx: SqlBaseParser.GroupingElementContext): GroupingElement = {
-    GroupingElement(List(Identifier(ctx.getText)))
-  }
-}
-object GroupBy {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): GroupBy = {
-    val g: List[GroupingElement] = Try(ctx.groupBy.groupingElement) match {
-      case Success(gs) => gs.map(GroupingElement(_)).toList
-      case Failure(_) => List()
-    }
-    GroupBy(g)
-  }
-}
-object Having {
-  def apply(ctx: SqlBaseParser.QuerySpecificationContext): Having = {
-    lazy val e = Identifier(ctx.having.getText)
-    Having(Try(e).toOption)
-  }
-}
 case class OrderBy(name: String) extends Node
 case class Limit(value: String) extends Node
 case class QueryNoWith(querySpecification: Option[QuerySpecification], orderBy: Option[OrderBy], limit: Option[Limit]) extends Node
-object QueryNoWith {
-  def apply(qso: Option[QuerySpecification], ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith = {
-    val orderBy = Try(OrderBy(ctx.sortItem.map{_.expression.getText}.mkString)).toOption
-    val limit = Try(Limit(ctx.limit.getText)).toOption
-    QueryNoWith(qso, orderBy, limit)
-  }
-}
 
 sealed trait JoinType
 case object LeftJoin extends JoinType
@@ -160,16 +128,28 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
     val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
-    QueryNoWith(Some(qso), ctx)
+    val orderBy = Try(OrderBy(ctx.sortItem.map{_.expression.getText}.mkString)).toOption
+    val limit = Try(Limit(ctx.limit.getText)).toOption
+    QueryNoWith(Some(qso), orderBy, limit)
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
     val select = Select(ctx.selectItem.map(_.getText).toList)
     val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
     val where = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
-    val groupBy = GroupBy(ctx)
-    val having = Having(ctx)
+    val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
+    val having = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
     QuerySpecification(select, from, where, groupBy, having)
+  }
+
+  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext) = {
+    val ges = ctx.groupingElement().map(visit(_).asInstanceOf[GroupingElement]).toList
+    GroupBy(ges)
+  }
+
+  override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext) = {
+    val ges = ctx.groupingExpressions.expression().map(visit(_).asInstanceOf[Identifier]).toList
+    GroupingElement(ges)
   }
 
   override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext) = {
