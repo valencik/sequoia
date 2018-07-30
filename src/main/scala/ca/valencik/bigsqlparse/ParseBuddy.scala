@@ -33,6 +33,16 @@ case object LTE extends Comparison
 case object GT extends Comparison
 case object GTE extends Comparison
 
+case class SortItem(expression: Expression, ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering]) extends Node
+
+sealed trait SortOrdering
+case object ASC extends SortOrdering
+case object DESC extends SortOrdering
+
+sealed trait NullOrdering
+case object FIRST extends NullOrdering
+case object LAST extends NullOrdering
+
 case class Where(expression: Option[Expression]) extends Node
 case class GroupingElement(groupingSet: List[Expression]) extends Node
 case class GroupBy(groupingElements: List[GroupingElement]) extends Node
@@ -46,7 +56,7 @@ case class QuerySpecification(
 ) extends Node
 
 
-case class OrderBy(name: String) extends Node
+case class OrderBy(items: List[SortItem]) extends Node
 case class Limit(value: String) extends Node
 case class QueryNoWith(querySpecification: Option[QuerySpecification], orderBy: Option[OrderBy], limit: Option[Limit]) extends Node
 
@@ -128,9 +138,35 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
     val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
-    val orderBy = Try(OrderBy(ctx.sortItem.map{_.expression.getText}.mkString)).toOption
-    val limit = Try(Limit(ctx.limit.getText)).toOption
+    val orderBy = {
+      if (ctx.sortItem != null)
+        Some(OrderBy(ctx.sortItem.map(visit(_).asInstanceOf[SortItem]).toList))
+      else
+        None
+    }
+    val limit = if (ctx.LIMIT != null) Some(Limit(ctx.limit.getText)) else None
     QueryNoWith(Some(qso), orderBy, limit)
+  }
+
+  override def visitSortItem(ctx: SqlBaseParser.SortItemContext) = {
+    val exp: Expression = visit(ctx.expression).asInstanceOf[Expression]
+    val ordering: Option[SortOrdering] = {
+      if (ctx.ASC != null)
+        Some(ASC)
+      else if (ctx.DESC != null)
+        Some(DESC)
+      else
+        None
+    }
+    val nullOrdering: Option[NullOrdering] = {
+      if (ctx.NULLS != null && ctx.FIRST != null)
+        Some(FIRST)
+      else if (ctx.NULLS != null && ctx.LAST != null)
+        Some(LAST)
+      else
+        None
+    }
+    SortItem(exp, ordering, nullOrdering)
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
