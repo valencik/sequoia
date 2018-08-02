@@ -251,11 +251,8 @@ object ParseBuddy {
 
     val prestoVisitor = new PrestoSqlVisitorApp()
     val node: Node = prestoVisitor.visit(parser.statement)
-    val qs = Try(node.asInstanceOf[QueryNoWith])
-    qs match {
-      case Success(qs) => Right(qs)
-      case Failure(err) => Left(ParseFailure(err.toString))
-    }
+    val qnw = node.asInstanceOf[QueryNoWith]
+    if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
   }
 
 }
