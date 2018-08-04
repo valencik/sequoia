@@ -9,13 +9,18 @@ import scala.collection.JavaConversions._
 
 sealed trait Node
 case class Name(text: String) extends Node with Relation
-case class Select(selectItems: List[String]) extends Node
+case class Select(selectItems: List[SelectItem]) extends Node
+
+sealed trait SelectItem extends Node
+case class SingleColumn(expression: Expression, alias: Option[Identifier]) extends SelectItem
+case class AllColumns(name: Option[QualifiedName]) extends SelectItem
 
 sealed trait Relation
 case class From(relations: List[Relation]) extends Node
 
 sealed trait Expression
 case class Identifier(name: String) extends Node with Expression
+case class QualifiedName(name: String) extends Node with Expression
 case class BooleanExpression(left: Expression, op: Operator, right: Expression) extends Node with Expression
 case class ComparisonExpression(left: Expression, op: Comparison, right: Expression) extends Node with Expression
 case class IsNullPredicate(value: Expression) extends Node with Expression
@@ -136,6 +141,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ???
   }
 
+  def getQualifiedName(ctx: SqlBaseParser.QualifiedNameContext): QualifiedName = {
+    QualifiedName(ctx.identifier.map(_.getText).mkString("."))
+  }
+
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
     val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
     val orderBy = {
@@ -170,12 +179,21 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
-    val select = Select(ctx.selectItem.map(_.getText).toList)
+    val select = Select(ctx.selectItem.map(visit(_).asInstanceOf[SelectItem]).toList)
     val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
     val where = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
     val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
     val having = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
     QuerySpecification(select, from, where, groupBy, having)
+  }
+
+  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext) = {
+    val alias = if (ctx.identifier != null) Some(visit(ctx.identifier).asInstanceOf[Identifier]) else None
+    SingleColumn(visit(ctx.expression()).asInstanceOf[Expression], alias)
+  }
+
+  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext) = {
+    if (ctx.qualifiedName != null) AllColumns(Some(getQualifiedName(ctx.qualifiedName))) else AllColumns(None)
   }
 
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext) = {
@@ -209,6 +227,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     else
       IsNullPredicate(exp)
   }
+
   override def visitComparison(ctx: SqlBaseParser.ComparisonContext) = {
     val op = getComparisonOperator(ctx.comparisonOperator)
     ComparisonExpression(visit(ctx.value).asInstanceOf[Expression], op, visit(ctx.right).asInstanceOf[Expression])
