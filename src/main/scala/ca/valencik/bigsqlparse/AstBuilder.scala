@@ -146,6 +146,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     Join(joinType, left, right, joinCriteria)
   }
 
+  override def visitSampledRelation(ctx: SqlBaseParser.SampledRelationContext): SampledRelation = {
+    SampledRelation(ctx.getText)
+  }
+
   override def visitPredicated(ctx: SqlBaseParser.PredicatedContext): Node = {
     if (ctx.predicate != null)
       visit(ctx.predicate)
@@ -175,10 +179,6 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Identifier = {
     Identifier(ctx.getText)
-  }
-
-  override def visitQualifiedName(ctx: SqlBaseParser.QualifiedNameContext): Name = {
-    Name(ctx.getText)
   }
 
   override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {

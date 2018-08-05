@@ -1,7 +1,6 @@
 package ca.valencik.bigsqlparse
 
 sealed trait Node
-case class Name(text: String)                    extends Node with Relation
 case class Select(selectItems: List[SelectItem]) extends Node
 
 sealed trait SelectItem                                                    extends Node
