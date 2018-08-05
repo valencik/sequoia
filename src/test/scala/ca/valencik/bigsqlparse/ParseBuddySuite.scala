@@ -14,7 +14,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 ORDER BY age LIMIT 2;",
       "select x from foo join bar on foo.a = bar.b"
     )
-    queries.map{case q => ParseBuddy.parse(q)}
+    queries.map { case q => ParseBuddy.parse(q) }
   }
 
   it should "parse lower case queries" in {
@@ -22,7 +22,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "select count(1);",
       "select name, count(*) from bar;"
     )
-    queries.map{case q => ParseBuddy.parse(q)}
+    queries.map { case q => ParseBuddy.parse(q) }
   }
 
   it should "parse queries without an ending ';'" in {
@@ -30,7 +30,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "SELECT COUNT(1)",
       "SELECT NAME, COUNT(*) FROM BAR"
     )
-    queries.map{case q => ParseBuddy.parse(q)}
+    queries.map { case q => ParseBuddy.parse(q) }
   }
 
 }

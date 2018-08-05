@@ -2,7 +2,6 @@ package ca.valencik.bigsqlparse
 
 import scala.collection.JavaConversions._
 
-
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
@@ -31,21 +30,28 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       if (jc.ON != null)
         Some(JoinOn(visit(ctx.joinCriteria.booleanExpression).asInstanceOf[Expression]))
       else if (jc.USING != null)
-        Some(JoinUsing(ctx.joinCriteria().identifier.map{
-          case ic => Identifier(ic.getText)
-        }.toList))
+        Some(
+          JoinUsing(
+            ctx
+              .joinCriteria()
+              .identifier
+              .map {
+                case ic => Identifier(ic.getText)
+              }
+              .toList))
       else
         None
     }
   }
 
   def getRight(ctx: SqlBaseParser.JoinRelationContext): Relation = {
-    val rel = if (ctx.CROSS != null)
-      visit(ctx.right)
-    else if (ctx.NATURAL != null)
-      visit(ctx.right)
-    else
-      visit(ctx.rightRelation)
+    val rel =
+      if (ctx.CROSS != null)
+        visit(ctx.right)
+      else if (ctx.NATURAL != null)
+        visit(ctx.right)
+      else
+        visit(ctx.rightRelation)
     rel.asInstanceOf[Relation]
   }
 
@@ -104,11 +110,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
-    val select = Select(ctx.selectItem.map(visit(_).asInstanceOf[SelectItem]).toList)
-    val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
-    val where = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
+    val select  = Select(ctx.selectItem.map(visit(_).asInstanceOf[SelectItem]).toList)
+    val from    = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
+    val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
     val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
-    val having = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
+    val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
     QuerySpecification(select, from, where, groupBy, having)
   }
 
@@ -132,9 +138,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): Join = {
-    val left = visit(ctx.left).asInstanceOf[Relation]
-    val right = getRight(ctx)
-    val joinType = getJoinType(ctx)
+    val left         = visit(ctx.left).asInstanceOf[Relation]
+    val right        = getRight(ctx)
+    val joinType     = getJoinType(ctx)
     val joinCriteria = getJoinCriteria(ctx)
     Join(joinType, left, right, joinCriteria)
   }
@@ -145,6 +151,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     else
       visit(ctx.valueExpression)
   }
+
   override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext): Node = {
     val exp = visit(ctx.value).asInstanceOf[Expression]
     if (ctx.NOT != null)
@@ -157,19 +164,26 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val op = getComparisonOperator(ctx.comparisonOperator)
     ComparisonExpression(visit(ctx.value).asInstanceOf[Expression], op, visit(ctx.right).asInstanceOf[Expression])
   }
+
   override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): BooleanExpression = {
     val op = if (ctx.AND != null) AND else OR
-    BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression], op, visit(ctx.right).asInstanceOf[BooleanExpression])
+    BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression],
+                      op,
+                      visit(ctx.right).asInstanceOf[BooleanExpression])
   }
+
   override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Identifier = {
     Identifier(ctx.getText)
   }
+
   override def visitQualifiedName(ctx: SqlBaseParser.QualifiedNameContext): Name = {
     Name(ctx.getText)
   }
+
   override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {
     Identifier(ctx.getText)
   }
+
   override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Identifier = {
     Identifier(ctx.getText)
   }
