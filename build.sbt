@@ -55,9 +55,6 @@ lazy val root = (project in file("."))
         organization := "ca.valencik",
         scalaVersion := "2.12.6",
         version := "0.1.0-SNAPSHOT",
-        javaOptions in Test ++= Seq("-Xmx1G", "-ea"),
-        fork in Test := true,
-        parallelExecution in Test := false
       )),
     name := "Big SQL Parse",
     libraryDependencies ++= Seq(
