@@ -64,5 +64,6 @@ lazy val root = (project in file("."))
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
-    antlr4PackageName in Antlr4 := Some("ca.valencik.bigsqlparse")
+    antlr4PackageName in Antlr4 := Some("ca.valencik.bigsqlparse"),
+    scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
   )
