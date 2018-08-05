@@ -50,8 +50,8 @@ object ParseBuddyApp extends App {
     val inputQuery = scala.io.StdIn.readLine("ParseBuddy> ")
     if (!exitCommand(inputQuery)) {
       val q = parse(inputQuery)
-      println("Parse: ", q)
-      q.right.map(qnw => println("Analyze: ", analyze(qnw)))
+      println(s"Parse: $q")
+      q.right.map(qnw => println(s"Analyze: ${analyze(qnw)}"))
       inputLoop()
     }
   }

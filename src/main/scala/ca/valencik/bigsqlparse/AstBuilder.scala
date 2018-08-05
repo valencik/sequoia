@@ -1,6 +1,6 @@
 package ca.valencik.bigsqlparse
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
@@ -35,6 +35,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
             ctx
               .joinCriteria()
               .identifier
+              .asScala
               .map {
                 case ic => Identifier(ic.getText)
               }
@@ -73,14 +74,14 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   def getQualifiedName(ctx: SqlBaseParser.QualifiedNameContext): QualifiedName = {
-    QualifiedName(ctx.identifier.map(_.getText).mkString("."))
+    QualifiedName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
 
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith = {
     val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
     val orderBy = {
       if (ctx.sortItem != null)
-        Some(OrderBy(ctx.sortItem.map(visit(_).asInstanceOf[SortItem]).toList))
+        Some(OrderBy(ctx.sortItem.asScala.map(visit(_).asInstanceOf[SortItem]).toList))
       else
         None
     }
@@ -110,8 +111,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
-    val select  = Select(ctx.selectItem.map(visit(_).asInstanceOf[SelectItem]).toList)
-    val from    = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
+    val select  = Select(ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem]).toList)
+    val from    = From(ctx.relation.asScala.map(visit(_).asInstanceOf[Relation]).toList)
     val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
     val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
     val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
@@ -120,7 +121,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): SingleColumn = {
     val alias = if (ctx.identifier != null) Some(visit(ctx.identifier).asInstanceOf[Identifier]) else None
-    SingleColumn(visit(ctx.expression()).asInstanceOf[Expression], alias)
+    SingleColumn(visit(ctx.expression).asInstanceOf[Expression], alias)
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): AllColumns = {
@@ -128,12 +129,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy = {
-    val ges = ctx.groupingElement().map(visit(_).asInstanceOf[GroupingElement]).toList
+    val ges = ctx.groupingElement.asScala.map(visit(_).asInstanceOf[GroupingElement]).toList
     GroupBy(ges)
   }
 
   override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext): GroupingElement = {
-    val ges = ctx.groupingExpressions.expression().map(visit(_).asInstanceOf[Identifier]).toList
+    val ges = ctx.groupingExpressions.expression.asScala.map(visit(_).asInstanceOf[Identifier]).toList
     GroupingElement(ges)
   }
 
