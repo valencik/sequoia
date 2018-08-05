@@ -6,7 +6,7 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "ca.valencik",
-      scalaVersion := "2.11.12",
+      scalaVersion := "2.12.6",
       version      := "0.1.0-SNAPSHOT",
       javaOptions in Test ++= Seq("-Xmx1G", "-ea"),
       fork in Test := true,
