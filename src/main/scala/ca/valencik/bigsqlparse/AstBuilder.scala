@@ -70,7 +70,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QualifiedName(ctx.identifier.map(_.getText).mkString("."))
   }
 
-  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext) = {
+  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith = {
     val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
     val orderBy = {
       if (ctx.sortItem != null)
@@ -82,7 +82,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QueryNoWith(Some(qso), orderBy, limit)
   }
 
-  override def visitSortItem(ctx: SqlBaseParser.SortItemContext) = {
+  override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem = {
     val exp: Expression = visit(ctx.expression).asInstanceOf[Expression]
     val ordering: Option[SortOrdering] = {
       if (ctx.ASC != null)
@@ -103,7 +103,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SortItem(exp, ordering, nullOrdering)
   }
 
-  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext) = {
+  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
     val select = Select(ctx.selectItem.map(visit(_).asInstanceOf[SelectItem]).toList)
     val from = From(ctx.relation.map(visit(_).asInstanceOf[Relation]).toList)
     val where = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
@@ -112,26 +112,26 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QuerySpecification(select, from, where, groupBy, having)
   }
 
-  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext) = {
+  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): SingleColumn = {
     val alias = if (ctx.identifier != null) Some(visit(ctx.identifier).asInstanceOf[Identifier]) else None
     SingleColumn(visit(ctx.expression()).asInstanceOf[Expression], alias)
   }
 
-  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext) = {
+  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): AllColumns = {
     if (ctx.qualifiedName != null) AllColumns(Some(getQualifiedName(ctx.qualifiedName))) else AllColumns(None)
   }
 
-  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext) = {
+  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy = {
     val ges = ctx.groupingElement().map(visit(_).asInstanceOf[GroupingElement]).toList
     GroupBy(ges)
   }
 
-  override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext) = {
+  override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext): GroupingElement = {
     val ges = ctx.groupingExpressions.expression().map(visit(_).asInstanceOf[Identifier]).toList
     GroupingElement(ges)
   }
 
-  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext) = {
+  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): Join = {
     val left = visit(ctx.left).asInstanceOf[Relation]
     val right = getRight(ctx)
     val joinType = getJoinType(ctx)
@@ -139,13 +139,13 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     Join(joinType, left, right, joinCriteria)
   }
 
-  override def visitPredicated(ctx: SqlBaseParser.PredicatedContext) = {
+  override def visitPredicated(ctx: SqlBaseParser.PredicatedContext): Node = {
     if (ctx.predicate != null)
       visit(ctx.predicate)
     else
       visit(ctx.valueExpression)
   }
-  override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext) = {
+  override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext): Node = {
     val exp = visit(ctx.value).asInstanceOf[Expression]
     if (ctx.NOT != null)
       IsNotNullPredicate(exp)
@@ -153,24 +153,24 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       IsNullPredicate(exp)
   }
 
-  override def visitComparison(ctx: SqlBaseParser.ComparisonContext) = {
+  override def visitComparison(ctx: SqlBaseParser.ComparisonContext): ComparisonExpression = {
     val op = getComparisonOperator(ctx.comparisonOperator)
     ComparisonExpression(visit(ctx.value).asInstanceOf[Expression], op, visit(ctx.right).asInstanceOf[Expression])
   }
-  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext) = {
+  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): BooleanExpression = {
     val op = if (ctx.AND != null) AND else OR
     BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression], op, visit(ctx.right).asInstanceOf[BooleanExpression])
   }
-  override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext) = {
+  override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Identifier = {
     Identifier(ctx.getText)
   }
-  override def visitQualifiedName(ctx: SqlBaseParser.QualifiedNameContext) = {
+  override def visitQualifiedName(ctx: SqlBaseParser.QualifiedNameContext): Name = {
     Name(ctx.getText)
   }
-  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext) = {
+  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {
     Identifier(ctx.getText)
   }
-  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext) = {
+  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Identifier = {
     Identifier(ctx.getText)
   }
 
