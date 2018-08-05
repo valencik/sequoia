@@ -173,11 +173,5 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext) = {
     Identifier(ctx.getText)
   }
-  override def visitBackQuotedIdentifier(ctx: SqlBaseParser.BackQuotedIdentifierContext) = {
-    Identifier(ctx.getText)
-  }
-  override def visitDigitIdentifier(ctx: SqlBaseParser.DigitIdentifierContext) = {
-    Identifier(ctx.getText)
-  }
 
 }
