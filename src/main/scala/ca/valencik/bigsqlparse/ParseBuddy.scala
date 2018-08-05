@@ -20,12 +20,22 @@ object ParseBuddy {
 
   def analyze(q: QueryNoWith): Option[List[String]] = {
     q.querySpecification.map {qs =>
-      qs.select.selectItems.map{ si => si match {
-        case si: SingleColumn => si.expression.toString
-        case ac: AllColumns => ac.name.map(_.name).getOrElse("*")
-      }} ++
-      qs.from.relations.map(_.toString)
+      qs.select.selectItems.flatMap(fSelect)
     }
+  }
+
+  def fSelect(si: SelectItem): List[String] = si match {
+    case si: SingleColumn => fExpression(si.expression)
+    case ac: AllColumns => List(ac.name.map(_.name).getOrElse("*"))
+  }
+
+  def fExpression(e: Expression): List[String] = e match {
+    case i: Identifier => List(i.name)
+    case q: QualifiedName => List(q.name)
+    case be: BooleanExpression => fExpression(be.left) ++ fExpression(be.right)
+    case ce: ComparisonExpression => fExpression(ce.left) ++ fExpression(ce.right)
+    case np: IsNullPredicate => fExpression(np.value)
+    case nnp: IsNotNullPredicate => fExpression(nnp.value)
   }
 
 }
