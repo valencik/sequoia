@@ -4,6 +4,10 @@ import scala.collection.JavaConverters._
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
+  type QRelation           = Relation[QualifiedName]
+  type QQueryNoWith        = QueryNoWith[QualifiedName]
+  type QQuerySpecification = QuerySpecification[QualifiedName]
+
   def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
     if (ctx.CROSS != null)
       CrossJoin
@@ -45,7 +49,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     }
   }
 
-  def getRight(ctx: SqlBaseParser.JoinRelationContext): Relation = {
+  def getRight(ctx: SqlBaseParser.JoinRelationContext): QRelation = {
     val rel =
       if (ctx.CROSS != null)
         visit(ctx.right)
@@ -53,7 +57,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         visit(ctx.right)
       else
         visit(ctx.rightRelation)
-    rel.asInstanceOf[Relation]
+    rel.asInstanceOf[QRelation]
   }
 
   def getComparisonOperator(ctx: SqlBaseParser.ComparisonOperatorContext): Comparison = {
@@ -77,8 +81,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QualifiedName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
 
-  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith = {
-    val qso = visit(ctx.queryTerm).asInstanceOf[QuerySpecification]
+  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QQueryNoWith = {
+    val qso = visit(ctx.queryTerm).asInstanceOf[QQuerySpecification]
     val orderBy = {
       if (ctx.sortItem != null)
         Some(OrderBy(ctx.sortItem.asScala.map(visit(_).asInstanceOf[SortItem]).toList))
@@ -110,9 +114,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SortItem(exp, ordering, nullOrdering)
   }
 
-  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification = {
+  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QQuerySpecification = {
     val select  = Select(ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem]).toList)
-    val from    = From(ctx.relation.asScala.map(visit(_).asInstanceOf[Relation]).toList)
+    val from    = From(ctx.relation.asScala.map(visit(_).asInstanceOf[QRelation]).toList)
     val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
     val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
     val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
@@ -138,16 +142,40 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     GroupingElement(ges)
   }
 
-  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): Join = {
-    val left         = visit(ctx.left).asInstanceOf[Relation]
+  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): QRelation = {
+    val left         = visit(ctx.left).asInstanceOf[QRelation]
     val right        = getRight(ctx)
     val joinType     = getJoinType(ctx)
     val joinCriteria = getJoinCriteria(ctx)
     Join(joinType, left, right, joinCriteria)
   }
 
-  override def visitSampledRelation(ctx: SqlBaseParser.SampledRelationContext): SampledRelation = {
-    SampledRelation(ctx.getText)
+  override def visitSampledRelation(ctx: SqlBaseParser.SampledRelationContext): QRelation = {
+    val child = visit(ctx.aliasedRelation).asInstanceOf[QRelation]
+    if (ctx.TABLESAMPLE == null)
+      child
+    else {
+      ???
+    }
+  }
+
+  override def visitAliasedRelation(ctx: SqlBaseParser.AliasedRelationContext): QRelation = {
+    val child = visit(ctx.relationPrimary).asInstanceOf[QRelation]
+    if (ctx.identifier == null)
+      child
+    else {
+      val alias = visit(ctx.identifier).asInstanceOf[Identifier]
+      val columns: List[Identifier] =
+        if (ctx.columnAliases != null)
+          ctx.columnAliases.identifier.asScala.map(visit(_).asInstanceOf[Identifier]).toList
+        else
+          List.empty
+      AliasedRelation(child, alias, columns)
+    }
+  }
+
+  override def visitTableName(ctx: SqlBaseParser.TableNameContext): QRelation = {
+    Table(getQualifiedName(ctx.qualifiedName))
   }
 
   override def visitPredicated(ctx: SqlBaseParser.PredicatedContext): Node = {
