@@ -1,6 +1,7 @@
 package ca.valencik.bigsqlparse
 
 import org.scalatest._
+import ca.valencik.bigsqlparse.ParseBuddy.catalog
 
 class ParseBuddySpec extends FlatSpec with Matchers {
 
@@ -34,6 +35,12 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "SELECT NAME, COUNT(*) FROM BAR"
     )
     queries.map { case q => ParseBuddy.parse(q) }
+  }
+
+  it should "resolve select item names and table names in relations" in {
+    val query = "select a, x, y from foo join bar on foo.a = bar.a"
+    ParseBuddy.resolve(ParseBuddy.parse(query).right.get) shouldBe
+      Some(List(List("db.foo.a", "db.bar.x", "db.bar.y"), List("db.foo", "db.bar")))
   }
 
 }
