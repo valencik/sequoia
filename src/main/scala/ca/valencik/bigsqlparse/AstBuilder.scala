@@ -4,9 +4,11 @@ import scala.collection.JavaConverters._
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
+  type QIdentifier         = Identifier[RawIdentifier]
+  type QExpression         = Expression[RawIdentifier]
   type QRelation           = Relation[QualifiedName]
-  type QQueryNoWith        = QueryNoWith[QualifiedName]
-  type QQuerySpecification = QuerySpecification[QualifiedName]
+  type QQueryNoWith        = QueryNoWith[QualifiedName, RawIdentifier]
+  type QQuerySpecification = QuerySpecification[QualifiedName, RawIdentifier]
 
   def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
     if (ctx.CROSS != null)
@@ -32,7 +34,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     else {
       val jc = ctx.joinCriteria
       if (jc.ON != null)
-        Some(JoinOn(visit(ctx.joinCriteria.booleanExpression).asInstanceOf[Expression]))
+        Some(JoinOn(visit(ctx.joinCriteria.booleanExpression).asInstanceOf[QExpression]))
       else if (jc.USING != null)
         Some(
           JoinUsing(
@@ -85,7 +87,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val qso = visit(ctx.queryTerm).asInstanceOf[QQuerySpecification]
     val orderBy = {
       if (ctx.sortItem != null)
-        Some(OrderBy(ctx.sortItem.asScala.map(visit(_).asInstanceOf[SortItem]).toList))
+        Some(OrderBy(ctx.sortItem.asScala.map(visit(_).asInstanceOf[SortItem[RawIdentifier]]).toList))
       else
         None
     }
@@ -93,8 +95,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QueryNoWith(Some(qso), orderBy, limit)
   }
 
-  override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem = {
-    val exp: Expression = visit(ctx.expression).asInstanceOf[Expression]
+  override def visitSortItem(ctx: SqlBaseParser.SortItemContext): Node = {
+    val exp: QExpression = visit(ctx.expression).asInstanceOf[QExpression]
     val ordering: Option[SortOrdering] = {
       if (ctx.ASC != null)
         Some(ASC)
@@ -117,28 +119,28 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QQuerySpecification = {
     val select  = Select(ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem]).toList)
     val from    = From(ctx.relation.asScala.map(visit(_).asInstanceOf[QRelation]).toList)
-    val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[Expression]) else None)
-    val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy] else GroupBy(List())
-    val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[Expression]) else None)
+    val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[QExpression]) else None)
+    val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy[RawIdentifier]] else GroupBy(List())
+    val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[QExpression]) else None)
     QuerySpecification(select, from, where, groupBy, having)
   }
 
-  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): SingleColumn = {
-    val alias = if (ctx.identifier != null) Some(visit(ctx.identifier).asInstanceOf[Identifier]) else None
-    SingleColumn(visit(ctx.expression).asInstanceOf[Expression], alias)
+  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): Node = {
+    val alias = if (ctx.identifier != null) Some(visit(ctx.identifier).asInstanceOf[QIdentifier]) else None
+    SingleColumn(visit(ctx.expression).asInstanceOf[QExpression], alias)
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): AllColumns = {
     if (ctx.qualifiedName != null) AllColumns(Some(getQualifiedName(ctx.qualifiedName))) else AllColumns(None)
   }
 
-  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy = {
-    val ges = ctx.groupingElement.asScala.map(visit(_).asInstanceOf[GroupingElement]).toList
+  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): Node = {
+    val ges = ctx.groupingElement.asScala.map(visit(_).asInstanceOf[GroupingElement[RawIdentifier]]).toList
     GroupBy(ges)
   }
 
-  override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext): GroupingElement = {
-    val ges = ctx.groupingExpressions.expression.asScala.map(visit(_).asInstanceOf[Identifier]).toList
+  override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext): Node = {
+    val ges = ctx.groupingExpressions.expression.asScala.map(visit(_).asInstanceOf[QIdentifier]).toList
     GroupingElement(ges)
   }
 
@@ -164,10 +166,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.identifier == null)
       child
     else {
-      val alias = visit(ctx.identifier).asInstanceOf[Identifier]
-      val columns: List[Identifier] =
+      val alias = visit(ctx.identifier).asInstanceOf[QIdentifier]
+      val columns: List[QIdentifier] =
         if (ctx.columnAliases != null)
-          ctx.columnAliases.identifier.asScala.map(visit(_).asInstanceOf[Identifier]).toList
+          ctx.columnAliases.identifier.asScala.map(visit(_).asInstanceOf[QIdentifier]).toList
         else
           List.empty
       AliasedRelation(child, alias, columns)
@@ -186,34 +188,34 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext): Node = {
-    val exp = visit(ctx.value).asInstanceOf[Expression]
+    val exp = visit(ctx.value).asInstanceOf[QExpression]
     if (ctx.NOT != null)
       IsNotNullPredicate(exp)
     else
       IsNullPredicate(exp)
   }
 
-  override def visitComparison(ctx: SqlBaseParser.ComparisonContext): ComparisonExpression = {
+  override def visitComparison(ctx: SqlBaseParser.ComparisonContext): Node = {
     val op = getComparisonOperator(ctx.comparisonOperator)
-    ComparisonExpression(visit(ctx.value).asInstanceOf[Expression], op, visit(ctx.right).asInstanceOf[Expression])
+    ComparisonExpression(visit(ctx.value).asInstanceOf[QExpression], op, visit(ctx.right).asInstanceOf[QExpression])
   }
 
-  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): BooleanExpression = {
+  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): Node = {
     val op = if (ctx.AND != null) AND else OR
-    BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression],
+    BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression[RawIdentifier]],
                       op,
-                      visit(ctx.right).asInstanceOf[BooleanExpression])
+                      visit(ctx.right).asInstanceOf[BooleanExpression[RawIdentifier]])
   }
 
-  override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Identifier = {
+  override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Node = {
     Identifier(ctx.getText)
   }
 
-  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {
+  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Node = {
     Identifier(ctx.getText)
   }
 
-  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Identifier = {
+  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Node = {
     Identifier(ctx.getText)
   }
 

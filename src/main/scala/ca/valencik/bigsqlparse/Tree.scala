@@ -2,17 +2,19 @@ package ca.valencik.bigsqlparse
 
 sealed trait Node
 case class QualifiedName(name: String)
+case class RawIdentifier(name: String)
 
-sealed trait SelectItem                                                    extends Node
-case class SingleColumn(expression: Expression, alias: Option[Identifier]) extends SelectItem
-case class AllColumns(name: Option[QualifiedName])                         extends SelectItem
+sealed trait SelectItem                                                             extends Node
+case class SingleColumn[A](expression: Expression[A], alias: Option[Identifier[A]]) extends SelectItem
+case class AllColumns(name: Option[QualifiedName])                                  extends SelectItem
 
-sealed trait Expression
-case class Identifier(name: String)                                                  extends Node with Expression
-case class BooleanExpression(left: Expression, op: Operator, right: Expression)      extends Node with Expression
-case class ComparisonExpression(left: Expression, op: Comparison, right: Expression) extends Node with Expression
-case class IsNullPredicate(value: Expression)                                        extends Node with Expression
-case class IsNotNullPredicate(value: Expression)                                     extends Node with Expression
+sealed trait Expression[+A]                                                                    extends Node
+final case class Identifier[A](name: A)                                                        extends Expression[A]
+final case class BooleanExpression[A](left: Expression[A], op: Operator, right: Expression[A]) extends Expression[A]
+final case class ComparisonExpression[A](left: Expression[A], op: Comparison, right: Expression[A])
+    extends Expression[A]
+final case class IsNullPredicate[A](value: Expression[A])    extends Expression[A]
+final case class IsNotNullPredicate[A](value: Expression[A]) extends Expression[A]
 
 sealed trait Operator
 case object AND extends Operator
@@ -26,7 +28,7 @@ case object LTE extends Comparison
 case object GT  extends Comparison
 case object GTE extends Comparison
 
-case class SortItem(expression: Expression, ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering])
+case class SortItem[A](expression: Expression[A], ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering])
     extends Node
 
 sealed trait SortOrdering
@@ -40,9 +42,9 @@ case object LAST  extends NullOrdering
 sealed trait Relation[+A] extends Node
 case class Join[A](jointype: JoinType, left: Relation[A], right: Relation[A], criterea: Option[JoinCriteria])
     extends Relation[A]
-case class SampledRelation[A](relation: Relation[A], sampleType: SampleType, samplePercentage: Expression)
+case class SampledRelation[A, B](relation: Relation[A], sampleType: SampleType, samplePercentage: Expression[B])
     extends Relation[A]
-case class AliasedRelation[A](relation: Relation[A], alias: Identifier, columnNames: List[Identifier])
+case class AliasedRelation[A, B](relation: Relation[A], alias: Identifier[B], columnNames: List[Identifier[B]])
     extends Relation[A]
 case class Table[A](name: A) extends Relation[A]
 
@@ -54,31 +56,31 @@ case object InnerJoin extends JoinType
 case object CrossJoin extends JoinType
 
 sealed trait JoinCriteria
-case object NaturalJoin                         extends JoinCriteria
-case class JoinOn(expression: Expression)       extends JoinCriteria
-case class JoinUsing(columns: List[Identifier]) extends JoinCriteria
+case object NaturalJoin                               extends JoinCriteria
+case class JoinOn[B](expression: Expression[B])       extends JoinCriteria
+case class JoinUsing[B](columns: List[Identifier[B]]) extends JoinCriteria
 
 sealed trait SampleType
 case object Bernoulli extends SampleType
 case object System    extends SampleType
 
-case class Select(selectItems: List[SelectItem])            extends Node
-case class From[A](relations: List[Relation[A]])            extends Node
-case class Where(expression: Option[Expression])            extends Node
-case class GroupingElement(groupingSet: List[Expression])   extends Node
-case class GroupBy(groupingElements: List[GroupingElement]) extends Node
-case class Having(expression: Option[Expression])           extends Node
-case class QuerySpecification[R](
+case class Select(selectItems: List[SelectItem])                   extends Node
+case class From[A](relations: List[Relation[A]])                   extends Node
+case class Where[A](expression: Option[Expression[A]])             extends Node
+case class GroupingElement[+A](groupingSet: List[Expression[A]])   extends Node
+case class GroupBy[+A](groupingElements: List[GroupingElement[A]]) extends Node
+case class Having[A](expression: Option[Expression[A]])            extends Node
+case class QuerySpecification[R, E](
     select: Select,
     from: From[R],
-    where: Where,
-    groupBy: GroupBy,
-    having: Having
+    where: Where[E],
+    groupBy: GroupBy[E],
+    having: Having[E]
 ) extends Node
 
-case class OrderBy(items: List[SortItem]) extends Node
-case class Limit(value: String)           extends Node
-case class QueryNoWith[R](querySpecification: Option[QuerySpecification[R]],
-                          orderBy: Option[OrderBy],
-                          limit: Option[Limit])
+case class OrderBy[E](items: List[SortItem[E]]) extends Node
+case class Limit(value: String)                 extends Node
+case class QueryNoWith[R, E](querySpecification: Option[QuerySpecification[R, E]],
+                             orderBy: Option[OrderBy[E]],
+                             limit: Option[Limit])
     extends Node
