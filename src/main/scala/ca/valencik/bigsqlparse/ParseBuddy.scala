@@ -1,5 +1,6 @@
 package ca.valencik.bigsqlparse
 
+import scala.collection.immutable.HashMap
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 
 object ParseBuddy {
@@ -18,13 +19,6 @@ object ParseBuddy {
     if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
   }
 
-  case class Database(name: String, tables: Map[String, List[String]])
-  implicit val mySchema = Database("db",
-                                   Map(
-                                     "FOO" -> List("A", "B", "C"),
-                                     "BAR" -> List("X", "Y", "Z")
-                                   ))
-
   def mapRelation[A, B](f: A => B)(r: Relation[A]): Relation[B] = r match {
     case j: Join[A]             => Join(j.jointype, mapRelation(f)(j.left), mapRelation(f)(j.right), j.criterea)
     case sr: SampledRelation[A] => SampledRelation(mapRelation(f)(sr.relation), sr.sampleType, sr.samplePercentage)
@@ -39,7 +33,13 @@ object ParseBuddy {
     case t: Table[A]            => Seq(t.name)
   }
 
-  def resolve[R](q: QueryNoWith[R])(implicit schema: Database): Option[List[List[String]]] = {
+  implicit val catalog = new Catalog(
+    HashMap(
+      "db" -> HashMap(
+        "foo" -> Seq("a", "b", "c"),
+        "bar" -> Seq("x", "y", "z")
+      )))
+  def resolve[R](q: QueryNoWith[R])(implicit schema: Catalog): Option[List[List[String]]] = {
     q.querySpecification.map { qs =>
       val ss: List[String] = qs.select.selectItems.flatMap {
         _ match {
@@ -47,10 +47,7 @@ object ParseBuddy {
           case a: AllColumns   => a.name.map(_.name)
         }
       }
-      val resolvedSelect = ss.flatMap(si =>
-        schema.tables.flatMap {
-          case (table, columns) => if (columns.indexOf(si) >= 0) Some(s"${table}.${si}") else None
-      })
+      val resolvedSelect = ss.flatMap(schema.nameColumn)
       val resolvedRelations: List[String] = qs.from.relations
         .map { relation =>
           // TODO specifying a function like rf should be considerably easier
@@ -58,13 +55,7 @@ object ParseBuddy {
           mapRelation(rf)(relation)
         }
         .flatMap(relationToList)
-        .map { r =>
-          println(r); r
-        }
-        .flatMap(si =>
-          schema.tables.flatMap {
-            case (table, columns) => if (columns.indexOf(si) >= 0) Some(s"${table}.${si}") else None
-        })
+        .flatMap(schema.nameTable)
       List(resolvedSelect, resolvedRelations)
     }
   }
