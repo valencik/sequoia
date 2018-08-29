@@ -56,7 +56,11 @@ object ParseBuddy {
         "foo" -> Seq("a", "b", "c"),
         "bar" -> Seq("x", "y", "z")
       )))
-  def resolve[R](q: QueryNoWith[R, String])(implicit schema: Catalog): Option[List[List[String]]] = {
+
+  case class ResolvedSelectItems(value: List[String])
+  case class ResolvedRelations(value: List[String])
+  case class Resolutions(rsi: ResolvedSelectItems, rr: ResolvedRelations)
+  def resolve[R](q: QueryNoWith[R, String])(implicit schema: Catalog): Option[Resolutions] = {
     q.querySpecification.map { qs =>
       val ss: List[String] = qs.select.selectItems.flatMap {
         _ match {
@@ -67,16 +71,16 @@ object ParseBuddy {
           case a: AllColumns => a.name.map(_.name)
         }
       }
-      val resolvedSelect = ss.flatMap(schema.nameColumn)
-      val resolvedRelations: List[String] = qs.from.relations
+      val resolvedSelect = ResolvedSelectItems(ss.flatMap(schema.nameColumn))
+      val resolvedRelations: ResolvedRelations = ResolvedRelations(qs.from.relations
         .map { relation =>
           // TODO specifying a function like rf should be considerably easier
           def rf(r: R): String = r match { case q: QualifiedName => q.name }
           mapRelation(rf)(relation)
         }
         .flatMap(relationToList)
-        .flatMap(schema.nameTable)
-      List(resolvedSelect, resolvedRelations)
+        .flatMap(schema.nameTable))
+      Resolutions(resolvedSelect, resolvedRelations)
     }
   }
 

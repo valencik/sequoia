@@ -1,7 +1,7 @@
 package ca.valencik.bigsqlparse
 
 import org.scalatest._
-import ca.valencik.bigsqlparse.ParseBuddy.catalog
+import ca.valencik.bigsqlparse.ParseBuddy._
 
 class ParseBuddySpec extends FlatSpec with Matchers {
 
@@ -18,7 +18,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "select x from foo join bar as derp (alias1, alias2) on foo.a = derp.a",
       "select * from foo f join bar b using (a);"
     )
-    queries.map { case q => ParseBuddy.parse(q) }
+    queries.map { case q => parse(q) }
   }
 
   it should "parse lower case queries" in {
@@ -26,7 +26,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "select count(1);",
       "select name, count(*) from bar;"
     )
-    queries.map { case q => ParseBuddy.parse(q) }
+    queries.map { case q => parse(q) }
   }
 
   it should "parse queries without an ending ';'" in {
@@ -34,13 +34,36 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "SELECT COUNT(1)",
       "SELECT NAME, COUNT(*) FROM BAR"
     )
-    queries.map { case q => ParseBuddy.parse(q) }
+    queries.map { case q => parse(q) }
   }
 
   it should "resolve select item names and table names in relations" in {
     val query = "select a, x, y from foo join bar on foo.a = bar.a"
-    ParseBuddy.resolve(ParseBuddy.parse(query).right.get) shouldBe
-      Some(List(List("db.foo.a", "db.bar.x", "db.bar.y"), List("db.foo", "db.bar")))
+    resolve(parse(query).right.get) shouldBe
+      Some(Resolutions(ResolvedSelectItems(List("db.foo.a", "db.bar.x", "db.bar.y")), ResolvedRelations(List("db.foo", "db.bar"))))
+  }
+
+  "ParseBuddy resolve" should "resolve fully qualified names in select clauses" in {
+    val queries = List(
+      "select a from foo",
+      "select a, b, z from foo join bar on foo.c = bar.y"
+    )
+    val resolvedQueries = queries
+      .map { case q => parse(q) }
+      .map(_.right.get)
+      .map(resolve(_).get)
+
+    val expected = List(
+      Resolutions(
+        ResolvedSelectItems(List("db.foo.a")),
+        ResolvedRelations(List("db.foo"))
+      ),
+      Resolutions(
+        ResolvedSelectItems(List("db.foo.a", "db.foo.b", "db.bar.z")),
+        ResolvedRelations(List("db.foo", "db.bar"))
+      )
+    )
+    resolvedQueries shouldBe expected
   }
 
 }
