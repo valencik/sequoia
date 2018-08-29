@@ -19,13 +19,29 @@ object ParseBuddy {
     if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
   }
 
-  // def mapExpression[A, B](f: A => B)(e: Expression[A]): Expression[B]
+  def mapExpression[A, B](f: A => B)(e: Expression[A]): Expression[B] = e match {
+    case i: Identifier[A]         => Identifier(f(i.name))
+    case be: BooleanExpression[A] => BooleanExpression(mapExpression(f)(be.left), be.op, mapExpression(f)(be.right))
+    case ce: ComparisonExpression[A] =>
+      ComparisonExpression(mapExpression(f)(ce.left), ce.op, mapExpression(f)(ce.right))
+    case inp: IsNullPredicate[A]    => IsNullPredicate(mapExpression(f)(inp.value))
+    case inn: IsNotNullPredicate[A] => IsNotNullPredicate(mapExpression(f)(inn.value))
+  }
+
+  // How do I get that joincriteria information out?
   def mapRelation[A, B](f: A => B)(r: Relation[A]): Relation[B] = r match {
     case j: Join[A]                => Join(j.jointype, mapRelation(f)(j.left), mapRelation(f)(j.right), j.criterea)
     case sr: SampledRelation[A, _] => SampledRelation(mapRelation(f)(sr.relation), sr.sampleType, sr.samplePercentage)
     case ar: AliasedRelation[A, _] => AliasedRelation(mapRelation(f)(ar.relation), ar.alias, ar.columnNames)
     case t: Table[A]               => Table(f(t.name))
   }
+
+  //def mapJoin[A, B](f: Expression[A] => B)(r: Relation[_]) = r match {
+  //  case j: Join[_] => j.criterea.map{jc => jc match {
+  //    case jo: JoinOn[A] => jo.map(f)
+  //  }}
+  //  case _          => None
+  //}
 
   def relationToList[A](r: Relation[A]): Seq[A] = r match {
     case j: Join[A]                => relationToList(j.left) ++ relationToList(j.right)

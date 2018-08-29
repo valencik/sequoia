@@ -57,8 +57,12 @@ case object CrossJoin extends JoinType
 
 sealed trait JoinCriteria
 case object NaturalJoin                               extends JoinCriteria
-case class JoinOn[B](expression: Expression[B])       extends JoinCriteria
-case class JoinUsing[B](columns: List[Identifier[B]]) extends JoinCriteria
+case class JoinOn[B](expression: Expression[B])       extends JoinCriteria {
+  def map[A](f: Expression[B] => A): A = f(expression)
+}
+case class JoinUsing[B](columns: List[Identifier[B]]) extends JoinCriteria {
+  def map[A](f: Identifier[B] => A): List[A] = columns.map(f)
+}
 
 sealed trait SampleType
 case object Bernoulli extends SampleType
