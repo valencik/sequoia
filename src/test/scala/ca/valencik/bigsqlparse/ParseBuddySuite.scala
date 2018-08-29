@@ -37,6 +37,16 @@ class ParseBuddySpec extends FlatSpec with Matchers {
     queries.map { case q => parse(q) }
   }
 
+  it should "not produce nulls on bad input" in {
+    val queries = List(
+      "lead() OVER (owner_email PARTITION BY contact_id ORDER BY property_timestamp ASC) as next_owner"
+    )
+    queries.map { case q => parse(q) }.map{
+      _.right.get.querySpecification
+    }.foreach{x => assert (x == None)}
+
+  }
+
   it should "resolve select item names and table names in relations" in {
     val query = "select a, x, y from foo join bar on foo.a = bar.a"
     resolve(parse(query).right.get) shouldBe
