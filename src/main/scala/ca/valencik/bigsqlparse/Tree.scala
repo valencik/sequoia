@@ -69,7 +69,7 @@ case object Bernoulli extends SampleType
 case object System    extends SampleType
 
 case class Select(selectItems: List[SelectItem])                   extends Node
-case class From[A](relations: List[Relation[A]])                   extends Node
+case class From[A](relations: Option[List[Relation[A]]])           extends Node
 case class Where[A](expression: Option[Expression[A]])             extends Node
 case class GroupingElement[+A](groupingSet: List[Expression[A]])   extends Node
 case class GroupBy[+A](groupingElements: List[GroupingElement[A]]) extends Node

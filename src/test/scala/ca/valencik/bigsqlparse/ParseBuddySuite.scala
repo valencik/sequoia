@@ -38,13 +38,8 @@ class ParseBuddySpec extends FlatSpec with Matchers {
   }
 
   it should "not produce nulls on bad input" in {
-    val queries = List(
-      "lead() OVER (owner_email PARTITION BY contact_id ORDER BY property_timestamp ASC) as next_owner"
-    )
-    queries.map { case q => parse(q) }.map{
-      _.right.get.querySpecification
-    }.foreach{x => assert (x == None)}
-
+    parse("func() over () as thing").map(_.querySpecification).right.get shouldBe None
+    parse("select x from").map(_.querySpecification).right.get.get.from.relations shouldBe None
   }
 
   it should "resolve select item names and table names in relations" in {

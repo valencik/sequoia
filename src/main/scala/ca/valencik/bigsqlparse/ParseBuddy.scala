@@ -72,14 +72,16 @@ object ParseBuddy {
         }
       }
       val resolvedSelect = ResolvedSelectItems(ss.flatMap(schema.nameColumn))
-      val resolvedRelations: ResolvedRelations = ResolvedRelations(qs.from.relations
-        .map { relation =>
+      val resolved = qs.from.relations.map{rs =>
+        rs.map { relation =>
           // TODO specifying a function like rf should be considerably easier
           def rf(r: R): String = r match { case q: QualifiedName => q.name }
           mapRelation(rf)(relation)
         }
         .flatMap(relationToList)
-        .flatMap(schema.nameTable))
+        .flatMap(schema.nameTable)
+      }
+      val resolvedRelations = ResolvedRelations(resolved.getOrElse(List.empty))
       Resolutions(resolvedSelect, resolvedRelations)
     }
   }

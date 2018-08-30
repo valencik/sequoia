@@ -83,6 +83,14 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QualifiedName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
 
+  def getFrom(ctx: SqlBaseParser.QuerySpecificationContext): From[QualifiedName] = {
+    val relationOptions = ctx.relation.asScala.map { r =>
+      Option(visit(r).asInstanceOf[QRelation])
+    }.toList
+    val relations = if (relationOptions.forall(_.isDefined)) Some(relationOptions.map(_.get)) else None
+    From(relations)
+  }
+
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QQueryNoWith = {
     val qso = Option(visit(ctx.queryTerm).asInstanceOf[QQuerySpecification])
     val orderBy = {
@@ -118,7 +126,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): QQuerySpecification = {
     val select  = Select(ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem]).toList)
-    val from    = From(ctx.relation.asScala.map(visit(_).asInstanceOf[QRelation]).toList)
+    val from    = getFrom(ctx)
     val where   = Where(if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[QExpression]) else None)
     val groupBy = if (ctx.groupBy != null) visit(ctx.groupBy).asInstanceOf[GroupBy[RawIdentifier]] else GroupBy(List())
     val having  = Having(if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[QExpression]) else None)
