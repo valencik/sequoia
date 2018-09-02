@@ -1,22 +1,44 @@
 package ca.valencik.bigsqlparse
 
 import scala.collection.immutable.HashMap
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
+import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
 
 object ParseBuddy {
 
   case class ParseFailure(error: String)
 
+  case class AntlrParseException(msg: String) extends Exception(msg)
+
+  case object ParseErrorListener extends BaseErrorListener {
+    override def syntaxError(recognizer: Recognizer[_, _],
+                             offendingSymbol: scala.Any,
+                             line: Int,
+                             charPositionInLine: Int,
+                             msg: String,
+                             e: RecognitionException): Unit = {
+      throw new AntlrParseException(msg)
+    }
+  }
+
   def parse(input: String): Either[ParseFailure, QueryNoWith[QualifiedName, String]] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
-    val tokens     = new CommonTokenStream(lexer)
-    val parser     = new SqlBaseParser(tokens)
+    lexer.removeErrorListeners()
+    lexer.addErrorListener(ParseErrorListener)
 
+    val tokens = new CommonTokenStream(lexer)
+    val parser = new SqlBaseParser(tokens)
+    parser.removeErrorListeners()
+    parser.addErrorListener(ParseErrorListener)
     val prestoVisitor = new PrestoSqlVisitorApp()
-    val node: Node    = prestoVisitor.visit(parser.statement)
-    val qnw           = node.asInstanceOf[QueryNoWith[QualifiedName, String]]
-    if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
+
+    try {
+      val node: Node = prestoVisitor.visit(parser.statement)
+      val qnw        = node.asInstanceOf[QueryNoWith[QualifiedName, String]]
+      if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
+    } catch {
+      case e: AntlrParseException => Left(ParseFailure(e.msg))
+    }
   }
 
   def mapExpression[A, B](f: A => B)(e: Expression[A]): Expression[B] = e match {
@@ -36,12 +58,12 @@ object ParseBuddy {
     case t: Table[A]               => Table(f(t.name))
   }
 
-  //def mapJoin[A, B](f: Expression[A] => B)(r: Relation[_]) = r match {
-  //  case j: Join[_] => j.criterea.map{jc => jc match {
-  //    case jo: JoinOn[A] => jo.map(f)
-  //  }}
-  //  case _          => None
-  //}
+  // def mapJoin[A, B](f: Expression[A] => B)(r: Relation[_]) = r match {
+  //   case j: Join[_] => j.criterea.map{jc => jc match {
+  //     case jo: JoinOn[A] => jo.map(f)
+  //   }}
+  //   case _          => None
+  // }
 
   def relationToList[A](r: Relation[A]): Seq[A] = r match {
     case j: Join[A]                => relationToList(j.left) ++ relationToList(j.right)
@@ -61,6 +83,7 @@ object ParseBuddy {
   case class ResolvedRelations(value: List[String])
   case class Resolutions(rsi: ResolvedSelectItems, rr: ResolvedRelations)
   def resolve[R](q: QueryNoWith[R, String])(implicit schema: Catalog): Option[Resolutions] = {
+    // TODO Be sure to handle ambiguous resolutions
     q.querySpecification.map { qs =>
       val ss: List[String] = qs.select.selectItems.flatMap {
         _ match {
@@ -72,14 +95,14 @@ object ParseBuddy {
         }
       }
       val resolvedSelect = ResolvedSelectItems(ss.flatMap(schema.nameColumn))
-      val resolved = qs.from.relations.map{rs =>
+      val resolved = qs.from.relations.map { rs =>
         rs.map { relation =>
-          // TODO specifying a function like rf should be considerably easier
-          def rf(r: R): String = r match { case q: QualifiedName => q.name }
-          mapRelation(rf)(relation)
-        }
-        .flatMap(relationToList)
-        .flatMap(schema.nameTable)
+            // TODO specifying a function like rf should be considerably easier
+            def rf(r: R): String = r match { case q: QualifiedName => q.name }
+            mapRelation(rf)(relation)
+          }
+          .flatMap(relationToList)
+          .flatMap(schema.nameTable)
       }
       val resolvedRelations = ResolvedRelations(resolved.getOrElse(List.empty))
       Resolutions(resolvedSelect, resolvedRelations)

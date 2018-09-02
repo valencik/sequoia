@@ -38,14 +38,16 @@ class ParseBuddySpec extends FlatSpec with Matchers {
   }
 
   it should "not produce nulls on bad input" in {
-    parse("func() over () as thing").map(_.querySpecification).right.get shouldBe None
-    parse("select x from").map(_.querySpecification).right.get.get.from.relations shouldBe None
+    parse("func() over () as thing").map(_.querySpecification).isLeft shouldBe true
+    parse("select x from").map(_.querySpecification).isLeft shouldBe true
   }
 
   it should "resolve select item names and table names in relations" in {
     val query = "select a, x, y from foo join bar on foo.a = bar.a"
     resolve(parse(query).right.get) shouldBe
-      Some(Resolutions(ResolvedSelectItems(List("db.foo.a", "db.bar.x", "db.bar.y")), ResolvedRelations(List("db.foo", "db.bar"))))
+      Some(
+        Resolutions(ResolvedSelectItems(List("db.foo.a", "db.bar.x", "db.bar.y")),
+                    ResolvedRelations(List("db.foo", "db.bar"))))
   }
 
   "ParseBuddy resolve" should "resolve fully qualified names in select clauses" in {
