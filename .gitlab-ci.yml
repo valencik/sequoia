@@ -14,6 +14,7 @@ before_script:
   # Install SBT
   - apt-get update -yqq
   - apt-get install sbt -yqq
+  - sbt update
 
 test:
   script:
