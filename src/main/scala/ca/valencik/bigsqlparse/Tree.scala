@@ -8,7 +8,8 @@ sealed trait SelectItem                                                         
 case class SingleColumn[A](expression: Expression[A], alias: Option[Identifier[A]]) extends SelectItem
 case class AllColumns(name: Option[QualifiedName])                                  extends SelectItem
 
-sealed trait Expression[+A]                                                                    extends Node
+sealed trait Expression[+A] extends Node
+// I am worried about this
 final case class Identifier[A](name: A)                                                        extends Expression[A]
 final case class BooleanExpression[A](left: Expression[A], op: Operator, right: Expression[A]) extends Expression[A]
 final case class ComparisonExpression[A](left: Expression[A], op: Comparison, right: Expression[A])

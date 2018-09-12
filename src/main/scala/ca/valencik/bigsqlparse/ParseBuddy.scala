@@ -58,13 +58,6 @@ object ParseBuddy {
     case t: Table[A]               => Table(f(t.name))
   }
 
-  // def mapJoin[A, B](f: Expression[A] => B)(r: Relation[_]) = r match {
-  //   case j: Join[_] => j.criterea.map{jc => jc match {
-  //     case jo: JoinOn[A] => jo.map(f)
-  //   }}
-  //   case _          => None
-  // }
-
   def relationToList[A](r: Relation[A]): Seq[A] = r match {
     case j: Join[A]                => relationToList(j.left) ++ relationToList(j.right)
     case sr: SampledRelation[A, _] => relationToList(sr.relation)
@@ -79,34 +72,86 @@ object ParseBuddy {
         "bar" -> Seq("x", "y", "z")
       )))
 
-  case class ResolvedSelectItems(value: List[String])
-  case class ResolvedRelations(value: List[String])
-  case class Resolutions(rsi: ResolvedSelectItems, rr: ResolvedRelations)
-  def resolve[R](q: QueryNoWith[R, String])(implicit schema: Catalog): Option[Resolutions] = {
-    // TODO Be sure to handle ambiguous resolutions
-    q.querySpecification.map { qs =>
-      val ss: List[String] = qs.select.selectItems.flatMap {
-        _ match {
-          // TODO BAD CAST
-          case s: SingleColumn[_] => {
-            s.expression match { case i: Identifier[_] => Some(i.name.asInstanceOf[String]); case _ => None }
+  sealed trait ResolvableRelation
+  case class ResolvedRelation(value: String)   extends ResolvableRelation
+  case class UnresolvedRelation(value: String) extends ResolvableRelation
+  def resolveRelations[R](q: QueryNoWith[R, String])(
+      implicit catalog: Catalog): QueryNoWith[ResolvableRelation, String] = {
+    val resolved = q.querySpecification.flatMap { qs =>
+      qs.from.relations.map { rs =>
+        rs.map { relation =>
+          def rf(r: R): ResolvableRelation = r match {
+            case q: QualifiedName => {
+              catalog.nameTable(q.name) match {
+                case Some(t) => ResolvedRelation(t)
+                case None    => UnresolvedRelation(q.name)
+              }
+
+            }
           }
-          case a: AllColumns => a.name.map(_.name)
+          mapRelation(rf)(relation)
         }
       }
-      val resolvedSelect = ResolvedSelectItems(ss.flatMap(schema.nameColumn))
-      val resolved = qs.from.relations.map { rs =>
-        rs.map { relation =>
-            // TODO specifying a function like rf should be considerably easier
-            def rf(r: R): String = r match { case q: QualifiedName => q.name }
-            mapRelation(rf)(relation)
-          }
-          .flatMap(relationToList)
-          .flatMap(schema.nameTable)
-      }
-      val resolvedRelations = ResolvedRelations(resolved.getOrElse(List.empty))
-      Resolutions(resolvedSelect, resolvedRelations)
     }
+    val from   = q.querySpecification.get.from.copy(relations = resolved)
+    val queryS = q.querySpecification.get.copy(from = from)
+    val qnw    = q.copy(querySpecification = Some(queryS))
+    qnw
+  }
+
+  sealed trait ResolvableReference
+  case class ResolvedReference(value: String)   extends ResolvableReference
+  case class UnresolvedReference(value: String) extends ResolvableReference
+
+  // TODO Handle ambiguity
+  def resolveColumn(c: String, relations: List[ResolvableRelation])(implicit catalog: Catalog): Option[String] =
+    relations.flatMap { r =>
+      val resoltion = r match {
+        case r: ResolvedRelation => catalog.nameColumnInTable(r.value)(c)
+        case _                   => None
+      }
+      println(s"Attempted to resolve $c with $r, and with result: $resoltion")
+      resoltion
+    }.headOption
+
+  def resolveReferences[R](q: QueryNoWith[ResolvableRelation, String])(
+      implicit catalog: Catalog): QueryNoWith[ResolvableRelation, String] = {
+    val x = q.querySpecification.map { qs =>
+      val resolvedRelations: List[ResolvableRelation] = qs.from.relations
+        .map { r =>
+          r.flatMap(relationToList(_))
+        }
+        .getOrElse(List.empty)
+      qs.select.selectItems.map { si =>
+        val sim: Option[String] = si match {
+          case sc: SingleColumn[_] =>
+            sc.expression match {
+              case e: Identifier[_] => {
+                val col = Option(e.name.asInstanceOf[String])
+                col.flatMap { c =>
+                  resolveColumn(c, resolvedRelations)
+                }
+              }
+              case _ => None
+            }
+          case a: AllColumns =>
+            a.name.flatMap { qn =>
+              // TODO qualifiedname's actually have parts i need to handle
+              catalog.nameTable(qn.name)
+            }
+        }
+        println(s"si: $si, sim: $sim")
+        val ref = sim match {
+          case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
+          case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
+        }
+        ref
+      }
+    }
+    val select = q.querySpecification.get.select.copy(selectItems = x.get)
+    val queryS = q.querySpecification.get.copy(select = select)
+    val qnw    = q.copy(querySpecification = Some(queryS))
+    qnw
   }
 
 }
@@ -122,7 +167,10 @@ object ParseBuddyApp extends App {
     if (!exitCommand(inputQuery)) {
       val q = parse(inputQuery)
       println(s"Parse: $q")
-      q.right.map(qnw => println(s"Resolved Columns: ${resolve(qnw)}"))
+      q.right.map(qnw => {
+        val resolvedColumns = resolveReferences(resolveRelations(qnw))
+        println(s"Resolved Columns: ${resolvedColumns}")
+      })
       inputLoop()
     }
   }

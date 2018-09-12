@@ -11,9 +11,9 @@ class CatalogSpec extends FlatSpec with Matchers {
   val catalog = new Catalog(m)
 
   "Catalog" should "resolve column names" in {
-    catalog.nameColumn("bah") shouldBe Some("b.ba.bah")
-    catalog.nameColumn("aaaa") shouldBe Some("a.aa.aaaa")
-    catalog.nameColumn("nope") shouldBe None
+    catalog.nameColumnInTable("ba")("bah") shouldBe Some("b.ba.bah")
+    catalog.nameColumnInTable("aa")("aaaa") shouldBe Some("a.aa.aaaa")
+    catalog.nameColumnInTable("b")("nope") shouldBe None
   }
 
   it should "resolve table names" in {
