@@ -89,3 +89,8 @@ case class QueryNoWith[R, E](querySpecification: Option[QuerySpecification[R, E]
                              orderBy: Option[OrderBy[E]],
                              limit: Option[Limit])
     extends Node
+
+case class With[R, E](recursive: Boolean, queries: List[WithQuery[R, E]]) extends Node
+case class WithQuery[R, E](name: Identifier[E], query: Query[R, E], columnNames: Option[List[RawIdentifier]])
+    extends Node
+case class Query[R, E](withz: Option[With[R, E]], queryNoWith: QueryNoWith[R, E]) extends Node

@@ -20,7 +20,7 @@ object ParseBuddy {
     }
   }
 
-  def parse(input: String): Either[ParseFailure, QueryNoWith[QualifiedName, String]] = {
+  def parse(input: String): Either[ParseFailure, Query[QualifiedName, String]] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     lexer.removeErrorListeners()
@@ -34,7 +34,7 @@ object ParseBuddy {
 
     try {
       val node: Node = prestoVisitor.visit(parser.statement)
-      val qnw        = node.asInstanceOf[QueryNoWith[QualifiedName, String]]
+      val qnw        = node.asInstanceOf[Query[QualifiedName, String]]
       if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
     } catch {
       case e: AntlrParseException => Left(ParseFailure(e.msg))
@@ -75,9 +75,8 @@ object ParseBuddy {
   sealed trait ResolvableRelation
   case class ResolvedRelation(value: String)   extends ResolvableRelation
   case class UnresolvedRelation(value: String) extends ResolvableRelation
-  def resolveRelations[R](q: QueryNoWith[R, String])(
-      implicit catalog: Catalog): QueryNoWith[ResolvableRelation, String] = {
-    val resolved = q.querySpecification.flatMap { qs =>
+  def resolveRelations[R](q: Query[R, String])(implicit catalog: Catalog): Query[ResolvableRelation, String] = {
+    val qnwr = q.queryNoWith.querySpecification.flatMap { qs =>
       qs.from.relations.map { rs =>
         rs.map { relation =>
           def rf(r: R): ResolvableRelation = r match {
@@ -93,10 +92,23 @@ object ParseBuddy {
         }
       }
     }
-    val from   = q.querySpecification.get.from.copy(relations = resolved)
-    val queryS = q.querySpecification.get.copy(from = from)
-    val qnw    = q.copy(querySpecification = Some(queryS))
-    qnw
+    val queriesResolved = q.withz.map { w =>
+      w.queries.map { wqs =>
+        wqs.copy(query = resolveRelations(wqs.query))
+      }
+    }
+    val withR = q.withz.flatMap { w: With[R, String] =>
+      {
+        queriesResolved.map { qrs =>
+          w.copy(queries = qrs)
+        }
+      }
+    }
+
+    val from: From[ResolvableRelation]                         = q.queryNoWith.querySpecification.get.from.copy(relations = qnwr)
+    val queryS: QuerySpecification[ResolvableRelation, String] = q.queryNoWith.querySpecification.get.copy(from = from)
+    val qnw: QueryNoWith[ResolvableRelation, String]           = q.queryNoWith.copy(querySpecification = Some(queryS))
+    Query(withR, qnw)
   }
 
   sealed trait ResolvableReference
@@ -114,9 +126,9 @@ object ParseBuddy {
       resoltion
     }.headOption
 
-  def resolveReferences[R](q: QueryNoWith[ResolvableRelation, String])(
-      implicit catalog: Catalog): QueryNoWith[ResolvableRelation, String] = {
-    val x = q.querySpecification.map { qs =>
+  def resolveReferences[R](q: Query[ResolvableRelation, String])(
+      implicit catalog: Catalog): Query[ResolvableRelation, String] = {
+    val x = q.queryNoWith.querySpecification.map { qs =>
       val resolvedRelations: List[ResolvableRelation] = qs.from.relations
         .map { r =>
           r.flatMap(relationToList(_))
@@ -148,10 +160,10 @@ object ParseBuddy {
         ref
       }
     }
-    val select = q.querySpecification.get.select.copy(selectItems = x.get)
-    val queryS = q.querySpecification.get.copy(select = select)
-    val qnw    = q.copy(querySpecification = Some(queryS))
-    qnw
+    val select = q.queryNoWith.querySpecification.get.select.copy(selectItems = x.get)
+    val queryS = q.queryNoWith.querySpecification.get.copy(select = select)
+    val qnw    = q.queryNoWith.copy(querySpecification = Some(queryS))
+    q.copy(queryNoWith = qnw)
   }
 
 }
