@@ -236,9 +236,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): Node = {
     val op = if (ctx.AND != null) AND else OR
-    BooleanExpression(visit(ctx.left).asInstanceOf[BooleanExpression[RawIdentifier]],
-                      op,
-                      visit(ctx.right).asInstanceOf[BooleanExpression[RawIdentifier]])
+    BooleanExpression(visit(ctx.left).asInstanceOf[QExpression], op, visit(ctx.right).asInstanceOf[QExpression])
   }
 
   override def visitValueExpressionDefault(ctx: SqlBaseParser.ValueExpressionDefaultContext): Node = {
