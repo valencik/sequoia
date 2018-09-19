@@ -11,3 +11,40 @@ This could be useful for learning about a data model.
 
 # How does Spark SQL resolve names?
 [`ExtractValue`](https://github.com/apache/spark/blob/4dc82259d81102e0cb48f4cb2e8075f80d899ac4/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/complexTypeExtractors.scala#L33)
+
+# Talk abstract
+SQL remains the ubiquitous tool of data reporting, analysis, and exploration.
+However, sharing context and common usage for datasets across teams is a manual and elective process, leading to poorly repeated patterns and bad habits.
+This talk will review a new system, written in Scala, which enables SQL query analysis such as finding commonly joined tables, tracking column lineage, and discovering unused columns.
+A primary focus of the effort is to increase data discovery among various data science teams.
+
+# Presentation notes
+- who am i
+- what is the problem?
+  - context is hard, lots of tables, lots of columns
+  - reports are organized, datasets organized, but tribal knowledge is still a thing
+  - would be nice to parse SQL for easier analysis
+- Presto SQL and Spark SQL
+  - Interestingly Spark SQL's grammar is a fork of Presto SQL
+  - Whether a good idea or not, this mostly solidfied the approach of using grammars
+  - I did however try using the parsers from those projects (see big jar)
+- ANTLR4
+  - Show toy example and giter8 template
+  - grammars for Presto, Spark, MySQL (which covers just about everything we use at work)
+  - in theory this approach leaves me with building the language application and not the parser
+- Language App
+  - Just build a giant tree of case classes for a query. ok now what?
+  - Show me all the columns accessed by SQL clause
+- Name resolution
+  - Working on simple queries
+  - To work on CTEs we should hopefully be able to just recurse on the sub queries with the same function
+  - working on CTEs... well it works on the sub queries but doesn't on the child queries
+  - Information is not being shared from the sub query to the child query
+  - Spark handles this as part of the analysis on Logical Plans
+- Query optimization
+  - If parts of your query are not needed they shouldn't be run
+  - This tool is currently ignorant of these database optimizations
+- What can it do?
+  - MAYBE aggregate columns used by clause
+  - MAYBE aggregate some stats on joins specifically
+  - BONUS sql query your sql queries
