@@ -82,22 +82,22 @@ object ParseBuddy {
       }
     }
     val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
-        rs.map { relation =>
-          def rf(r: R): ResolvableRelation = {
-            val rr = r match {
-              case q: QualifiedName => {
-                catalog.nameTable(q.name) match {
-                  case Some(t) => ResolvedRelation(t)
-                  case None    => UnresolvedRelation(q.name)
-                }
+      rs.map { relation =>
+        def rf(r: R): ResolvableRelation = {
+          val rr = r match {
+            case q: QualifiedName => {
+              catalog.nameTable(q.name) match {
+                case Some(t) => ResolvedRelation(t)
+                case None    => UnresolvedRelation(q.name)
               }
             }
-            println(s"(resolveRelations) attempted to resolve $r with result $rr")
-            rr
           }
-          mapRelation(rf)(relation)
+          println(s"(resolveRelations) attempted to resolve $r with result $rr")
+          rr
         }
+        mapRelation(rf)(relation)
       }
+    }
 
     val withR = q.withz.flatMap { w: With[R, String] =>
       {

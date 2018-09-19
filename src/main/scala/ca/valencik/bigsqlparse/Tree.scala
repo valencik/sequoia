@@ -69,16 +69,16 @@ sealed trait SampleType
 case object Bernoulli extends SampleType
 case object System    extends SampleType
 
-case class Select(selectItems: List[SelectItem])                   extends Node {
+case class Select(selectItems: List[SelectItem]) extends Node {
   def show: String = s"Select: $selectItems"
 }
-case class From[A](relations: Option[List[Relation[A]]])           extends Node {
+case class From[A](relations: Option[List[Relation[A]]]) extends Node {
   def show: String = if (relations.isDefined) s"From: ${relations.get}" else ""
 }
-case class Where[A](expression: Option[Expression[A]])             extends Node {
+case class Where[A](expression: Option[Expression[A]]) extends Node {
   def show: String = if (expression.isDefined) s"Where: ${expression.get}" else ""
 }
-case class GroupingElement[+A](groupingSet: List[Expression[A]])   extends Node {
+case class GroupingElement[+A](groupingSet: List[Expression[A]]) extends Node {
   def show: String = if (groupingSet.size >= 1) s"GroupingSet: ${groupingSet}" else ""
 }
 
@@ -86,7 +86,7 @@ case class GroupBy[+A](groupingElements: List[GroupingElement[A]]) extends Node 
   def show: String = if (groupingElements.size >= 1) s"GroupBy: ${groupingElements}" else ""
 }
 
-case class Having[A](expression: Option[Expression[A]])            extends Node {
+case class Having[A](expression: Option[Expression[A]]) extends Node {
   def show: String = if (expression.isDefined) s"Having: ${expression.get}" else ""
 }
 
@@ -107,7 +107,7 @@ case class OrderBy[E](items: List[SortItem[E]]) extends Node {
   def show: String = if (items.size >= 1) s"OrderBy: ${items}" else ""
 }
 
-case class Limit(value: String)                 extends Node {
+case class Limit(value: String) extends Node {
   def show: String = if (value != "") s"Limit: ${value}" else ""
 }
 
@@ -116,10 +116,14 @@ case class QueryNoWith[R, E](querySpecification: QuerySpecification[R, E],
                              limit: Option[Limit])
     extends Node {
   def show: String = {
-    val ob = if (orderBy.isDefined) orderBy.get.show else ""
-    val l = if (limit.isDefined) limit.get.show else ""
+    val ob         = if (orderBy.isDefined) orderBy.get.show else ""
+    val l          = if (limit.isDefined) limit.get.show else ""
     val components = List(querySpecification.show, ob, l)
-    components.filter{c => c != ""}.mkString("\n", "\n", "\n")
+    components
+      .filter { c =>
+        c != ""
+      }
+      .mkString("\n", "\n", "\n")
   }
 }
 
@@ -132,15 +136,23 @@ case class With[R, E](recursive: Boolean, queries: List[WithQuery[R, E]]) extend
 case class WithQuery[R, E](name: Identifier[E], query: Query[R, E], columnNames: Option[List[RawIdentifier]])
     extends Node {
   def show: String = {
-    val cn = if (columnNames.isDefined) columnNames.get.toString else ""
+    val cn         = if (columnNames.isDefined) columnNames.get.toString else ""
     val components = List(cn, query.show)
-    components.filter{c => c  != ""}.mkString(s"WithQuery $name as\n", "\n", "\n")
+    components
+      .filter { c =>
+        c != ""
+      }
+      .mkString(s"WithQuery $name as\n", "\n", "\n")
   }
 }
 case class Query[R, E](withz: Option[With[R, E]], queryNoWith: QueryNoWith[R, E]) extends Node {
   def show: String = {
-    val w = if (withz.isDefined) withz.get.show else ""
+    val w          = if (withz.isDefined) withz.get.show else ""
     val components = List(w, queryNoWith.show)
-    components.filter{c => c  != ""}.mkString("Query\n", "\n", "\n")
+    components
+      .filter { c =>
+        c != ""
+      }
+      .mkString("Query\n", "\n", "\n")
   }
 }
