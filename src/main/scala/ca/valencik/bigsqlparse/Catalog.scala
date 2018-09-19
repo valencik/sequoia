@@ -2,11 +2,7 @@ package ca.valencik.bigsqlparse
 
 import scala.collection.immutable.HashMap
 
-class Catalog(schemaMap: HashMap[String, HashMap[String, Seq[String]]]) {
-  type Column     = String
-  type TableName  = String
-  type SchemaName = String
-  type Schema     = HashMap[SchemaName, HashMap[TableName, Column]]
+class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]]) {
 
   def nameColumnInTable(relation: String)(c: String): Option[String] = {
     val nameParts = relation.split('.').toList
@@ -41,4 +37,9 @@ class Catalog(schemaMap: HashMap[String, HashMap[String, Seq[String]]]) {
     }
   }.headOption
 
+}
+object Catalog {
+  def apply(schema: HashMap[String, HashMap[String, Seq[String]]]): Catalog = new Catalog(schema)
+
+  def apply(): Catalog = new Catalog(HashMap.empty)
 }

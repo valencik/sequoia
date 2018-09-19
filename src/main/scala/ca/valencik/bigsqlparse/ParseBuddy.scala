@@ -65,7 +65,7 @@ object ParseBuddy {
     case t: Table[A]               => Seq(t.name)
   }
 
-  implicit val catalog = new Catalog(
+  implicit val catalog = Catalog(
     HashMap(
       "db" -> HashMap(
         "foo" -> Seq("a", "b", "c"),
