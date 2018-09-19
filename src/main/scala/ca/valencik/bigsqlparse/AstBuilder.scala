@@ -118,7 +118,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): QQueryNoWith = {
-    val qso = Option(visit(ctx.queryTerm).asInstanceOf[QQuerySpecification])
+    val qso = visit(ctx.queryTerm).asInstanceOf[QQuerySpecification]
     val orderBy = {
       if (ctx.sortItem != null)
         Some(OrderBy(ctx.sortItem.asScala.map(visit(_).asInstanceOf[SortItem[RawIdentifier]]).toList))

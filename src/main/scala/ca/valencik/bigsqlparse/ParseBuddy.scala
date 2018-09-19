@@ -76,27 +76,29 @@ object ParseBuddy {
   case class ResolvedRelation(value: String)   extends ResolvableRelation
   case class UnresolvedRelation(value: String) extends ResolvableRelation
   def resolveRelations[R](q: Query[R, String])(implicit catalog: Catalog): Query[ResolvableRelation, String] = {
-    val qnwr = q.queryNoWith.querySpecification.flatMap { qs =>
-      qs.from.relations.map { rs =>
-        rs.map { relation =>
-          def rf(r: R): ResolvableRelation = r match {
-            case q: QualifiedName => {
-              catalog.nameTable(q.name) match {
-                case Some(t) => ResolvedRelation(t)
-                case None    => UnresolvedRelation(q.name)
-              }
-
-            }
-          }
-          mapRelation(rf)(relation)
-        }
-      }
-    }
     val queriesResolved = q.withz.map { w =>
       w.queries.map { wqs =>
         wqs.copy(query = resolveRelations(wqs.query))
       }
     }
+    val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
+        rs.map { relation =>
+          def rf(r: R): ResolvableRelation = {
+            val rr = r match {
+              case q: QualifiedName => {
+                catalog.nameTable(q.name) match {
+                  case Some(t) => ResolvedRelation(t)
+                  case None    => UnresolvedRelation(q.name)
+                }
+              }
+            }
+            println(s"(resolveRelations) attempted to resolve $r with result $rr")
+            rr
+          }
+          mapRelation(rf)(relation)
+        }
+      }
+
     val withR = q.withz.flatMap { w: With[R, String] =>
       {
         queriesResolved.map { qrs =>
@@ -104,10 +106,9 @@ object ParseBuddy {
         }
       }
     }
-
-    val from: From[ResolvableRelation]                         = q.queryNoWith.querySpecification.get.from.copy(relations = qnwr)
-    val queryS: QuerySpecification[ResolvableRelation, String] = q.queryNoWith.querySpecification.get.copy(from = from)
-    val qnw: QueryNoWith[ResolvableRelation, String]           = q.queryNoWith.copy(querySpecification = Some(queryS))
+    val from: From[ResolvableRelation]                         = q.queryNoWith.querySpecification.from.copy(relations = qnwr)
+    val queryS: QuerySpecification[ResolvableRelation, String] = q.queryNoWith.querySpecification.copy(from = from)
+    val qnw: QueryNoWith[ResolvableRelation, String]           = q.queryNoWith.copy(querySpecification = queryS)
     Query(withR, qnw)
   }
 
@@ -122,47 +123,48 @@ object ParseBuddy {
         case r: ResolvedRelation => catalog.nameColumnInTable(r.value)(c)
         case _                   => None
       }
-      println(s"Attempted to resolve $c with $r, and with result: $resoltion")
+      println(s"(resolveColumn) Attempted to resolve $c with $r, and with result: $resoltion")
       resoltion
     }.headOption
 
   def resolveReferences[R](q: Query[ResolvableRelation, String])(
       implicit catalog: Catalog): Query[ResolvableRelation, String] = {
-    val x = q.queryNoWith.querySpecification.map { qs =>
-      val resolvedRelations: List[ResolvableRelation] = qs.from.relations
-        .map { r =>
-          r.flatMap(relationToList(_))
-        }
-        .getOrElse(List.empty)
-      qs.select.selectItems.map { si =>
-        val sim: Option[String] = si match {
-          case sc: SingleColumn[_] =>
-            sc.expression match {
-              case e: Identifier[_] => {
-                val col = Option(e.name.asInstanceOf[String])
-                col.flatMap { c =>
-                  resolveColumn(c, resolvedRelations)
-                }
-              }
-              case _ => None
-            }
-          case a: AllColumns =>
-            a.name.flatMap { qn =>
-              // TODO qualifiedname's actually have parts i need to handle
-              catalog.nameTable(qn.name)
-            }
-        }
-        println(s"si: $si, sim: $sim")
-        val ref = sim match {
-          case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
-          case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
-        }
-        ref
+    val qs = q.queryNoWith.querySpecification
+    val resolvedRelations: List[ResolvableRelation] = qs.from.relations
+      .map { r =>
+        r.flatMap(relationToList(_))
       }
+      .getOrElse(List.empty)
+    println(s"(resolveReferences) Resolved Relations: $resolvedRelations")
+
+    val selectItemsResolved = qs.select.selectItems.map { si =>
+      val sim: Option[String] = si match {
+        case sc: SingleColumn[_] =>
+          sc.expression match {
+            case e: Identifier[_] => {
+              val col = Option(e.name.asInstanceOf[String])
+              col.flatMap { c =>
+                resolveColumn(c, resolvedRelations)
+              }
+            }
+            case _ => None
+          }
+        case a: AllColumns =>
+          a.name.flatMap { qn =>
+            // TODO qualifiedname's actually have parts i need to handle
+            catalog.nameTable(qn.name)
+          }
+      }
+      println(s"(resolveReferences) si: $si, sim: $sim")
+      val ref = sim match {
+        case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
+        case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
+      }
+      ref
     }
-    val select = q.queryNoWith.querySpecification.get.select.copy(selectItems = x.get)
-    val queryS = q.queryNoWith.querySpecification.get.copy(select = select)
-    val qnw    = q.queryNoWith.copy(querySpecification = Some(queryS))
+    val select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
+    val queryS = q.queryNoWith.querySpecification.copy(select = select)
+    val qnw    = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
 
@@ -175,13 +177,14 @@ object ParseBuddyApp extends App {
   def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)
 
   def inputLoop(): Unit = {
-    val inputQuery = scala.io.StdIn.readLine("ParseBuddy> ")
+    val inputQuery = scala.io.StdIn.readLine("\nParseBuddy> ")
     if (!exitCommand(inputQuery)) {
       val q = parse(inputQuery)
-      println(s"Parse: $q")
+      println(s"\n(main) Parse: $q \n")
       q.right.map(qnw => {
         val resolvedColumns = resolveReferences(resolveRelations(qnw))
-        println(s"Resolved Columns: ${resolvedColumns}")
+        println(s"(main) Resolved Columns: ${resolvedColumns}")
+        println(s"(main) Resolved Columns: ${resolvedColumns.show}")
       })
       inputLoop()
     }
