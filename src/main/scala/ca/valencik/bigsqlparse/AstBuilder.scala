@@ -174,7 +174,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitSingleGroupingSet(ctx: SqlBaseParser.SingleGroupingSetContext): Node = {
-    val ges = ctx.groupingExpressions.expression.asScala.map(visit(_).asInstanceOf[QIdentifier]).toList
+    val ges = ctx.groupingSet.expression.asScala.map(visit(_).asInstanceOf[QIdentifier]).toList
     GroupingElement(ges)
   }
 
