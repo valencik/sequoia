@@ -122,7 +122,9 @@ object ParseBuddy {
   // TODO Handle ambiguity
   def resolveColumn(acc: Catalog, c: Identifier[_], relations: List[ResolvableRelation]): Option[String] = {
     println(acc)
-    relations.flatMap {r => acc.lookupColumnInRelation(c, r)}.headOption
+    relations.flatMap { r =>
+      acc.lookupColumnInRelation(c, r)
+    }.headOption
   }
 
   def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, String]): Query[ResolvableRelation, String] = {
@@ -140,7 +142,7 @@ object ParseBuddy {
           // TODO perhaps want expressionMap back here
           sc.expression match {
             case e: Identifier[_] => resolveColumn(acc, e, resolvedRelations)
-            case _ => None
+            case _                => None
           }
         case _ => ???
       }
