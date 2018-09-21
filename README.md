@@ -18,12 +18,16 @@ However, sharing context and common usage for datasets across teams is a manual 
 This talk will review a new system, written in Scala, which enables SQL query analysis such as finding commonly joined tables, tracking column lineage, and discovering unused columns.
 A primary focus of the effort is to increase data discovery among various data science teams.
 
+# Alicia Questions
+- Why do other people want to know about this?
+
 # Presentation notes
 - who am i
 - what is the problem?
   - context is hard, lots of tables, lots of columns
   - reports are organized, datasets organized, but tribal knowledge is still a thing
   - would be nice to parse SQL for easier analysis
+  - everyone who uses this column applies this filter, you should too
 - Presto SQL and Spark SQL
   - Interestingly Spark SQL's grammar is a fork of Presto SQL
   - Whether a good idea or not, this mostly solidfied the approach of using grammars
@@ -44,7 +48,34 @@ A primary focus of the effort is to increase data discovery among various data s
 - Query optimization
   - If parts of your query are not needed they shouldn't be run
   - This tool is currently ignorant of these database optimizations
+  - query: with everything as (select * from foo) select a from everything
 - What can it do?
   - MAYBE aggregate columns used by clause
   - MAYBE aggregate some stats on joins specifically
   - BONUS sql query your sql queries
+
+This query works and demonstrates name resolution carrying from one namedQuery to another:
+```
+with firstq AS
+  (SELECT year, month
+  FROM hive.raw_kafka.support_router LIMIT 4),
+  secondq AS
+  (SELECT year, month
+  FROM firstq LIMIT 2)
+SELECT year, month
+FROM secondq
+```
+
+This query works and shows of a subqueryExpression:
+```
+WITH firstq AS
+  (SELECT year, month
+  FROM hive.raw_kafka.support_router LIMIT 4),
+  secondq AS
+  (select
+    year,
+    (select count(month) from firstq where year = 2018 and month = 9) num
+  from hive.raw_kafka.support_router
+  limit 2)
+  select * from secondq
+```
