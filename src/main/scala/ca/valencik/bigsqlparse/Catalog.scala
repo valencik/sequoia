@@ -2,7 +2,8 @@ package ca.valencik.bigsqlparse
 
 import scala.collection.immutable.HashMap
 
-class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]]) {
+case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]],
+                            tempViews: HashMap[String, Seq[String]]) {
 
   def nameColumnInTable(relation: String)(c: String): Option[String] = {
     val nameParts = relation.split('.').toList
@@ -28,18 +29,31 @@ class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]])
     }
   }
 
-  def nameTable(t: String): Option[String] = {
-    schemaMap.flatMap {
-      case (schemaName, tables) =>
-        tables
-          .filter { case (tableName, _) => tableName.toLowerCase == t.toLowerCase }
-          .map { case (table, _) => s"$schemaName.$table" }
+  def lookupTableName(tn: String): Option[QualifiedName] = {
+    tn.toLowerCase.split('.') match {
+      case Array(table) =>
+        if (tempViews.keySet.contains(table)) Some(QualifiedName(table)) else Some(QualifiedName(s"public.$table"))
+      case Array(db, table) =>
+        schemaMap.get(db).flatMap { d =>
+          d.get(table).map { _ =>
+            QualifiedName(s"$db.$table")
+          }
+        }
+      case Array(schema, db, table) => Some(QualifiedName(s"$schema.$db.$table"))
+      case _                        => None
     }
-  }.headOption
+  }
+
+  def lookupQualifiedName(qn: QualifiedName): Option[QualifiedName] = lookupTableName(qn.name)
+
+  def addTempViewColumn(table: String)(column: String): Catalog = {
+    val cs = tempViews.getOrElse(table, Seq.empty) :+ column
+    this.copy(tempViews = tempViews.updated(table, cs))
+  }
 
 }
 object Catalog {
-  def apply(schema: HashMap[String, HashMap[String, Seq[String]]]): Catalog = new Catalog(schema)
+  def apply(schema: HashMap[String, HashMap[String, Seq[String]]]): Catalog = new Catalog(schema, HashMap.empty)
 
-  def apply(): Catalog = new Catalog(HashMap.empty)
+  def apply(): Catalog = new Catalog(HashMap.empty, HashMap.empty)
 }

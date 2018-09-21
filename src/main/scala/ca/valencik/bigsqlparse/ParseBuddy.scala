@@ -3,6 +3,10 @@ package ca.valencik.bigsqlparse
 import scala.collection.immutable.HashMap
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
 
+sealed trait ResolvableRelation
+case class ResolvedRelation(value: String)   extends ResolvableRelation
+case class UnresolvedRelation(value: String) extends ResolvableRelation
+
 object ParseBuddy {
 
   case class ParseFailure(error: String)
@@ -72,34 +76,26 @@ object ParseBuddy {
         "bar" -> Seq("x", "y", "z")
       )))
 
-  sealed trait ResolvableRelation
-  case class ResolvedRelation(value: String)   extends ResolvableRelation
-  case class UnresolvedRelation(value: String) extends ResolvableRelation
-  def resolveRelations[R](q: Query[R, String])(implicit catalog: Catalog): Query[ResolvableRelation, String] = {
+  def resolveRelation(qn: QualifiedName)(implicit catalog: Catalog): ResolvableRelation = {
+    catalog
+      .lookupQualifiedName(qn)
+      .map { q =>
+        ResolvedRelation(q.name)
+      }
+      .getOrElse(UnresolvedRelation("WTF"))
+  }
+  def resolveRelations(q: Query[QualifiedName, String])(
+      implicit catalog: Catalog): Query[ResolvableRelation, String] = {
     val queriesResolved = q.withz.map { w =>
       w.queries.map { wqs =>
         wqs.copy(query = resolveRelations(wqs.query))
       }
     }
     val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
-      rs.map { relation =>
-        def rf(r: R): ResolvableRelation = {
-          val rr = r match {
-            case q: QualifiedName => {
-              catalog.nameTable(q.name) match {
-                case Some(t) => ResolvedRelation(t)
-                case None    => UnresolvedRelation(q.name)
-              }
-            }
-          }
-          println(s"(resolveRelations) attempted to resolve $r with result $rr")
-          rr
-        }
-        mapRelation(rf)(relation)
-      }
+      rs.map { mapRelation(resolveRelation)(_) }
     }
 
-    val withR = q.withz.flatMap { w: With[R, String] =>
+    val withR = q.withz.flatMap { w: With[QualifiedName, String] =>
       {
         queriesResolved.map { qrs =>
           w.copy(queries = qrs)
@@ -149,11 +145,7 @@ object ParseBuddy {
             }
             case _ => None
           }
-        case a: AllColumns =>
-          a.name.flatMap { qn =>
-            // TODO qualifiedname's actually have parts i need to handle
-            catalog.nameTable(qn.name)
-          }
+        case _ => ???
       }
       println(s"(resolveReferences) si: $si, sim: $sim")
       val ref = sim match {

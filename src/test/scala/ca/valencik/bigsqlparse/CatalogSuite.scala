@@ -17,15 +17,19 @@ class CatalogSpec extends FlatSpec with Matchers {
   }
 
   it should "resolve table names" in {
-    catalog.nameTable("ba") shouldBe Some("b.ba")
-    catalog.nameTable("aa") shouldBe Some("a.aa")
-    catalog.nameTable("bah") shouldBe None
-    catalog.nameTable("nope") shouldBe None
+    catalog.lookupTableName("b.ba") shouldBe Some(QualifiedName("b.ba"))
+    catalog.lookupTableName("b.ba.baa") shouldBe Some(QualifiedName("b.ba.baa"))
+    catalog.lookupTableName("a.aa") shouldBe Some(QualifiedName("a.aa"))
+    catalog.lookupTableName("bah") shouldBe Some(QualifiedName("public.bah"))
+    catalog.lookupTableName("notdb.nope") shouldBe None
+    catalog.lookupTableName("1.2.3.4") shouldBe None
   }
 
-  it should "not resolve any names when empty" in {
-    val emptyCatalog = Catalog()
-    emptyCatalog.nameTable("anything") shouldBe None
-    emptyCatalog.nameColumnInTable("foo")("bar") shouldBe None
+  it should "return a new catalog with updated tempViews in addTempViewColumn" in {
+    val emptyCatalog                               = Catalog()
+    val expectedView: HashMap[String, Seq[String]] = HashMap("cats" -> Seq("name"))
+    val actual                                     = emptyCatalog.addTempViewColumn("cats")("name")
+    actual.tempViews shouldBe expectedView
+    actual.schemaMap shouldBe HashMap.empty
   }
 }
