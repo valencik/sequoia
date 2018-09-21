@@ -73,7 +73,7 @@ object ParseBuddy {
     case t: Table[A]               => Seq(t.name)
   }
 
-  implicit val catalog = Catalog(
+  val catalog = Catalog(
     HashMap(
       "db" -> HashMap(
         "foo" -> Seq("a", "b", "c"),
@@ -120,18 +120,19 @@ object ParseBuddy {
   }
 
   // TODO Handle ambiguity
-  def resolveColumn(c: String, relations: List[ResolvableRelation])(implicit catalog: Catalog): Option[String] =
+  def resolveColumn(acc: Catalog, c: String, relations: List[ResolvableRelation]): Option[String] = {
+    println(acc)
     relations.flatMap { r =>
       val resoltion = r match {
-        case r: ResolvedRelation => catalog.nameColumnInTable(r.value)(c)
+        case r: ResolvedRelation => catalog.nameColumnInTable(r.value)(c.toLowerCase())
         case _                   => None
       }
       println(s"(resolveColumn) Attempted to resolve $c with $r, and with result: $resoltion")
       resoltion
     }.headOption
+  }
 
-  def resolveReferences[R](q: Query[ResolvableRelation, String])(
-      implicit catalog: Catalog): Query[ResolvableRelation, String] = {
+  def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, String]): Query[ResolvableRelation, String] = {
     val qs = q.queryNoWith.querySpecification
     val resolvedRelations: List[ResolvableRelation] = qs.from.relations
       .map { r =>
@@ -147,7 +148,7 @@ object ParseBuddy {
             case e: Identifier[_] => {
               val col = Option(e.name.asInstanceOf[String])
               col.flatMap { c =>
-                resolveColumn(c, resolvedRelations)
+                resolveColumn(acc, c, resolvedRelations)
               }
             }
             case _ => None

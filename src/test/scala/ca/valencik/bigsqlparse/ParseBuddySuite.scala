@@ -40,7 +40,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
     parse("select x from").isLeft shouldBe true
   }
 
-  def catalog =
+  def catalog: Catalog =
     Catalog(
       HashMap(
         "db" -> HashMap(
@@ -82,6 +82,60 @@ class ParseBuddySpec extends FlatSpec with Matchers {
     resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
       Table(ResolvedRelation("public.fake")))
     resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+  }
+
+  "ParseBuddy Resolving References in QueryNoWith" should "resolve simple statements" in {
+    val acc      = catalog
+    val q        = parse("select a from db.foo").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(ResolvedReference("db.foo.a")), None))
+  }
+
+  it should "resolve references to public if relation is not in catalog" in {
+    val acc      = catalog
+    val q        = parse("select a from fake").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("public.fake")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(ResolvedReference("public.fake.a")), None))
+  }
+
+  "ParseBuddy Resolving References in QueryWith" should "resolve cte statements" in {
+    val acc      = catalog
+    val q        = parse("with f as (select a from db.foo) select a from f").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(ResolvedReference("cteAlias.f.a")), None))
+  }
+
+  it should "resolve references to public if relation is not in catalog" in {
+    val acc      = catalog
+    val q        = parse("with f as (select a from fake) select a from f").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("public.fake")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(ResolvedReference("cteAlias.f.a")), None))
+  }
+
+  it should "not resolve references if reference is not in tempView from cte" in {
+    val acc      = catalog
+    val q        = parse("with f as (select a from fake) select b from f").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("public.fake")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(UnresolvedReference("b")), None))
+    assert(
+      resolved.queryNoWith.querySpecification.select.selectItems != List(
+        SingleColumn(Identifier(ResolvedReference("cteAlias.f.b")), None)))
   }
 
 }
