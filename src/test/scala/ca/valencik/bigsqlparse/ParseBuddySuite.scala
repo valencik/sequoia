@@ -3,6 +3,8 @@ package ca.valencik.bigsqlparse
 import org.scalatest._
 import ca.valencik.bigsqlparse.ParseBuddy._
 
+import scala.collection.mutable.HashMap
+
 class ParseBuddySpec extends FlatSpec with Matchers {
 
   "ParseBuddy" should "parse valid SQL queries" in {
@@ -36,6 +38,50 @@ class ParseBuddySpec extends FlatSpec with Matchers {
   it should "not produce nulls on bad input" in {
     parse("func() over () as thing").isLeft shouldBe true
     parse("select x from").isLeft shouldBe true
+  }
+
+  def catalog =
+    Catalog(
+      HashMap(
+        "db" -> HashMap(
+          "foo" -> Seq("a", "b", "c"),
+          "bar" -> Seq("x", "y", "z")
+        )))
+
+  "ParseBuddy Resolving QueryNoWith" should "resolve simple statements" in {
+    val q        = parse("select a from db.foo").right.get
+    val resolved = resolveRelations(catalog, q, None)
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("db.foo")))
+  }
+
+  it should "resolve to public if the relation is not in the catalog" in {
+    val q        = parse("select a from fake").right.get
+    val resolved = resolveRelations(catalog, q, None)
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("public.fake")))
+  }
+
+  "ParseBuddy Resolving QueryWith" should "resolve simple statements" in {
+    val q        = parse("with f as (select a from db.foo) select a from f").right.get
+    val resolved = resolveRelations(catalog, q, None)
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+  }
+
+  it should "resolve to public if the relation is not an alias" in {
+    val q        = parse("with f as (select a from db.foo) select a from fake").right.get
+    val resolved = resolveRelations(catalog, q, None)
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("public.fake")))
+  }
+
+  it should "resolve even if the named query usese a public table?" in {
+    val q        = parse("with f as (select a from fake) select a from f").right.get
+    val resolved = resolveRelations(catalog, q, None)
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("public.fake")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
   }
 
 }
