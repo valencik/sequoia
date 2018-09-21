@@ -120,16 +120,9 @@ object ParseBuddy {
   }
 
   // TODO Handle ambiguity
-  def resolveColumn(acc: Catalog, c: String, relations: List[ResolvableRelation]): Option[String] = {
+  def resolveColumn(acc: Catalog, c: Identifier[_], relations: List[ResolvableRelation]): Option[String] = {
     println(acc)
-    relations.flatMap { r =>
-      val resoltion = r match {
-        case r: ResolvedRelation => catalog.nameColumnInTable(r.value)(c.toLowerCase())
-        case _                   => None
-      }
-      println(s"(resolveColumn) Attempted to resolve $c with $r, and with result: $resoltion")
-      resoltion
-    }.headOption
+    relations.flatMap {r => acc.lookupColumnInRelation(c, r)}.headOption
   }
 
   def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, String]): Query[ResolvableRelation, String] = {
@@ -144,13 +137,9 @@ object ParseBuddy {
     val selectItemsResolved = qs.select.selectItems.map { si =>
       val sim: Option[String] = si match {
         case sc: SingleColumn[_] =>
+          // TODO perhaps want expressionMap back here
           sc.expression match {
-            case e: Identifier[_] => {
-              val col = Option(e.name.asInstanceOf[String])
-              col.flatMap { c =>
-                resolveColumn(acc, c, resolvedRelations)
-              }
-            }
+            case e: Identifier[_] => resolveColumn(acc, e, resolvedRelations)
             case _ => None
           }
         case _ => ???
