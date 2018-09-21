@@ -1,7 +1,7 @@
 package ca.valencik.bigsqlparse
 
 import org.scalatest._
-import scala.collection.immutable.HashMap
+import scala.collection.mutable.HashMap
 
 class CatalogSpec extends FlatSpec with Matchers {
 
@@ -26,10 +26,10 @@ class CatalogSpec extends FlatSpec with Matchers {
   }
 
   it should "return a new catalog with updated tempViews in addTempViewColumn" in {
-    val emptyCatalog                               = Catalog()
+    val mutCatalog                                 = Catalog()
     val expectedView: HashMap[String, Seq[String]] = HashMap("cats" -> Seq("name"))
-    val actual                                     = emptyCatalog.addTempViewColumn("cats")("name")
-    actual.tempViews shouldBe expectedView
-    actual.schemaMap shouldBe HashMap.empty
+    mutCatalog.addTempViewColumn("cats")("name")
+    mutCatalog.tempViews shouldBe expectedView
+    mutCatalog.schemaMap shouldBe HashMap.empty
   }
 }

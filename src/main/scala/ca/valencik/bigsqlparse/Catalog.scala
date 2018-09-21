@@ -1,6 +1,6 @@
 package ca.valencik.bigsqlparse
 
-import scala.collection.immutable.HashMap
+import scala.collection.mutable.HashMap
 
 case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]],
                             tempViews: HashMap[String, Seq[String]]) {
@@ -32,7 +32,8 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
   def lookupTableName(tn: String): Option[QualifiedName] = {
     tn.toLowerCase.split('.') match {
       case Array(table) =>
-        if (tempViews.keySet.contains(table)) Some(QualifiedName(table)) else Some(QualifiedName(s"public.$table"))
+        if (tempViews.keySet.contains(table)) Some(QualifiedName(s"cteAlias.$table"))
+        else Some(QualifiedName(s"public.$table"))
       case Array(db, table) =>
         schemaMap.get(db).flatMap { d =>
           d.get(table).map { _ =>
@@ -46,9 +47,17 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
 
   def lookupQualifiedName(qn: QualifiedName): Option[QualifiedName] = lookupTableName(qn.name)
 
-  def addTempViewColumn(table: String)(column: String): Catalog = {
+  def addTempViewColumn(table: String)(column: String): Unit = {
     val cs = tempViews.getOrElse(table, Seq.empty) :+ column
-    this.copy(tempViews = tempViews.updated(table, cs))
+    tempViews.update(table, cs)
+  }
+
+  def lookupAndMaybeModify(alias: Option[Identifier[String]], qn: QualifiedName): Option[QualifiedName] = {
+    val maybeQn = lookupQualifiedName(qn)
+    // MUTATION
+    if (maybeQn.isDefined && alias.isDefined)
+      addTempViewColumn(alias.get.name.toLowerCase())(maybeQn.get.name.toLowerCase())
+    maybeQn
   }
 
 }

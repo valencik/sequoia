@@ -1,11 +1,15 @@
 package ca.valencik.bigsqlparse
 
-import scala.collection.immutable.HashMap
+import scala.collection.mutable.HashMap
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
 
 sealed trait ResolvableRelation
 case class ResolvedRelation(value: String)   extends ResolvableRelation
 case class UnresolvedRelation(value: String) extends ResolvableRelation
+
+sealed trait ResolvableReference
+case class ResolvedReference(value: String)   extends ResolvableReference
+case class UnresolvedReference(value: String) extends ResolvableReference
 
 object ParseBuddy {
 
@@ -76,23 +80,30 @@ object ParseBuddy {
         "bar" -> Seq("x", "y", "z")
       )))
 
-  def resolveRelation(qn: QualifiedName)(implicit catalog: Catalog): ResolvableRelation = {
-    catalog
-      .lookupQualifiedName(qn)
+  def resolveRelation(acc: Catalog, alias: Option[Identifier[String]], qn: QualifiedName): ResolvableRelation = {
+    acc
+      .lookupAndMaybeModify(alias, qn)
       .map { q =>
         ResolvedRelation(q.name)
       }
-      .getOrElse(UnresolvedRelation("WTF"))
+      .getOrElse(UnresolvedRelation(qn.name))
   }
-  def resolveRelations(q: Query[QualifiedName, String])(
-      implicit catalog: Catalog): Query[ResolvableRelation, String] = {
+  def resolveRelations(acc: Catalog,
+                       q: Query[QualifiedName, String],
+                       alias: Option[Identifier[String]]): Query[ResolvableRelation, String] = {
     val queriesResolved = q.withz.map { w =>
       w.queries.map { wqs =>
-        wqs.copy(query = resolveRelations(wqs.query))
+        // each one of these withquery names needs to become a temp view
+        wqs.copy(query = resolveRelations(acc, wqs.query, Some(wqs.name)))
       }
     }
+    // the resolution here needs to use the updated catalog with temp views
     val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
-      rs.map { mapRelation(resolveRelation)(_) }
+      val resolvedRelations: List[Relation[ResolvableRelation]] = rs.map(mapRelation { qn: QualifiedName =>
+        resolveRelation(acc, alias, qn)
+      }(_))
+      println(s"-- QNW Resolution with alias: ${alias} and resolvedRelations: ${resolvedRelations}")
+      resolvedRelations
     }
 
     val withR = q.withz.flatMap { w: With[QualifiedName, String] =>
@@ -107,10 +118,6 @@ object ParseBuddy {
     val qnw: QueryNoWith[ResolvableRelation, String]           = q.queryNoWith.copy(querySpecification = queryS)
     Query(withR, qnw)
   }
-
-  sealed trait ResolvableReference
-  case class ResolvedReference(value: String)   extends ResolvableReference
-  case class UnresolvedReference(value: String) extends ResolvableReference
 
   // TODO Handle ambiguity
   def resolveColumn(c: String, relations: List[ResolvableRelation])(implicit catalog: Catalog): Option[String] =
@@ -174,9 +181,9 @@ object ParseBuddyApp extends App {
       val q = parse(inputQuery)
       println(s"\n(main) Parse: $q \n")
       q.right.map(qnw => {
-        val resolvedColumns = resolveReferences(resolveRelations(qnw))
-        println(s"(main) Resolved Columns: ${resolvedColumns}")
-        println(s"(main) Resolved Columns: ${resolvedColumns.show}")
+        val resolved = resolveRelations(catalog, qnw, None)
+        println(s"(main) Resolved Relations: ${resolved}")
+        println(s"(main) Resolved Relations: ${resolved.show}")
       })
       inputLoop()
     }
