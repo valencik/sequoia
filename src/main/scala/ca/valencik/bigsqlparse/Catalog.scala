@@ -48,7 +48,7 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
     tempViews.update(table, cs)
   }
 
-  def lookupAndMaybeModify(alias: Option[Identifier[String]], qn: QualifiedName): Option[QualifiedName] = {
+  def lookupAndMaybeModify(alias: Option[RawIdentifier], qn: QualifiedName): Option[QualifiedName] = {
     val maybeQn = lookupQualifiedName(qn)
     // MUTATION
     if (maybeQn.isDefined && alias.isDefined)

@@ -28,7 +28,7 @@ object ParseBuddy {
     }
   }
 
-  def parse(input: String): Either[ParseFailure, Query[QualifiedName, String]] = {
+  def parse(input: String): Either[ParseFailure, Query[QualifiedName, RawIdentifier]] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     lexer.removeErrorListeners()
@@ -42,7 +42,7 @@ object ParseBuddy {
 
     try {
       val node: Node = prestoVisitor.visit(parser.statement)
-      val qnw        = node.asInstanceOf[Query[QualifiedName, String]]
+      val qnw        = node.asInstanceOf[Query[QualifiedName, RawIdentifier]]
       if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
     } catch {
       case e: AntlrParseException => Left(ParseFailure(e.msg))
@@ -80,7 +80,7 @@ object ParseBuddy {
         "bar" -> Seq("x", "y", "z")
       )))
 
-  def resolveRelation(acc: Catalog, alias: Option[Identifier[String]], qn: QualifiedName): ResolvableRelation = {
+  def resolveRelation(acc: Catalog, alias: Option[RawIdentifier], qn: QualifiedName): ResolvableRelation = {
     acc
       .lookupAndMaybeModify(alias, qn)
       .map { q =>
@@ -89,12 +89,12 @@ object ParseBuddy {
       .getOrElse(UnresolvedRelation(qn.name))
   }
   def resolveRelations(acc: Catalog,
-                       q: Query[QualifiedName, String],
-                       alias: Option[Identifier[String]]): Query[ResolvableRelation, String] = {
+                       q: Query[QualifiedName, RawIdentifier],
+                       alias: Option[RawIdentifier]): Query[ResolvableRelation, RawIdentifier] = {
     val queriesResolved = q.withz.map { w =>
       w.queries.map { wqs =>
         // each one of these withquery names needs to become a temp view
-        wqs.copy(query = resolveRelations(acc, wqs.query, Some(wqs.name)))
+        wqs.copy(query = resolveRelations(acc, wqs.query, Some(wqs.name.name)))
       }
     }
     // the resolution here needs to use the updated catalog with temp views
@@ -106,7 +106,7 @@ object ParseBuddy {
       resolvedRelations
     }
 
-    val withR = q.withz.flatMap { w: With[QualifiedName, String] =>
+    val withR = q.withz.flatMap { w: With[QualifiedName, RawIdentifier] =>
       {
         queriesResolved.map { qrs =>
           w.copy(queries = qrs)
@@ -114,8 +114,8 @@ object ParseBuddy {
       }
     }
     val from: From[ResolvableRelation]                         = q.queryNoWith.querySpecification.from.copy(relations = qnwr)
-    val queryS: QuerySpecification[ResolvableRelation, String] = q.queryNoWith.querySpecification.copy(from = from)
-    val qnw: QueryNoWith[ResolvableRelation, String]           = q.queryNoWith.copy(querySpecification = queryS)
+    val queryS: QuerySpecification[ResolvableRelation, RawIdentifier] = q.queryNoWith.querySpecification.copy(from = from)
+    val qnw: QueryNoWith[ResolvableRelation, RawIdentifier]           = q.queryNoWith.copy(querySpecification = queryS)
     Query(withR, qnw)
   }
 
@@ -125,7 +125,7 @@ object ParseBuddy {
     relations.flatMap {r => acc.lookupColumnInRelation(c, r)}.headOption
   }
 
-  def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, String]): Query[ResolvableRelation, String] = {
+  def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, RawIdentifier]): Query[ResolvableRelation, RawIdentifier] = {
     val qs = q.queryNoWith.querySpecification
     val resolvedRelations: List[ResolvableRelation] = qs.from.relations
       .map { r =>
