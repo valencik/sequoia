@@ -124,7 +124,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       SingleColumn(Identifier(ResolvedReference("cteAlias.f.a")), None))
   }
 
-  it should "not resolve references if reference is not in tempView from cte" in {
+  ignore should "not resolve references if reference is not in tempView from cte" in {
     val acc      = catalog
     val q        = parse("with f as (select a from fake) select b from f").right.get
     val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
