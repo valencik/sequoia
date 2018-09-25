@@ -12,15 +12,18 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
       case Array("public", table)   => if (lookupTableName(table).isDefined) Some(s"public.$table.$c") else None
       case Array("cteAlias", table) => if (lookupTableName(table).isDefined) Some(s"cteAlias.$table.$c") else None
       case Array(db, table) => {
-        val dbMap = schemaMap.get(db)
-        val columns =
-          if (lookupTableName(table).isDefined && dbMap.isDefined)
-            dbMap.get.get(table).getOrElse(tempViews.get(table).get)
-          else Seq.empty
+        val columns = getEffectiveColumns(db, table)
         if (columns.exists(_ == c.toLowerCase())) Some(s"$db.$table.$c") else None
       }
       case _ => None
     }
+  }
+
+  def getEffectiveColumns(db: String, table: String): Seq[String] = {
+    val dbMap = schemaMap.get(db)
+    if (lookupTableName(table).isDefined && dbMap.isDefined)
+      dbMap.get.get(table).getOrElse(tempViews.get(table).get)
+    else Seq.empty
   }
 
   def lookupColumnInRelation(col: Identifier[_], relation: ResolvableRelation): Option[String] = relation match {
