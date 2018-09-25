@@ -176,6 +176,9 @@ object ParseBuddyApp extends App {
         val resolved = resolveRelations(catalog, qnw, None)
         println(s"(main) Resolved Relations: ${resolved}")
         println(s"(main) Resolved Relations: ${resolved.show}")
+        val resolvedColumns = resolveReferences(catalog, resolved)
+        println(s"(main) Resolved Columns: ${resolvedColumns}")
+        println(s"(main) Resolved Columns: ${resolvedColumns.show}")
       })
       inputLoop()
     }
