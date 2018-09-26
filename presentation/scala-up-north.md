@@ -30,6 +30,13 @@ A primary focus of the effort is to increase data discovery among various data s
   - Build NLP and search products for our Support Data team
   - Python by day Scala by night (for now...)
 
+::: notes
+Shopify is a complete commerce platform that lets you start, grow, and manage a business
+Create and customize an online store
+Sell in multiple places, including web, mobile, social media, physical
+Manage products, inventory, payments, and shipping
+:::
+
 ## What is the problem?
   - "Big Data"
   - Big Teams
@@ -37,6 +44,7 @@ A primary focus of the effort is to increase data discovery among various data s
 
 ::: notes
   - Often hear of problems with Big Data in terms of our ability to crunch numbers
+  - Petabyte data warehouses not run by small teams
   - Gaining and sharing context around data is hard, lots of tables, lots of columns
   - On the order of several thousand tables and many tens of thousands of columns
 :::
@@ -54,21 +62,17 @@ A primary focus of the effort is to increase data discovery among various data s
 
 ## Presto SQL and Spark SQL
  - Big data distributed SQL engines
- - [Spark SQL][sparksql] forked [Presto SQL][prestosql]
+ - [Spark SQL][sparksql] forked [Presto SQL's][prestosql] grammar
  - Both using [ANTLR v4][antlr] grammar
 
 ::: notes
-  - Interestingly Spark SQL's grammar is a fork of Presto SQL
   - Whether a good idea or not, this mostly solidfied the approach of using grammars
-  - I did however try using the parsers from those projects (see big jar)
-  - Worth noting at the time Presto used an older Antlr 4.6 runtime
 :::
 
 # ANTLR v4
 
 ## Why ANTLR v4?
   - ANTLR v4 is a parser generator toolkit
-  - Used by Presto and Spark (and Hive)
 
 ::: notes
   - grammars for Presto, Spark, MySQL (which covers just about everything we use at work)
@@ -79,18 +83,56 @@ A primary focus of the effort is to increase data discovery among various data s
   - Show ANTLR v4 [toy example](https://github.com/valencik/antlr4-scala-example)
 <!-- Need to flesh this area out -->
 
+
 # Language App
 
-## Query -> Scala
+## Flow
+
+0. ANTLR Grammar to Code
+1. Query text
+2. ANTLR runtime
+3. Scala query object
+
+::: notes
+  - At compile time an sbt plugin runs ANTLR and generates Java code
+  - At runtime our app gets some query text and calls `parse`
+  - This turns it over to the ANTLR runtime which builds a parse tree
+  - We then visit nodes in the parse tree and build our query object
+:::
+
+## Query Text
+``` sql
+select a, b buz from db.foo
+```
 ``` scala
 def parse(input: String):
   Either[ParseFailure, Query[QualifiedName, String]]
 ```
-```
-select a, b buz from db.foo
+
+::: notes
+  - ANTLR has really nice error reporting so the ParseFailure contains info on what went wrong
+:::
+
+## ANTLR Runtime
+``` scala
+override def visitJoinRelation(
+  ctx: SqlBaseParser.JoinRelationContext
+  ): QRelation = {
+  val left         = visit(ctx.left).asInstanceOf[QRelation]
+  val right        = getRight(ctx)
+  val joinType     = getJoinType(ctx)
+  val joinCriteria = getJoinCriteria(ctx)
+  Join(joinType, left, right, joinCriteria)
+}
 ```
 
-## Parsing
+::: notes
+  - override all our relevant visitor methods
+  - ctx holds info about where in parse tree we are, children, text values
+  - we return a type in our Scala AST
+:::
+
+## Scala query object
 ``` scala
 Either[ParseFailure, Query]
 ```
@@ -108,22 +150,16 @@ Either[ParseFailure, Query]
       None)))
   ```
 
-## AST Builder
-``` scala
-override def visitJoinRelation(
-  ctx: SqlBaseParser.JoinRelationContext
-  ): QRelation = {
-  val left         = visit(ctx.left).asInstanceOf[QRelation]
-  val right        = getRight(ctx)
-  val joinType     = getJoinType(ctx)
-  val joinCriteria = getJoinCriteria(ctx)
-  Join(joinType, left, right, joinCriteria)
-}
-```
+::: notes
+  - great, now we have horrific case classes, now what?
+:::
 
-## Analysis?
+
+# Analysis
+
+## Clauses
   - Show me all the columns accessed by SQL clause
-```
+``` sql
 select a, x from db.foo join db.bar on b = y where c >= 10
 ```
 ```
@@ -138,20 +174,13 @@ WHERE: C
  - The information in the aggregation is not enough. Where does `Y` come from?
 :::
 
-
-# Name Resolution
-
-## Name resolution
-  - Resolving Relations
+## Resolving Relations
   - Looking up tables in the "catalog"
-  - Resolving References
+  - Nested Hashmaps
+  - schema -> database -> table -> column
+
+## Resolving References
   - `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
-
-::: notes
- - This is a problem I did not know I would have in the beginning
-:::
-
-## Resolved Query
 ``` scala
 Query[ResolvableRelation, ResolvableReference]
 ```
@@ -166,7 +195,11 @@ Query(None,
     ...
 ```
 
-## Name resolution pt.2
+::: notes
+ - This is a problem I did not know I would have in the beginning
+:::
+
+## Resolved Clauses
   - Working on simple queries
 ```
 SELECT: db.foo.a, db.bar.x
@@ -179,10 +212,10 @@ WHERE: db.foo.c
   - working on CTEs... well it works on the sub queries but doesn't on the child queries
   - Information is not being shared from the sub query to the child query
 -->
-  - Spark handles this as part of the analysis on Logical Plans
 
 ## Query optimization?
   - Query engines rewrite your query
+  - Spark handles this as part of the analysis on Logical Plans
 ```
 with everything as (select * from foo) select a from everything
 ```
@@ -192,6 +225,7 @@ with everything as (select * from foo) select a from everything
 :::
 
 ## Spark's Resolution
+[`...catalyst/analysis/Analyzer.scala`][catalyst]
 ``` scala
 ...
 Batch("Substitution", fixedPoint,
@@ -222,7 +256,10 @@ Batch("Resolution", fixedPoint,
   - TempView catalog sounds like State Monad
   - Inspiration from Uber's [queryparser][queryparser]
 
+# EOF
+
  [sparksql]: https://github.com/apache/spark/blob/v2.3.2/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBase.g4
  [prestosql]: https://github.com/prestodb/presto/blob/0.211/presto-parser/src/main/antlr4/com/facebook/presto/sql/parser/SqlBase.g4
  [queryparser]: https://github.com/uber/queryparser
  [antlr]: http://www.antlr.org
+ [catalyst]: https://github.com/apache/spark/blob/v2.3.2/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/Analyzer.scala#L142
