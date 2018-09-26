@@ -69,6 +69,8 @@ Manage products, inventory, payments, and shipping
   - Whether a good idea or not, this mostly solidfied the approach of using grammars
 :::
 
+
+
 # ANTLR v4
 
 ## Why ANTLR v4?
@@ -90,6 +92,11 @@ SUB: '-';
 MUL: '*';
 DIV: '/';
 ```
+
+::: notes
+ - These are the rules for tokenization
+ - Their syntax is similar to regex, here a NUMBER is one or more digits with an optional sequence of digits after a period
+:::
 
 ## Arithmetic Parser
 [github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
@@ -122,6 +129,13 @@ class ArithmeticVisitorApp
   }
   ...
 ```
+
+::: notes
+ - ANTLR generates a recursive decent parser in a target language
+ - Using the Java target we can extend the base visitor class
+ - there is a method for every parser rule
+ - here we implement visitExpr which itself calls visitOperation and returns a Expression
+:::
 
 
 
@@ -216,6 +230,7 @@ Either[ParseFailure, Query]
 :::
 
 
+
 # Analysis
 
 ## Clauses
@@ -237,8 +252,19 @@ WHERE: C
 
 ## Resolving Relations
   - Looking up tables in the "catalog"
-  - Nested Hashmaps
   - schema -> database -> table -> column
+``` scala
+def resolveRelations(acc: Catalog,
+  q: Query[QualifiedName, String],
+  alias: Option[Identifier[String]]):
+  Query[ResolvableRelation, String]
+```
+
+::: notes
+ - Resolving the relations that appear in a FROM clause is simple
+ - resolveRelations takes a catalog and a query and recursively calls itself for all namedqueries
+ - the catalog gets updated with each named query and finally resolves the child QueryNoWith
+:::
 
 ## Resolving References
 ``` sql
@@ -258,7 +284,6 @@ with f as (select a from db.foo) select a from f
 
 ## Aside: What does Spark do?
   - Spark handles this as part of the analysis on Logical Plans
-  - Query engines rewrite your query
 ``` sql
 with everything as (select * from foo) select a from everything
 ```
@@ -270,6 +295,43 @@ CTE [everything]
 +- 'Project ['a]
    +- 'UnresolvedRelation `everything`
 ```
+
+::: notes
+ - Here we see the logical plan with no optimizations
+ - That CTE gets substituted into the query and ultimately optimized away
+ - Neither Presto nor Spark will actually select all colums from foo
+:::
+
+## Resolved Clauses
+``` sql
+with everything as (select * from foo) select a from everything
+```
+```
+SELECT: db.foo.a, db.foo.b, db.foo.c,
+JOIN:
+WHERE:
+...
+```
+
+::: notes
+  - So this analysis tool is db optimization unaware and has this limitation
+  - This particular type of query is uncommon
+  - But I am not sure what other issues from this limitation there may be
+:::
+
+
+
+# Future
+
+## Future work at work
+  - Frequently joined against
+  - Column level advice (common filter)
+  - Report (SQL) rewriting tools
+  - A more fp rewrite
+
+# EOF
+
+# Appendix
 
 ## Aside: Query Optimization
 ```
@@ -287,6 +349,7 @@ LocalRelation [a#7]
 ```
 
 ::: notes
+ - That CTE gets substituted into the query and ultimately optimized away
  - Neither Presto nor Spark will actually select all colums from foo
 :::
 
@@ -307,31 +370,8 @@ Batch("Resolution", fixedPoint,
 ```
 
 ::: notes
-  - If parts of your query are not needed they shouldn't be run
-  - This tool is currently ignorant of these database optimizations
+  - The catalyst analyzer does a decent amount of manipulation to the Logical plan before resolution
 :::
-
-## Resolved Clauses
-  - Working on simple queries
-```
-SELECT: db.foo.a, db.bar.x
-JOIN: db.foo.b, db.bar.y
-WHERE: db.foo.c
-...
-```
-
-::: notes
-  - Show limitation on select * in cte
-:::
-
-# Future
-
-## Future work at work
-  - Column level learning resources
-  - Report (SQL) rewriting tools
-
-# EOF
-
  [sparksql]: https://github.com/apache/spark/blob/v2.3.2/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBase.g4
  [prestosql]: https://github.com/prestodb/presto/blob/0.211/presto-parser/src/main/antlr4/com/facebook/presto/sql/parser/SqlBase.g4
  [queryparser]: https://github.com/uber/queryparser
