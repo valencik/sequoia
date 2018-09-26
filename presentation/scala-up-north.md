@@ -79,9 +79,46 @@ Manage products, inventory, payments, and shipping
   - in theory this approach leaves me with building the language application and not the parser
 :::
 
-## Example
-  - Show ANTLR v4 [toy example](https://github.com/valencik/antlr4-scala-example)
-<!-- Need to flesh this area out -->
+## Arithmetic Lexer
+[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
+```
+lexer grammar ArithmeticLexer;
+WS: [ \t\n]+ -> skip ;
+NUMBER: ('0' .. '9') + ('.' ('0' .. '9') +)?;
+ADD: '+';
+SUB: '-';
+MUL: '*';
+DIV: '/';
+```
+
+## Arithmetic Parser
+[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
+```
+parser grammar ArithmeticParser;
+options { tokenVocab=ArithmeticLexer; }
+expr: NUMBER operation NUMBER;
+operation: (ADD | SUB | MUL | DIV);
+```
+
+## Arithmetic Visitor App
+[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
+``` scala
+class ArithmeticVisitorApp
+  extends ArithmeticParserBaseVisitor[Expr] {
+
+  override def visitExpr(
+    ctx: ArithmeticParser.ExprContext): Expression = {
+
+    val operands = ctx.NUMBER().toList.map(_.getText)
+    val operand1 = parseDouble(operands(0))
+    val operand2 = parseDouble(operands(1))
+    val operation = visitOperation(ctx.operation())
+
+    Expression(operand1, operand2, operation)
+  }
+  ...
+```
+
 
 
 # Language App
@@ -216,7 +253,7 @@ WHERE: db.foo.c
 ## Query optimization?
   - Query engines rewrite your query
   - Spark handles this as part of the analysis on Logical Plans
-```
+``` sql
 with everything as (select * from foo) select a from everything
 ```
 
