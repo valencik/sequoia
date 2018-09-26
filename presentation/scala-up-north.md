@@ -6,7 +6,8 @@ author: Andrew Valencik
 # Viz Test
 
 ## Can you see this?
-- [link][antlr]
+- [link: switch to dark theme](pres-dark.html#/can-you-see-this)
+- [link: switch to light theme](pres-light.html#/can-you-see-this)
 - `fixed width`
 ``` scala
 val x = List(1, 2).map(_ + 1)
