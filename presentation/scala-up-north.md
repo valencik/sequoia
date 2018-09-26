@@ -100,6 +100,10 @@ expr: NUMBER operation NUMBER;
 operation: (ADD | SUB | MUL | DIV);
 ```
 
+::: notes
+  - boring example, our expr cannot contain other expressions here
+:::
+
 ## Arithmetic Visitor App
 [github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
 ``` scala
@@ -135,6 +139,26 @@ class ArithmeticVisitorApp
   - At runtime our app gets some query text and calls `parse`
   - This turns it over to the ANTLR runtime which builds a parse tree
   - We then visit nodes in the parse tree and build our query object
+:::
+
+## ANTLR Grammar to Code
+```
+query:  with? queryNoWith;
+with: WITH RECURSIVE? namedQuery (',' namedQuery)*;
+queryNoWith: queryTerm
+      (ORDER BY sortItem (',' sortItem)*)?
+      (LIMIT limit=(INTEGER_VALUE | ALL))?;
+querySpecification: SELECT setQuantifier? selectItem (',' selectItem)*
+      (FROM relation (',' relation)*)?
+      (WHERE where=booleanExpression)?
+      (GROUP BY groupBy)?
+      (HAVING having=booleanExpression)?;
+```
+
+::: notes
+  - Presto SQL grammar a bit over 700 lines
+  - 4o different rules for "expression"
+  - one of which is of course, ( query )
 :::
 
 ## Query Text
@@ -217,51 +241,56 @@ WHERE: C
   - schema -> database -> table -> column
 
 ## Resolving References
-  - `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
-``` scala
-Query[ResolvableRelation, ResolvableReference]
+``` sql
+select a, x from db.foo join db.bar on b = y where c >= 10
 ```
-``` scala
-Query(None,
-  QueryNoWith(QuerySpecification(
-    Select(List(
-      SingleColumn(Identifier(ResolvedReference(db.foo.a)),None),
-      SingleColumn(Identifier(ResolvedReference(db.foo.b)),Some(BUZ))
-    )),
-    From(Some(List(Table(ResolvedRelation(db.foo))))),
-    ...
+  - `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
+``` sql
+with f as (select a from db.foo) select a from f
 ```
 
 ::: notes
- - This is a problem I did not know I would have in the beginning
+ - For queries without a With this is straightforward
+ - Named queries complicate things a bit
+ - Even in this second query the answer might be straightforward, the outer `a` is the same as `db.foo.a`
+ - What if the namedquery has joins or more complicated select expressions
 :::
 
-## Resolved Clauses
-  - Working on simple queries
-```
-SELECT: db.foo.a, db.bar.x
-JOIN: db.foo.b, db.bar.y
-WHERE: db.foo.c
-...
-```
-<!--
-  - To work on CTEs we should hopefully be able to just recurse on the sub queries with the same function
-  - working on CTEs... well it works on the sub queries but doesn't on the child queries
-  - Information is not being shared from the sub query to the child query
--->
-
-## Query optimization?
-  - Query engines rewrite your query
+## Aside: What does Spark do?
   - Spark handles this as part of the analysis on Logical Plans
+  - Query engines rewrite your query
 ``` sql
 with everything as (select * from foo) select a from everything
+```
+```
+CTE [everything]
+:  +- 'SubqueryAlias everything
+:     +- 'Project [*]
+:        +- 'UnresolvedRelation `foo`
++- 'Project ['a]
+   +- 'UnresolvedRelation `everything`
+```
+
+## Aside: Query Optimization
+```
+== Analyzed Logical Plan ==
+a: string
+Project [a#7]
++- SubqueryAlias everything
+   +- Project [a#7, b#8, c#9]
+      +- SubqueryAlias foo
+         +- LocalRelation [a#7, b#8, c#9]
+```
+```
+== Optimized Logical Plan ==
+LocalRelation [a#7]
 ```
 
 ::: notes
  - Neither Presto nor Spark will actually select all colums from foo
 :::
 
-## Spark's Resolution
+## Aside: Spark's Resolution
 [`...catalyst/analysis/Analyzer.scala`][catalyst]
 ``` scala
 ...
@@ -282,16 +311,24 @@ Batch("Resolution", fixedPoint,
   - This tool is currently ignorant of these database optimizations
 :::
 
+## Resolved Clauses
+  - Working on simple queries
+```
+SELECT: db.foo.a, db.bar.x
+JOIN: db.foo.b, db.bar.y
+WHERE: db.foo.c
+...
+```
+
+::: notes
+  - Show limitation on select * in cte
+:::
+
 # Future
 
 ## Future work at work
   - Column level learning resources
   - Report (SQL) rewriting tools
-
-## Typelevel rewrite
-  - Lots of `map` code mixed throughout
-  - TempView catalog sounds like State Monad
-  - Inspiration from Uber's [queryparser][queryparser]
 
 # EOF
 
