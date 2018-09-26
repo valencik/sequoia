@@ -3,6 +3,18 @@ title: Analyzing Presto and Spark SQL with Scala
 author: Andrew Valencik
 ...
 
+# Viz Test
+
+## Can you see this?
+- [link][antlr]
+- `fixed width`
+``` scala
+val x = List(1, 2).map(_ + 1)
+```
+```
+raw block
+```
+
 # Intro
 
 ## Who am I?
@@ -12,6 +24,7 @@ However, sharing context and common usage for datasets across teams is a manual 
 This talk will review a new system, written in Scala, which enables SQL query analysis such as finding commonly joined tables, tracking column lineage, and discovering unused columns.
 A primary focus of the effort is to increase data discovery among various data science teams.
 -->
+  - Andrew Valencik (@valencik)
   - Data scientist at Shopify
   - Build NLP and search products for our Support Data team
   - Python by day Scala by night (for now...)
@@ -19,7 +32,7 @@ A primary focus of the effort is to increase data discovery among various data s
 ## What is the problem?
   - "Big Data"
   - Big Teams
-  - Context. Context is the problem.
+  - Context is the problem.
 
 ::: notes
   - Often hear of problems with Big Data in terms of our ability to crunch numbers
@@ -28,7 +41,7 @@ A primary focus of the effort is to increase data discovery among various data s
 :::
 
 ## Typical ETL Pipeline
-  - Data App produces data
+  - Data app produces data
   - Some ETL (extracts, transforms, loads)
   - Reporting layer in SQL
 
@@ -41,7 +54,7 @@ A primary focus of the effort is to increase data discovery among various data s
 ## Presto SQL and Spark SQL
  - Big data distributed SQL engines
  - [Spark SQL][sparksql] forked [Presto SQL][prestosql]
- - Both using ANTLR4 grammar
+ - Both using [ANTLR v4][antlr] grammar
 
 ::: notes
   - Interestingly Spark SQL's grammar is a fork of Presto SQL
@@ -50,10 +63,10 @@ A primary focus of the effort is to increase data discovery among various data s
   - Worth noting at the time Presto used an older Antlr 4.6 runtime
 :::
 
-# ANTLR4
+# ANTLR v4
 
-## Why ANTLR4?
-  - ANTLR4 is a parser generator toolkit
+## Why ANTLR v4?
+  - ANTLR v4 is a parser generator toolkit
   - Used by Presto and Spark (and Hive)
 
 ::: notes
@@ -62,17 +75,25 @@ A primary focus of the effort is to increase data discovery among various data s
 :::
 
 ## Example
-  - Show ANTLR4 [toy example](https://github.com/valencik/antlr4-scala-example)
-
+  - Show ANTLR v4 [toy example](https://github.com/valencik/antlr4-scala-example)
+<!-- Need to flesh this area out -->
 
 # Language App
 
 ## Query -> Scala
-  - Just build a giant tree of case classes for a query. ok now what?
-  - `select a, b buz from db.foo`
+``` scala
+def parse(input: String):
+  Either[ParseFailure, Query[QualifiedName, String]]
+```
+```
+select a, b buz from db.foo
+```
 
-## Either[ParseFailure, Query]
-  ```
+## Parsing
+``` scala
+Either[ParseFailure, Query]
+```
+``` scala
   Right(Query(None,
     QueryNoWith(QuerySpecification(
       Select(List(
@@ -86,13 +107,34 @@ A primary focus of the effort is to increase data discovery among various data s
       None)))
   ```
 
+## AST Builder
+``` scala
+override def visitJoinRelation(
+  ctx: SqlBaseParser.JoinRelationContext
+  ): QRelation = {
+  val left         = visit(ctx.left).asInstanceOf[QRelation]
+  val right        = getRight(ctx)
+  val joinType     = getJoinType(ctx)
+  val joinCriteria = getJoinCriteria(ctx)
+  Join(joinType, left, right, joinCriteria)
+}
+```
+
 ## Analysis?
   - Show me all the columns accessed by SQL clause
-  - _TODO_ Clause extraction without name resolution
+```
+select a, x from db.foo join db.bar on b = y where c >= 10
+```
+```
+SELECT: A, X
+JOIN: B, Y
+WHERE: C
+...
+```
 
 ::: notes
- - Hopefully I can write some clause extraction to work on `Query[_, _]`
- - Use this as a lead in to name resolution
+ - Perhaps the most straight forward seeming aggregation is to group column reference by SQL clause
+ - The information in the aggregation is not enough. Where does `Y` come from?
 :::
 
 
@@ -108,8 +150,11 @@ A primary focus of the effort is to increase data discovery among various data s
  - This is a problem I did not know I would have in the beginning
 :::
 
-## Query[ResolovableRelation, ResolovableReference]
+## Resolved Query
+``` scala
+Query[ResolvableRelation, ResolvableReference]
 ```
+``` scala
 Query(None,
   QueryNoWith(QuerySpecification(
     Select(List(
@@ -122,6 +167,12 @@ Query(None,
 
 ## Name resolution pt.2
   - Working on simple queries
+```
+SELECT: db.foo.a, db.bar.x
+JOIN: db.foo.b, db.bar.y
+WHERE: db.foo.c
+...
+```
 <!--
   - To work on CTEs we should hopefully be able to just recurse on the sub queries with the same function
   - working on CTEs... well it works on the sub queries but doesn't on the child queries
@@ -130,8 +181,29 @@ Query(None,
   - Spark handles this as part of the analysis on Logical Plans
 
 ## Query optimization?
-  - `with everything as (select * from foo) select a from everything`
-  - _TODO_ Extract snippets on how Spark handles this
+  - Query engines rewrite your query
+```
+with everything as (select * from foo) select a from everything
+```
+
+::: notes
+ - Neither Presto nor Spark will actually select all colums from foo
+:::
+
+## Spark's Resolution
+``` scala
+...
+Batch("Substitution", fixedPoint,
+  CTESubstitution,
+  WindowsSubstitution,
+  EliminateUnions,
+  new SubstituteUnresolvedOrdinals(conf)),
+Batch("Resolution", fixedPoint,
+  ResolveTableValuedFunctions ::
+  ResolveRelations ::
+  ResolveReferences ::
+...
+```
 
 ::: notes
   - If parts of your query are not needed they shouldn't be run
@@ -152,3 +224,4 @@ Query(None,
  [sparksql]: https://github.com/apache/spark/blob/v2.3.2/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBase.g4
  [prestosql]: https://github.com/prestodb/presto/blob/0.211/presto-parser/src/main/antlr4/com/facebook/presto/sql/parser/SqlBase.g4
  [queryparser]: https://github.com/uber/queryparser
+ [antlr]: http://www.antlr.org
