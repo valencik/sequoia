@@ -25,10 +25,10 @@ However, sharing context and common usage for datasets across teams is a manual 
 This talk will review a new system, written in Scala, which enables SQL query analysis such as finding commonly joined tables, tracking column lineage, and discovering unused columns.
 A primary focus of the effort is to increase data discovery among various data science teams.
 -->
-  - Andrew Valencik (@valencik)
-  - Data scientist at Shopify
-  - Build NLP and search products for our Support Data team
-  - Python by day Scala by night (for now...)
+- Andrew Valencik (@valencik)
+- Data scientist at Shopify
+- Build NLP and search products for our Support Data team
+- Python by day Scala by night (for now...)
 
 ::: notes
 Shopify is a complete commerce platform that lets you start, grow, and manage a business
@@ -38,35 +38,37 @@ Manage products, inventory, payments, and shipping
 :::
 
 ## What is the problem?
-  - "Big Data"
-  - Big Teams
-  - Context is the problem.
+- "Big Data"
+- Big Teams
+- Context is the problem.
 
 ::: notes
-  - Often hear of problems with Big Data in terms of our ability to crunch numbers
-  - Petabyte data warehouses not run by small teams
-  - Gaining and sharing context around data is hard, lots of tables, lots of columns
-  - On the order of several thousand tables and many tens of thousands of columns
+- Often hear of problems with Big Data in terms of our ability to crunch numbers
+- Petabyte data warehouses not run by small teams
+- Gaining and sharing context around data is hard, lots of tables, lots of columns
+- On the order of several thousand tables and many tens of thousands of columns
 :::
 
+<!-- Concrete examples of problems we could solve -->
+
 ## Typical ETL Pipeline
-  - Data app produces data
-  - Some ETL (extracts, transforms, loads)
-  - Reporting layer in SQL
+- Data app produces data
+- Some ETL (extracts, transforms, loads)
+- Reporting layer in SQL
 
 ::: notes
-  - reports are organized, datasets organized, but tribal knowledge is still a thing
-  - would be nice to parse SQL for easier analysis
-  - e.g. everyone who uses this column applies this filter, you should too
+- reports are organized, datasets organized, but tribal knowledge is still a thing
+- would be nice to parse SQL for easier analysis
+- e.g. everyone who uses this column applies this filter, you should too
 :::
 
 ## Presto SQL and Spark SQL
- - Big data distributed SQL engines
- - [Spark SQL][sparksql] forked [Presto SQL's][prestosql] grammar
- - Both using [ANTLR v4][antlr] grammar
+- Big data distributed SQL engines
+- [Spark SQL][sparksql] forked [Presto SQL's][prestosql] grammar
+- Both using [ANTLR v4][antlr] grammar
 
 ::: notes
-  - Whether a good idea or not, this mostly solidfied the approach of using grammars
+- Whether a good idea or not, this mostly solidfied the approach of using grammars
 :::
 
 
@@ -74,72 +76,12 @@ Manage products, inventory, payments, and shipping
 # ANTLR v4
 
 ## Why ANTLR v4?
-  - ANTLR v4 is a parser generator toolkit
+- ANTLR v4 is a parser generator toolkit
 
 ::: notes
-  - grammars for Presto, Spark, MySQL (which covers just about everything we use at work)
-  - in theory this approach leaves me with building the language application and not the parser
+- grammars for Presto, Spark, MySQL (which covers just about everything we use at work)
+- in theory this approach leaves me with building the language application and not the parser
 :::
-
-## Arithmetic Lexer
-[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
-```
-lexer grammar ArithmeticLexer;
-WS: [ \t\n]+ -> skip ;
-NUMBER: ('0' .. '9') + ('.' ('0' .. '9') +)?;
-ADD: '+';
-SUB: '-';
-MUL: '*';
-DIV: '/';
-```
-
-::: notes
- - These are the rules for tokenization
- - Their syntax is similar to regex, here a NUMBER is one or more digits with an optional sequence of digits after a period
-:::
-
-## Arithmetic Parser
-[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
-```
-parser grammar ArithmeticParser;
-options { tokenVocab=ArithmeticLexer; }
-expr: NUMBER operation NUMBER;
-operation: (ADD | SUB | MUL | DIV);
-```
-
-::: notes
-  - boring example, our expr cannot contain other expressions here
-:::
-
-## Arithmetic Visitor App
-[github.com/valencik/antlr4-scala-example](https://github.com/valencik/antlr4-scala-example)
-``` scala
-class ArithmeticVisitorApp
-  extends ArithmeticParserBaseVisitor[Expr] {
-
-  override def visitExpr(
-    ctx: ArithmeticParser.ExprContext): Expression = {
-
-    val operands = ctx.NUMBER().toList.map(_.getText)
-    val operand1 = parseDouble(operands(0))
-    val operand2 = parseDouble(operands(1))
-    val operation = visitOperation(ctx.operation())
-
-    Expression(operand1, operand2, operation)
-  }
-  ...
-```
-
-::: notes
- - ANTLR generates a recursive decent parser in a target language
- - Using the Java target we can extend the base visitor class
- - there is a method for every parser rule
- - here we implement visitExpr which itself calls visitOperation and returns a Expression
-:::
-
-
-
-# Language App
 
 ## Flow
 
@@ -149,13 +91,31 @@ class ArithmeticVisitorApp
 3. Scala query object
 
 ::: notes
-  - At compile time an sbt plugin runs ANTLR and generates Java code
-  - At runtime our app gets some query text and calls `parse`
-  - This turns it over to the ANTLR runtime which builds a parse tree
-  - We then visit nodes in the parse tree and build our query object
+- At compile time an sbt plugin runs ANTLR and generates Java code
+- At runtime our app gets some query text and calls `parse`
+- This turns it over to the ANTLR runtime which builds a parse tree
+- We then visit nodes in the parse tree and build our query object
 :::
 
-## ANTLR Grammar to Code
+## Lexing Rules
+```
+...
+SELECT: 'SELECT';
+...
+EQ  : '=';
+NEQ : '<>' | '!=';
+LT  : '<';
+...
+IDENTIFIER : (LETTER | '_') (LETTER | DIGIT | '_' | '@' | ':')*;
+```
+
+::: notes
+- These are the rules for tokenization
+- Their syntax is similar to regex, here `SELECT` is literally match
+- `IDENTIFIER` is a letter or underscore optionally followed by more letters, digits, and so on.
+:::
+
+## Parsing Rules
 ```
 query:  with? queryNoWith;
 with: WITH RECURSIVE? namedQuery (',' namedQuery)*;
@@ -170,10 +130,14 @@ querySpecification: SELECT setQuantifier? selectItem (',' selectItem)*
 ```
 
 ::: notes
-  - Presto SQL grammar a bit over 700 lines
-  - 4o different rules for "expression"
-  - one of which is of course, ( query )
+- Presto SQL grammar a bit over 700 lines
+- 40 different rules for "expression"
+- one of which is of course, ( query )
 :::
+
+
+
+# Language App
 
 ## Query Text
 ``` sql
@@ -185,7 +149,7 @@ def parse(input: String):
 ```
 
 ::: notes
-  - ANTLR has really nice error reporting so the ParseFailure contains info on what went wrong
+- ANTLR has really nice error reporting so the ParseFailure contains info on what went wrong
 :::
 
 ## ANTLR Runtime
@@ -202,31 +166,54 @@ override def visitJoinRelation(
 ```
 
 ::: notes
-  - override all our relevant visitor methods
-  - ctx holds info about where in parse tree we are, children, text values
-  - we return a type in our Scala AST
+- ANTLR generates a recursive decent parser in a target language
+- Using the Java target we can extend the base visitor class
+- there is a method for every parser rule
+- here we implement visitJoinRelation which itself visits other nodes linked to in the ctx
+- ctx holds info about where in parse tree we are, children, text values
+- we return a type in our Scala AST
 :::
 
 ## Scala query object
-``` scala
-Either[ParseFailure, Query]
+``` sql
+select a, b buz from db.foo
 ```
 ``` scala
-  Right(Query(None,
-    QueryNoWith(QuerySpecification(
-      Select(List(
-        SingleColumn(Identifier(A),None),
-        SingleColumn(Identifier(B),Some(BUZ)))),
-      From(Some(List(Table(QualifiedName(DB.FOO))))),
-      Where(None),
-      GroupBy(List()),
-      Having(None)),
-      Some(OrderBy(List())),
-      None)))
-  ```
+Right(Query(None,
+  QueryNoWith(QuerySpecification(
+    Select(List(
+      SingleColumn(Identifier(A),None),
+      SingleColumn(Identifier(B),Some(BUZ)))),
+    From(Some(List(Table(QualifiedName(DB.FOO))))),
+    Where(None),
+    GroupBy(List()),
+    Having(None)),
+    Some(OrderBy(List())),
+    None)))
+```
+
+## Scala query object (cont)
+``` sql
+select a, x from db.foo join db.bar on b = y where c >= 10
+```
+``` scala
+Right(Query(None,
+  QueryNoWith(QuerySpecification(
+    Select(List(
+      SingleColumn(Identifier(A),None),
+      SingleColumn(Identifier(X),None))),
+    From(Some(List(Join(InnerJoin,
+      Table(QualifiedName(DB.FOO)),
+      Table(QualifiedName(DB.BAR)),
+      Some(JoinOn(
+        ComparisonExpression(Identifier(B),EQ,Identifier(Y)))))))),
+    Where(Some(
+      ComparisonExpression(Identifier(C),GTE,Identifier(10)))),
+    ...
+```
 
 ::: notes
-  - great, now we have horrific case classes, now what?
+- great, now we have horrific case classes, now what?
 :::
 
 
@@ -234,7 +221,7 @@ Either[ParseFailure, Query]
 # Analysis
 
 ## Clauses
-  - Show me all the columns accessed by SQL clause
+- Show me all the columns accessed by SQL clause
 ``` sql
 select a, x from db.foo join db.bar on b = y where c >= 10
 ```
@@ -246,13 +233,13 @@ WHERE: C
 ```
 
 ::: notes
- - Perhaps the most straight forward seeming aggregation is to group column reference by SQL clause
- - The information in the aggregation is not enough. Where does `Y` come from?
+- Perhaps the most straight forward seeming aggregation is to group column reference by SQL clause
+- The information in the aggregation is not enough. Where does `Y` come from?
 :::
 
 ## Resolving Relations
-  - Looking up tables in the "catalog"
-  - schema -> database -> table -> column
+- Looking up tables in the "catalog"
+- schema -> database -> table -> column
 ``` scala
 def resolveRelations(acc: Catalog,
   q: Query[QualifiedName, String],
@@ -261,31 +248,37 @@ def resolveRelations(acc: Catalog,
 ```
 
 ::: notes
- - Resolving the relations that appear in a FROM clause is simple
- - resolveRelations takes a catalog and a query and recursively calls itself for all namedqueries
- - the catalog gets updated with each named query and finally resolves the child QueryNoWith
+- Resolving the relations that appear in a FROM clause is simple
+- resolveRelations takes a catalog and a query and recursively calls itself for all namedqueries
+- the catalog gets updated with each named query and finally resolves the child QueryNoWith
 :::
 
 ## Resolving References
 ``` sql
 select a, x from db.foo join db.bar on b = y where c >= 10
 ```
-  - `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
+- `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
 ``` sql
-with f as (select a from db.foo) select a from f
+with f as (
+  select a from db.foo
+)
+select a from f
 ```
 
 ::: notes
- - For queries without a With this is straightforward
- - Named queries complicate things a bit
- - Even in this second query the answer might be straightforward, the outer `a` is the same as `db.foo.a`
- - What if the namedquery has joins or more complicated select expressions
+- For queries without a With this is straightforward
+- Named queries complicate things a bit
+- Even in this second query the answer might be straightforward, the outer `a` is the same as `db.foo.a`
+- What if the namedquery has joins or more complicated select expressions
 :::
 
 ## Aside: What does Spark do?
-  - Spark handles this as part of the analysis on Logical Plans
+- Spark handles this as part of the analysis on Logical Plans
 ``` sql
-with everything as (select * from foo) select a from everything
+with everything as (
+  select * from foo
+)
+select a from everything
 ```
 ```
 CTE [everything]
@@ -297,14 +290,17 @@ CTE [everything]
 ```
 
 ::: notes
- - Here we see the logical plan with no optimizations
- - That CTE gets substituted into the query and ultimately optimized away
- - Neither Presto nor Spark will actually select all colums from foo
+- Here we see the logical plan with no optimizations
+- That CTE gets substituted into the query and ultimately optimized away
+- Neither Presto nor Spark will actually select all colums from foo
 :::
 
 ## Resolved Clauses
 ``` sql
-with everything as (select * from foo) select a from everything
+with everything as (
+  select * from foo
+)
+select a from everything
 ```
 ```
 SELECT: db.foo.a, db.foo.b, db.foo.c,
@@ -314,20 +310,35 @@ WHERE:
 ```
 
 ::: notes
-  - So this analysis tool is db optimization unaware and has this limitation
-  - This particular type of query is uncommon
-  - But I am not sure what other issues from this limitation there may be
+- So this analysis tool is db optimization unaware and has this limitation
+- This particular type of query is uncommon
+- But I am not sure what other issues from this limitation there may be
 :::
 
+## Resolved Clauses (cont)
+``` sql
+select a, x from db.foo join db.bar on b = y where c >= 10
+```
+```
+SELECT: db.foo.a, db.bar.x
+JOIN: db.foo.b, db.bar.y
+WHERE: db.foo.c
+...
+```
 
 
 # Future
 
+## Use Cases
+
+- "If I change this column, what reports are affected?"
+- Improve data discovery by showing commonly used datasets
+- Sub query / CTE search
+
 ## Future work at work
-  - Frequently joined against
-  - Column level advice (common filter)
-  - Report (SQL) rewriting tools
-  - A more fp rewrite
+- Column level advice (common filter)
+- Report (SQL) rewriting tools
+- A more fp rewrite
 
 # EOF
 
@@ -349,8 +360,8 @@ LocalRelation [a#7]
 ```
 
 ::: notes
- - That CTE gets substituted into the query and ultimately optimized away
- - Neither Presto nor Spark will actually select all colums from foo
+- That CTE gets substituted into the query and ultimately optimized away
+- Neither Presto nor Spark will actually select all colums from foo
 :::
 
 ## Aside: Spark's Resolution
@@ -370,7 +381,7 @@ Batch("Resolution", fixedPoint,
 ```
 
 ::: notes
-  - The catalyst analyzer does a decent amount of manipulation to the Logical plan before resolution
+- The catalyst analyzer does a decent amount of manipulation to the Logical plan before resolution
 :::
  [sparksql]: https://github.com/apache/spark/blob/v2.3.2/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBase.g4
  [prestosql]: https://github.com/prestodb/presto/blob/0.211/presto-parser/src/main/antlr4/com/facebook/presto/sql/parser/SqlBase.g4
