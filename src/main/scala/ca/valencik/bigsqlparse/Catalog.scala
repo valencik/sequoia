@@ -25,14 +25,17 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
   }
 
   def lookupColumnStringInRelations(col: String, relations: List[ResolvableRelation]): String = {
-    val candidates = relations.map {
-    case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.toLowerCase)
-    case _                    => None
-    }.filter(_.isDefined).map(_.get)
+    val candidates = relations
+      .map {
+        case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.toLowerCase)
+        case _                    => None
+      }
+      .filter(_.isDefined)
+      .map(_.get)
     candidates match {
       case rc :: Nil => rc
-      case Nil => col
-      case _ => throw new Exception(s"Ambiguous resolution for column $col")
+      case Nil       => col
+      case _         => throw new Exception(s"Ambiguous resolution for column $col")
     }
   }
 

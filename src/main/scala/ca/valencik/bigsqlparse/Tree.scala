@@ -8,14 +8,25 @@ sealed trait SelectItem                                                         
 case class SingleColumn[A](expression: Expression[A], alias: Option[Identifier[A]]) extends SelectItem
 case class AllColumns(name: Option[QualifiedName])                                  extends SelectItem
 
-sealed trait Expression[+A] extends Node
-// I am worried about this
-final case class Identifier[A](name: A)                                                        extends Expression[A]
-final case class BooleanExpression[A](left: Expression[A], op: Operator, right: Expression[A]) extends Expression[A]
+sealed trait Expression[+A] extends Node {
+  def map[B](f: A => B): Expression[B]
+}
+final case class Identifier[A](name: A) extends Expression[A] {
+  def map[B](f: A => B): Expression[B] = Identifier(f(name))
+}
+final case class BooleanExpression[A](left: Expression[A], op: Operator, right: Expression[A]) extends Expression[A] {
+  def map[B](f: A => B): Expression[B] = BooleanExpression(left.map(f), op, right.map(f))
+}
 final case class ComparisonExpression[A](left: Expression[A], op: Comparison, right: Expression[A])
-    extends Expression[A]
-final case class IsNullPredicate[A](value: Expression[A])    extends Expression[A]
-final case class IsNotNullPredicate[A](value: Expression[A]) extends Expression[A]
+    extends Expression[A] {
+  def map[B](f: A => B): Expression[B] = ComparisonExpression(left.map(f), op, right.map(f))
+}
+final case class IsNullPredicate[A](value: Expression[A]) extends Expression[A] {
+  def map[B](f: A => B): Expression[B] = IsNullPredicate(value.map(f))
+}
+final case class IsNotNullPredicate[A](value: Expression[A]) extends Expression[A] {
+  def map[B](f: A => B): Expression[B] = IsNotNullPredicate(value.map(f))
+}
 
 sealed trait Operator
 case object AND extends Operator
@@ -40,14 +51,42 @@ sealed trait NullOrdering
 case object FIRST extends NullOrdering
 case object LAST  extends NullOrdering
 
-sealed trait Relation[+A] extends Node
+sealed trait Relation[+A] extends Node {
+  def map[R](f: A => R): Relation[R]
+  def toList: List[A]
+  def mapJoinExpression(f: Expression[_] => Expression[_]): Relation[A] = {
+    this match {
+      case j: Join[A] => {
+        val critereaR = j.criterea.map {
+          case jo: JoinOn[_] => JoinOn(f(jo.expression))
+          case other         => other
+        }
+        Join(j.jointype, j.left.mapJoinExpression(f), j.right.mapJoinExpression(f), critereaR)
+      }
+      case other => other
+    }
+  }
+}
 case class Join[A](jointype: JoinType, left: Relation[A], right: Relation[A], criterea: Option[JoinCriteria])
-    extends Relation[A]
+    extends Relation[A] {
+  def map[R](f: A => R): Relation[R]                                = Join(jointype, left.map(f), right.map(f), criterea)
+  def mapJoinCriteria(f: JoinCriteria => JoinCriteria): Relation[A] = Join(jointype, left, right, criterea.map(f))
+  def toList: List[A]                                               = left.toList ++ right.toList
+}
 case class SampledRelation[A, B](relation: Relation[A], sampleType: SampleType, samplePercentage: Expression[B])
-    extends Relation[A]
+    extends Relation[A] {
+  def map[R](f: A => R): Relation[R] = SampledRelation(relation.map(f), sampleType, samplePercentage)
+  def toList: List[A]                = relation.toList
+}
 case class AliasedRelation[A, B](relation: Relation[A], alias: Identifier[B], columnNames: List[Identifier[B]])
-    extends Relation[A]
-case class Table[A](name: A) extends Relation[A]
+    extends Relation[A] {
+  def map[R](f: A => R): Relation[R] = AliasedRelation(relation.map(f), alias, columnNames)
+  def toList: List[A]                = relation.toList
+}
+case class Table[A](name: A) extends Relation[A] {
+  def map[R](f: A => R): Relation[R] = Table(f(name))
+  def toList: List[A]                = List(name)
+}
 
 sealed trait JoinType
 case object LeftJoin  extends JoinType
@@ -74,6 +113,14 @@ case class Select(selectItems: List[SelectItem]) extends Node {
 }
 case class From[A](relations: Option[List[Relation[A]]]) extends Node {
   def show: String = if (relations.isDefined) s"From: ${relations.get}" else ""
+  def map[B](f: A => B): From[B] =
+    From({
+      relations.map { rs =>
+        rs.map { r =>
+          r.map(f)
+        }
+      }
+    })
 }
 case class Where[A](expression: Option[Expression[A]]) extends Node {
   def show: String = if (expression.isDefined) s"Where: ${expression.get}" else ""

@@ -51,40 +51,6 @@ object ParseBuddy {
     }
   }
 
-  def mapExpression[A, B](f: A => B)(e: Expression[A]): Expression[B] = e match {
-    case i: Identifier[A]         => Identifier(f(i.name))
-    case be: BooleanExpression[A] => BooleanExpression(mapExpression(f)(be.left), be.op, mapExpression(f)(be.right))
-    case ce: ComparisonExpression[A] =>
-      ComparisonExpression(mapExpression(f)(ce.left), ce.op, mapExpression(f)(ce.right))
-    case inp: IsNullPredicate[A]    => IsNullPredicate(mapExpression(f)(inp.value))
-    case inn: IsNotNullPredicate[A] => IsNotNullPredicate(mapExpression(f)(inn.value))
-  }
-
-  def mapRelation[A, B](f: A => B)(r: Relation[A]): Relation[B] = r match {
-    case j: Join[A]                => Join(j.jointype, mapRelation(f)(j.left), mapRelation(f)(j.right), j.criterea)
-    case sr: SampledRelation[A, _] => SampledRelation(mapRelation(f)(sr.relation), sr.sampleType, sr.samplePercentage)
-    case ar: AliasedRelation[A, _] => AliasedRelation(mapRelation(f)(ar.relation), ar.alias, ar.columnNames)
-    case t: Table[A]               => Table(f(t.name))
-  }
-
-  def mapJoinExpression[A, B](f: Expression[_] => Expression[_])(r: Relation[A]): Relation[A] = r match {
-    case j: Join[A]                => {
-      val critereaR = j.criterea.map{
-        case jo: JoinOn[_] => JoinOn(f(jo.expression))
-        case other => other
-      }
-      Join(j.jointype, mapJoinExpression(f)(j.left), mapJoinExpression(f)(j.right), critereaR)
-    }
-    case other => other
-  }
-
-  def relationToList[A](r: Relation[A]): Seq[A] = r match {
-    case j: Join[A]                => relationToList(j.left) ++ relationToList(j.right)
-    case sr: SampledRelation[A, _] => relationToList(sr.relation)
-    case ar: AliasedRelation[A, _] => relationToList(ar.relation)
-    case t: Table[A]               => Seq(t.name)
-  }
-
   val catalog = Catalog(
     HashMap(
       "db" -> HashMap(
@@ -111,9 +77,10 @@ object ParseBuddy {
     }
     // the resolution here needs to use the updated catalog with temp views
     val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
-      val resolvedRelations: List[Relation[ResolvableRelation]] = rs.map(mapRelation { qn: QualifiedName =>
-        resolveRelation(acc, alias, qn)
-      }(_))
+      val resolvedRelations: List[Relation[ResolvableRelation]] = rs.map(r =>
+        r.map { qn: QualifiedName =>
+          resolveRelation(acc, alias, qn)
+      })
       println(s"-- QNW Resolution with alias: ${alias} and resolvedRelations: ${resolvedRelations}")
       resolvedRelations
     }
@@ -145,9 +112,10 @@ object ParseBuddy {
     val qs = q.queryNoWith.querySpecification
     val resolvedRelations: List[ResolvableRelation] = qs.from.relations
       .map { r =>
-        r.flatMap(relationToList(_))
+        r.flatMap(_.toList)
       }
       .getOrElse(List.empty)
+    def resolveExpression(c: String): String = acc.lookupColumnStringInRelations(c, resolvedRelations)
     println(s"(resolveReferences) Resolved Relations: $resolvedRelations")
 
     val selectItemsResolved = qs.select.selectItems.map { si =>
@@ -167,19 +135,18 @@ object ParseBuddy {
       }
       ref
     }
-    val fromR = From(qs.from.relations.map {rs => rs.map{r =>
-      mapJoinExpression{e => mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e.asInstanceOf[Expression[String]])}(r)
-    }})
-    val whereR = Where(qs.where.expression.map { e =>
-      mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e.asInstanceOf[Expression[String]])
+    val fromR = From(qs.from.relations.map { rs =>
+      rs.map(_.mapJoinExpression(_.asInstanceOf[Expression[String]].map(resolveExpression)))
     })
+    val whereR = Where(qs.where.expression.map(_.map(resolveExpression)))
     val groupbyR = GroupBy(qs.groupBy.groupingElements.map { ge =>
-      val inner = ge.groupingSet.map { e => mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e)}
+      val inner = ge.groupingSet.map { _.map(resolveExpression) }
       GroupingElement(inner)
     })
     val select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
-    val queryS = q.queryNoWith.querySpecification.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
-    val qnw    = q.queryNoWith.copy(querySpecification = queryS)
+    val queryS =
+      q.queryNoWith.querySpecification.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
+    val qnw = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
 
