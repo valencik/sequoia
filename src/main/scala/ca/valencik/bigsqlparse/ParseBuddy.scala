@@ -60,12 +60,22 @@ object ParseBuddy {
     case inn: IsNotNullPredicate[A] => IsNotNullPredicate(mapExpression(f)(inn.value))
   }
 
-  // How do I get that joincriteria information out?
   def mapRelation[A, B](f: A => B)(r: Relation[A]): Relation[B] = r match {
     case j: Join[A]                => Join(j.jointype, mapRelation(f)(j.left), mapRelation(f)(j.right), j.criterea)
     case sr: SampledRelation[A, _] => SampledRelation(mapRelation(f)(sr.relation), sr.sampleType, sr.samplePercentage)
     case ar: AliasedRelation[A, _] => AliasedRelation(mapRelation(f)(ar.relation), ar.alias, ar.columnNames)
     case t: Table[A]               => Table(f(t.name))
+  }
+
+  def mapJoinExpression[A, B](f: Expression[_] => Expression[_])(r: Relation[A]): Relation[A] = r match {
+    case j: Join[A]                => {
+      val critereaR = j.criterea.map{
+        case jo: JoinOn[_] => JoinOn(f(jo.expression))
+        case other => other
+      }
+      Join(j.jointype, mapJoinExpression(f)(j.left), mapJoinExpression(f)(j.right), critereaR)
+    }
+    case other => other
   }
 
   def relationToList[A](r: Relation[A]): Seq[A] = r match {
@@ -121,12 +131,14 @@ object ParseBuddy {
     Query(withR, qnw)
   }
 
-  // TODO Handle ambiguity
   def resolveColumn(acc: Catalog, c: Identifier[_], relations: List[ResolvableRelation]): Option[String] = {
-    println(acc)
-    relations.flatMap { r =>
-      acc.lookupColumnInRelation(c, r)
-    }.headOption
+    val col = c.name.asInstanceOf[String]
+    Some(acc.lookupColumnStringInRelations(col, relations))
+  }
+
+  def resolveExpression(acc: Catalog, e: Expression[_], relations: List[ResolvableRelation]): Option[String] = e match {
+    case e: Identifier[_] => resolveColumn(acc, e, relations)
+    case _                => None
   }
 
   def resolveReferences[R](acc: Catalog, q: Query[ResolvableRelation, String]): Query[ResolvableRelation, String] = {
@@ -155,8 +167,18 @@ object ParseBuddy {
       }
       ref
     }
+    val fromR = From(qs.from.relations.map {rs => rs.map{r =>
+      mapJoinExpression{e => mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e.asInstanceOf[Expression[String]])}(r)
+    }})
+    val whereR = Where(qs.where.expression.map { e =>
+      mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e.asInstanceOf[Expression[String]])
+    })
+    val groupbyR = GroupBy(qs.groupBy.groupingElements.map { ge =>
+      val inner = ge.groupingSet.map { e => mapExpression{c: String => acc.lookupColumnStringInRelations(c, resolvedRelations)}(e)}
+      GroupingElement(inner)
+    })
     val select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
-    val queryS = q.queryNoWith.querySpecification.copy(select = select)
+    val queryS = q.queryNoWith.querySpecification.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
     val qnw    = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
@@ -184,7 +206,7 @@ object ParseBuddy {
           |ORDERBY: ${orderbys.mkString(", ")}
           |""".stripMargin
   }
-  def extractReferencesByClause[R](q: Query[ResolvableRelation, String]): AggregatedClauses = {
+  def extractReferencesByClause(q: Query[ResolvableRelation, String]): AggregatedClauses = {
     val qs = q.queryNoWith.querySpecification
     val selects: List[String] = qs.select.selectItems
       .map {

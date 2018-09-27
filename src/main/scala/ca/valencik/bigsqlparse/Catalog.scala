@@ -6,8 +6,6 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
                             tempViews: HashMap[String, Seq[String]]) {
 
   def nameColumnInTable(relation: String)(c: String): Option[String] = {
-    println(s"(nameColumnInTable) from $relation, with column $c")
-
     relation.split('.') match {
       case Array("public", table)   => if (lookupTableName(table).isDefined) Some(s"public.$table.$c") else None
       case Array("cteAlias", table) => if (lookupTableName(table).isDefined) Some(s"cteAlias.$table.$c") else None
@@ -26,9 +24,16 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
     else Seq.empty
   }
 
-  def lookupColumnInRelation(col: Identifier[_], relation: ResolvableRelation): Option[String] = relation match {
-    case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.name.asInstanceOf[String].toLowerCase())
+  def lookupColumnStringInRelations(col: String, relations: List[ResolvableRelation]): String = {
+    val candidates = relations.map {
+    case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.toLowerCase)
     case _                    => None
+    }.filter(_.isDefined).map(_.get)
+    candidates match {
+      case rc :: Nil => rc
+      case Nil => col
+      case _ => throw new Exception(s"Ambiguous resolution for column $col")
+    }
   }
 
   def lookupTableName(tn: String): Option[QualifiedName] = {
