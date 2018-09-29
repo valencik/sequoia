@@ -49,8 +49,6 @@ Manage products, inventory, payments, and shipping
 - On the order of several thousand tables and many tens of thousands of columns
 :::
 
-<!-- Concrete examples of problems we could solve -->
-
 ## Typical ETL Pipeline
 - Data app produces data
 - Some ETL (extracts, transforms, loads)
@@ -60,6 +58,17 @@ Manage products, inventory, payments, and shipping
 - reports are organized, datasets organized, but tribal knowledge is still a thing
 - would be nice to parse SQL for easier analysis
 - e.g. everyone who uses this column applies this filter, you should too
+:::
+
+## Use Cases
+
+- "If I change this column, what reports are affected?"
+- Improve data discovery by showing commonly used datasets
+- Sub query / CTE search
+
+::: notes
+- Our data analysts struggle to find the right data
+- How can we improve data discovery?
 :::
 
 ## Presto SQL and Spark SQL
@@ -192,6 +201,11 @@ Right(Query(None,
     None)))
 ```
 
+::: notes
+- Here's an example Query structure
+- I think there's lots of room for clean up here.
+:::
+
 ## Scala query object (cont)
 ``` sql
 select a, x from db.foo join db.bar on b = y where c >= 10
@@ -258,6 +272,13 @@ def resolveRelations(acc: Catalog,
 select a, x from db.foo join db.bar on b = y where c >= 10
 ```
 - `a` in our SELECT clause to `ResolvedReference(db.foo.a)`
+
+::: notes
+- For queries without a With this is straightforward
+- All the information we need is in the catalog
+:::
+
+## Resolving References (cont)
 ``` sql
 with f as (
   select a from db.foo
@@ -266,7 +287,6 @@ select a from f
 ```
 
 ::: notes
-- For queries without a With this is straightforward
 - Named queries complicate things a bit
 - Even in this second query the answer might be straightforward, the outer `a` is the same as `db.foo.a`
 - What if the namedquery has joins or more complicated select expressions
@@ -329,16 +349,15 @@ WHERE: db.foo.c
 
 # Future
 
-## Use Cases
-
-- "If I change this column, what reports are affected?"
-- Improve data discovery by showing commonly used datasets
-- Sub query / CTE search
-
 ## Future work at work
 - Column level advice (common filter)
 - Report (SQL) rewriting tools
 - A more fp rewrite
+
+## Sequoia
+
+https://github.com/valencik/sequoia
+
 
 # EOF
 
