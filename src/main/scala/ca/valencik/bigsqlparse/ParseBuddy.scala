@@ -81,7 +81,6 @@ object ParseBuddy {
         r.map { qn: QualifiedName =>
           resolveRelation(acc, alias, qn)
       })
-      println(s"-- QNW Resolution with alias: ${alias} and resolvedRelations: ${resolvedRelations}")
       resolvedRelations
     }
 
@@ -128,7 +127,6 @@ object ParseBuddy {
           }
         case _ => ???
       }
-      println(s"(resolveReferences) si: $si, sim: $sim")
       val ref = sim match {
         case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
         case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
@@ -230,10 +228,8 @@ object ParseBuddyApp extends App {
       q.right.map(qnw => {
         val resolved = resolveRelations(catalog, qnw, None)
         println(s"(main) Resolved Relations: ${resolved}")
-        println(s"(main) Resolved Relations: ${resolved.show}")
         val resolvedColumns = resolveReferences(catalog, resolved)
         println(s"(main) Resolved Columns: ${resolvedColumns}")
-        println(s"(main) Resolved Columns: ${resolvedColumns.show}")
 
         println("Now for some clauses!")
         println(extractReferencesByClause(resolvedColumns))
