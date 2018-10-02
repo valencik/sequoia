@@ -31,13 +31,14 @@ A primary focus of the effort is to increase data discovery among various data s
 - Python by day Scala by night (for now...)
 
 ::: notes
-Shopify is a complete commerce platform that lets you start, grow, and manage a business
-Create and customize an online store
-Sell in multiple places, including web, mobile, social media, physical
-Manage products, inventory, payments, and shipping
+Shopify is a complete commerce platform that lets you start, grow, and manage a business.
+Create and customize an online store.
+Manage products, inventory, payments, and shipping.
+Sell in multiple places, including web, mobile, social media, physical.
 :::
 
 ## What is the problem?
+- Data Discoverability
 - "Big Data"
 - Big Teams
 - Context is the problem.
@@ -63,7 +64,7 @@ Manage products, inventory, payments, and shipping
 ## Use Cases
 
 - "If I change this column, what reports are affected?"
-- Improve data discovery by showing commonly used datasets
+- "What tables are frequently joined against this table?"
 - Sub query / CTE search
 
 ::: notes
