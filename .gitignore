@@ -2,7 +2,7 @@
 
 src/main/antlr4/
 .bloop/
-presentation/
+docs/scala-up-north/
 .idea/
 
 
