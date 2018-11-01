@@ -1,25 +1,41 @@
 package ca.valencik.bigsqlparse
 
 import org.scalatest._
-import scala.collection.immutable.HashMap
+import scala.collection.mutable.HashMap
 
 class CatalogSpec extends FlatSpec with Matchers {
 
-  val m: HashMap[String, HashMap[String, Seq[String]]] = HashMap(
-    "a" -> HashMap("aa" -> Seq("aaa", "aaaa"), "ah" -> Seq("ahh")),
-    "b" -> HashMap("bb" -> Seq("bbb"), "ba"         -> Seq("bah", "bahh")))
-  val catalog = new Catalog(m)
+  def catalog: Catalog =
+    Catalog(
+      HashMap(
+        "db" -> HashMap(
+          "foo" -> Seq("a", "b", "c"),
+          "bar" -> Seq("x", "y", "z")
+        )))
 
   "Catalog" should "resolve column names" in {
-    catalog.nameColumnInTable("ba")("bah") shouldBe Some("b.ba.bah")
-    catalog.nameColumnInTable("aa")("aaaa") shouldBe Some("a.aa.aaaa")
-    catalog.nameColumnInTable("b")("nope") shouldBe None
+    catalog.nameColumnInTable("db.foo")("a") shouldBe Some("db.foo.a")
+    catalog.nameColumnInTable("db.bar")("x") shouldBe Some("db.bar.x")
+    catalog.nameColumnInTable("foo")("a") shouldBe None
+    catalog.nameColumnInTable("fake")("a") shouldBe None
+
+    catalog.nameColumnInTable("public.fake")("x") shouldBe Some("public.fake.x")
+    catalog.nameColumnInTable("cteAlias.f")("x") shouldBe Some("cteAlias.f.x")
   }
 
   it should "resolve table names" in {
-    catalog.nameTable("ba") shouldBe Some("b.ba")
-    catalog.nameTable("aa") shouldBe Some("a.aa")
-    catalog.nameTable("bah") shouldBe None
-    catalog.nameTable("nope") shouldBe None
+    catalog.lookupTableName("db.foo") shouldBe Some(QualifiedName("db.foo"))
+    catalog.lookupTableName("db.foo.a") shouldBe Some(QualifiedName("db.foo.a"))
+    catalog.lookupTableName("fake") shouldBe Some(QualifiedName("public.fake"))
+    catalog.lookupTableName("notdb.nope") shouldBe None
+    catalog.lookupTableName("1.2.3.4") shouldBe None
+  }
+
+  it should "return a new catalog with updated tempViews in addTempViewColumn" in {
+    val mutCatalog                                 = Catalog()
+    val expectedView: HashMap[String, Seq[String]] = HashMap("cats" -> Seq("name"))
+    mutCatalog.addTempViewColumn("cats")("name")
+    mutCatalog.tempViews shouldBe expectedView
+    mutCatalog.schemaMap shouldBe HashMap.empty
   }
 }
