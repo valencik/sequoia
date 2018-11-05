@@ -1,4 +1,4 @@
-package ca.valencik.bigsqlparse
+package ca.valencik.sequoia
 
 import scala.collection.JavaConverters._
 

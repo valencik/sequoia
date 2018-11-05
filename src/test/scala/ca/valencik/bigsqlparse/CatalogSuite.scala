@@ -1,4 +1,4 @@
-package ca.valencik.bigsqlparse
+package ca.valencik.sequoia
 
 import org.scalatest._
 import scala.collection.mutable.HashMap

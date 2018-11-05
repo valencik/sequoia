@@ -1,4 +1,4 @@
-package ca.valencik.bigsqlparse
+package ca.valencik.sequoia
 
 sealed trait Node
 case class QualifiedName(name: String)
