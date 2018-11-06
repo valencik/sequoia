@@ -54,7 +54,7 @@ lazy val root = (project in file("."))
     inThisBuild(
       List(
         organization := "ca.valencik",
-        scalaVersion := "2.12.6",
+        scalaVersion := "2.12.7",
         version := "0.1.0-SNAPSHOT",
       )),
     name := "Big SQL Parse",
@@ -64,6 +64,6 @@ lazy val root = (project in file("."))
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
-    antlr4PackageName in Antlr4 := Some("ca.valencik.bigsqlparse"),
+    antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia"),
     scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
   )

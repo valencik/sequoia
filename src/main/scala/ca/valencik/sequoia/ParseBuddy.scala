@@ -1,4 +1,4 @@
-package ca.valencik.bigsqlparse
+package ca.valencik.sequoia
 
 import scala.collection.mutable.HashMap
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
@@ -215,7 +215,7 @@ object ParseBuddy {
 }
 
 object ParseBuddyApp extends App {
-  import ca.valencik.bigsqlparse.ParseBuddy._
+  import ca.valencik.sequoia.ParseBuddy._
 
   private val exitCommands                  = Seq("exit", ":q", "q")
   def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)

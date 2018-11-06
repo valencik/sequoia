@@ -1,7 +1,7 @@
-package ca.valencik.bigsqlparse
+package ca.valencik.sequoia
 
 import org.scalatest._
-import ca.valencik.bigsqlparse.ParseBuddy._
+import ca.valencik.sequoia.ParseBuddy._
 
 import scala.collection.mutable.HashMap
 
