@@ -24,7 +24,7 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
     else Seq.empty
   }
 
-  def lookupColumnStringInRelations(col: String, relations: List[ResolvableRelation]): String = {
+  def lookupColumnStringInRelations(col: String, relations: List[ResolvableRelation]): Option[String] = {
     val candidates = relations
       .map {
         case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.toLowerCase)
@@ -33,12 +33,16 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
       .filter(_.isDefined)
       .map(_.get)
     candidates match {
-      case rc :: Nil => rc
-      case Nil       => col
+      case rc :: Nil => Some(rc)
+      case Nil       => None // Oh this is probably the fuckup
       case _         => throw new Exception(s"Ambiguous resolution for column $col")
     }
   }
 
+  /** Look up table names
+   *
+   *  TODO Currently this only does a "lookup" when passed a db and table?
+   */
   def lookupTableName(tn: String): Option[QualifiedName] = {
     tn.toLowerCase.split('.') match {
       case Array(table) =>

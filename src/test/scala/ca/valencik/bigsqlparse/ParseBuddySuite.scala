@@ -93,6 +93,15 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       SingleColumn(Identifier(ResolvedReference("db.foo.a")), None))
   }
 
+  it should "not resolve references if column is not in catalog" in {
+    val acc      = catalog
+    val q        = parse("select f from db.foo").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(UnresolvedReference("F")), None))
+  }
+
   it should "resolve references to public if relation is not in catalog" in {
     val acc      = catalog
     val q        = parse("select a from fake").right.get

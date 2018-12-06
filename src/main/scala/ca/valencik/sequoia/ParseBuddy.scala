@@ -97,9 +97,14 @@ object ParseBuddy {
     Query(withR, qnw)
   }
 
-  def resolveColumn(acc: Catalog, c: Identifier[_], relations: List[ResolvableRelation]): Option[String] = {
+  def resolveColumn(acc: Catalog, c: Identifier[_], relations: List[ResolvableRelation]): ResolvableReference = {
     val col = c.name.asInstanceOf[String]
-    Some(acc.lookupColumnStringInRelations(col, relations))
+    println(s"Attemping to resolve column ${c.name}")
+    val rcol = acc.lookupColumnStringInRelations(col, relations)
+    rcol match {
+      case Some(rc) => ResolvedReference(rc)
+      case None => UnresolvedReference(col)
+    }
   }
 
   def resolveExpression(acc: Catalog, e: Expression[_], relations: List[ResolvableRelation]): Option[String] = e match {
@@ -114,8 +119,10 @@ object ParseBuddy {
         r.flatMap(_.toList)
       }
       .getOrElse(List.empty)
-    def resolveExpression(c: String): String = acc.lookupColumnStringInRelations(c, resolvedRelations)
     println(s"(resolveReferences) Resolved Relations: $resolvedRelations")
+    def resolveExpression(c: String): Option[String] = {
+      acc.lookupColumnStringInRelations(c, resolvedRelations)
+    }
 
     val selectItemsResolved = qs.select.selectItems.map { si =>
       val sim: Option[String] = si match {
@@ -127,7 +134,7 @@ object ParseBuddy {
           }
         case _ => ???
       }
-      val ref = sim match {
+      val ref: SingleColumn[ResolvableReference] = sim match {
         case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
         case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
       }
