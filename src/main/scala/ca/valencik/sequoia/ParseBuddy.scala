@@ -107,8 +107,8 @@ object ParseBuddy {
     }
   }
 
-  def resolveExpression(acc: Catalog, e: Expression[_], relations: List[ResolvableRelation]): Option[String] = e match {
-    case e: Identifier[_] => resolveColumn(acc, e, relations)
+  def resolveExpression(acc: Catalog, e: Expression[_], relations: List[ResolvableRelation]): Option[ResolvableReference] = e match {
+    case e: Identifier[_] => Some(resolveColumn(acc, e, relations))
     case _                => None
   }
 
@@ -125,32 +125,29 @@ object ParseBuddy {
     }
 
     val selectItemsResolved = qs.select.selectItems.map { si =>
-      val sim: Option[String] = si match {
+      val sim: SelectItem = si match {
         case sc: SingleColumn[_] =>
           // TODO perhaps want expressionMap back here
           sc.expression match {
-            case e: Identifier[_] => resolveColumn(acc, e, resolvedRelations)
-            case _                => None
+            case e: Identifier[_] => SingleColumn(Identifier(resolveColumn(acc, e, resolvedRelations)), None)
+            case _ => ???
           }
         case _ => ???
       }
-      val ref: SingleColumn[ResolvableReference] = sim match {
-        case Some(rn) => SingleColumn(Identifier(ResolvedReference(rn)), None)
-        case None     => SingleColumn(Identifier(UnresolvedReference("WTF?!")), None)
-      }
-      ref
+      sim
     }
+
     val fromR = From(qs.from.relations.map { rs =>
       rs.map(_.mapJoinExpression(_.asInstanceOf[Expression[String]].map(resolveExpression)))
     })
-    val whereR = Where(qs.where.expression.map(_.map(resolveExpression)))
-    val groupbyR = GroupBy(qs.groupBy.groupingElements.map { ge =>
+    val whereR: Where[String] = Where(qs.where.expression.map(_.map(resolveExpression(_).get)))
+    val groupbyR: GroupBy[Option[String]] = GroupBy(qs.groupBy.groupingElements.map { ge =>
       val inner = ge.groupingSet.map { _.map(resolveExpression) }
       GroupingElement(inner)
     })
-    val select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
+    val select: Select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
     val queryS =
-      q.queryNoWith.querySpecification.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
+      q.queryNoWith.querySpecification //.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
     val qnw = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
