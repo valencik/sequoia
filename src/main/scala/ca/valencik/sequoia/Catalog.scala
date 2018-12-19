@@ -40,9 +40,9 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
   }
 
   /** Look up table names
-   *
-   *  TODO Currently this only does a "lookup" when passed a db and table?
-   */
+    *
+    *  TODO Currently this only does a "lookup" when passed a db and table?
+    */
   def lookupTableName(tn: String): Option[QualifiedName] = {
     tn.toLowerCase.split('.') match {
       case Array(table) =>

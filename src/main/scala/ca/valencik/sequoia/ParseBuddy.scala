@@ -103,11 +103,13 @@ object ParseBuddy {
     val rcol = acc.lookupColumnStringInRelations(col, relations)
     rcol match {
       case Some(rc) => ResolvedReference(rc)
-      case None => UnresolvedReference(col)
+      case None     => UnresolvedReference(col)
     }
   }
 
-  def resolveExpression(acc: Catalog, e: Expression[_], relations: List[ResolvableRelation]): Option[ResolvableReference] = e match {
+  def resolveExpression(acc: Catalog,
+                        e: Expression[_],
+                        relations: List[ResolvableRelation]): Option[ResolvableReference] = e match {
     case e: Identifier[_] => Some(resolveColumn(acc, e, relations))
     case _                => None
   }
@@ -130,7 +132,7 @@ object ParseBuddy {
           // TODO perhaps want expressionMap back here
           sc.expression match {
             case e: Identifier[_] => SingleColumn(Identifier(resolveColumn(acc, e, resolvedRelations)), None)
-            case _ => ???
+            case _                => ???
           }
         case _ => ???
       }
@@ -150,7 +152,8 @@ object ParseBuddy {
     println(whereR)
     println(fromR)
     println(groupbyR)
-    val queryS: QuerySpecification[ResolvableRelation, String] = qs.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
+    val queryS: QuerySpecification[ResolvableRelation, String] =
+      qs.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
     val qnw = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
