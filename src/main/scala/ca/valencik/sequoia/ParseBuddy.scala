@@ -120,7 +120,7 @@ object ParseBuddy {
       }
       .getOrElse(List.empty)
     println(s"(resolveReferences) Resolved Relations: $resolvedRelations")
-    def resolveExpression(c: String): Option[String] = {
+    def innerResolveCol(c: String): Option[String] = {
       acc.lookupColumnStringInRelations(c, resolvedRelations)
     }
 
@@ -137,17 +137,20 @@ object ParseBuddy {
       sim
     }
 
-    val fromR = From(qs.from.relations.map { rs =>
-      rs.map(_.mapJoinExpression(_.asInstanceOf[Expression[String]].map(resolveExpression)))
+    val fromR: From[ResolvableRelation] = From(qs.from.relations.map { rs =>
+      rs.map(_.mapJoinExpression(_.asInstanceOf[Expression[String]].map(innerResolveCol)))
     })
-    val whereR: Where[String] = Where(qs.where.expression.map(_.map(resolveExpression(_).get)))
-    val groupbyR: GroupBy[Option[String]] = GroupBy(qs.groupBy.groupingElements.map { ge =>
-      val inner = ge.groupingSet.map { _.map(resolveExpression) }
+    val whereR: Where[String] = Where(qs.where.expression.map(_.map(innerResolveCol(_).get)))
+    val groupbyR: GroupBy[String] = GroupBy(qs.groupBy.groupingElements.map { ge =>
+      val inner = ge.groupingSet.map { _.map(innerResolveCol(_).get) }
       GroupingElement(inner)
     })
     val select: Select = q.queryNoWith.querySpecification.select.copy(selectItems = selectItemsResolved)
-    val queryS =
-      q.queryNoWith.querySpecification //.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
+    println(select)
+    println(whereR)
+    println(fromR)
+    println(groupbyR)
+    val queryS: QuerySpecification[ResolvableRelation, String] = qs.copy(select = select, where = whereR, groupBy = groupbyR, from = fromR)
     val qnw = q.queryNoWith.copy(querySpecification = queryS)
     q.copy(queryNoWith = qnw)
   }
