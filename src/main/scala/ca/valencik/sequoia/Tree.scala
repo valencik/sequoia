@@ -40,7 +40,7 @@ case object LTE extends Comparison
 case object GT  extends Comparison
 case object GTE extends Comparison
 
-case class SortItem[+A](expression: Expression[A], ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering])
+case class SortItem[A](expression: Expression[A], ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering])
     extends Node
 
 sealed trait SortOrdering
@@ -111,7 +111,7 @@ case object System    extends SampleType
 case class Select(selectItems: List[SelectItem]) extends Node {
   def show: String = s"Select: $selectItems"
 }
-case class From[+A](relations: Option[List[Relation[A]]]) extends Node {
+case class From[A](relations: Option[List[Relation[A]]]) extends Node {
   def show: String = if (relations.isDefined) s"From: ${relations.get}" else ""
   def map[B](f: A => B): From[B] =
     From({
@@ -122,7 +122,7 @@ case class From[+A](relations: Option[List[Relation[A]]]) extends Node {
       }
     })
 }
-case class Where[+A](expression: Option[Expression[A]]) extends Node {
+case class Where[A](expression: Option[Expression[A]]) extends Node {
   def show: String = if (expression.isDefined) s"Where: ${expression.get}" else ""
 }
 case class GroupingElement[+A](groupingSet: List[Expression[A]]) extends Node {
@@ -133,11 +133,11 @@ case class GroupBy[+A](groupingElements: List[GroupingElement[A]]) extends Node 
   def show: String = if (groupingElements.size >= 1) s"GroupBy: ${groupingElements}" else ""
 }
 
-case class Having[+A](expression: Option[Expression[A]]) extends Node {
+case class Having[A](expression: Option[Expression[A]]) extends Node {
   def show: String = if (expression.isDefined) s"Having: ${expression.get}" else ""
 }
 
-case class QuerySpecification[+R, +E](
+case class QuerySpecification[R, E](
     select: Select,
     from: From[R],
     where: Where[E],
@@ -150,7 +150,7 @@ case class QuerySpecification[+R, +E](
   }
 }
 
-case class OrderBy[+E](items: List[SortItem[E]]) extends Node {
+case class OrderBy[E](items: List[SortItem[E]]) extends Node {
   def show: String = if (items.size >= 1) s"OrderBy: ${items}" else ""
 }
 
@@ -158,7 +158,7 @@ case class Limit(value: String) extends Node {
   def show: String = if (value != "") s"Limit: ${value}" else ""
 }
 
-case class QueryNoWith[+R, +E](querySpecification: QuerySpecification[R, E],
+case class QueryNoWith[R, E](querySpecification: QuerySpecification[R, E],
                              orderBy: Option[OrderBy[E]],
                              limit: Option[Limit])
     extends Node {
