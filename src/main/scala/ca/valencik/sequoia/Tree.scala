@@ -14,8 +14,11 @@ final case class ColumnAlias[I](info: I, value: String)
 sealed trait Node
 
 sealed trait Query[R, I] extends Node
+final case class QueryWith[R, I](info: I, ctes: Seq[CTE[R, I]], q: Query[R, I]) extends Query[R, I]
 final case class QuerySelect[R, I](info: I, qs: Select[R, I]) extends Query[R, I]
 final case class QueryLimit[R, I](info: I, limit: Limit[I], qs: Select[R, I]) extends Query[R, I]
+
+final case class CTE[R, I](info: I, alias: TablishAliasT[I], cols: Seq[ColumnAlias[I]], q: Query[R, I]) extends Node
 
 final case class Limit[I](info: I, value: String)
 
