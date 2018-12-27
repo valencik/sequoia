@@ -122,6 +122,17 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       SingleColumn(Identifier(ResolvedReference("cteAlias.f.a")), None))
   }
 
+  ignore should "not resolve references not in the cte" in {
+    val acc      = catalog
+    val q        = parse("with f as (select a from db.foo) select b from f").right.get
+    val resolved = resolveReferences(acc, resolveRelations(acc, q, None))
+    resolved.withz.get.queries(0).query.queryNoWith.querySpecification.from.relations.get shouldBe List(
+      Table(ResolvedRelation("db.foo")))
+    resolved.queryNoWith.querySpecification.from.relations.get shouldBe List(Table(ResolvedRelation("cteAlias.f")))
+    resolved.queryNoWith.querySpecification.select.selectItems shouldBe List(
+      SingleColumn(Identifier(UnresolvedReference("b")), None))
+  }
+
   it should "resolve references to public if relation is not in catalog" in {
     val acc      = catalog
     val q        = parse("with f as (select a from fake) select a from f").right.get

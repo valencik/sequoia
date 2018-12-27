@@ -27,6 +27,7 @@ case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[Strin
   def lookupColumnStringInRelations(col: String, relations: List[ResolvableRelation]): Option[String] = {
     val candidates = relations
       .map {
+        // this needs to be a lookup
         case rr: ResolvedRelation => nameColumnInTable(rr.value)(col.toLowerCase)
         case _                    => None
       }

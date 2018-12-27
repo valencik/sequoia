@@ -71,11 +71,11 @@ object ParseBuddy {
                        alias: Option[Identifier[String]]): Query[ResolvableRelation, String] = {
     val queriesResolved = q.withz.map { w =>
       w.queries.map { wqs =>
-        // each one of these withquery names needs to become a temp view
+        // TODO each one of these withquery names needs to become a temp view
         wqs.copy(query = resolveRelations(acc, wqs.query, Some(wqs.name)))
       }
     }
-    // the resolution here needs to use the updated catalog with temp views
+    // TODO the resolution here needs to use the updated catalog with temp views
     val qnwr = q.queryNoWith.querySpecification.from.relations.map { rs =>
       val resolvedRelations: List[Relation[ResolvableRelation]] = rs.map(r =>
         r.map { qn: QualifiedName =>
