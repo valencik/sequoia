@@ -40,38 +40,37 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): RawSelect = {
     val select  = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toSeq)
     val relationOptions = ctx.relation.asScala.map{ r=> Option(visit(r).asInstanceOf[RawTablish])}
-    val from = if (relationOptions.forall(_.isDefined))
+    val from = if (relationOptions.size > 0 && relationOptions.forall(_.isDefined))
                  Some(From(nextId(), relationOptions.map(_.get)))
                else None
     Select(nextId(), select, from)
   }
 
-  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): Node = {
-    //val alias = if (ctx.identifier != null) Option(ctx.identifier.getText) else None
+  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): RawSelection = {
+    val ident = if (ctx.identifier != null) Option(ctx.identifier.getText) else None
+    val alias: Option[ColumnAlias[Info]] = ident.map{a => ColumnAlias(nextId(), a)}
     val expr: RawExpression = visit(ctx.expression).asInstanceOf[RawExpression]
-    SelectExpr(nextId(), expr, None)
+    SelectExpr(nextId(), expr, alias)
   }
 
- // override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): AllColumns = {
+  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): RawSelection = {
+    val ref: Option[TableRef[RawNames, Info]] = if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName))) else None
+    SelectStar(nextId(), ref)
+  }
 
   override def visitTableName(ctx: SqlBaseParser.TableNameContext): RawTablish = {
     val ref: TableRef[RawNames, Info] = TableRef(nextId(), getTableName(ctx.qualifiedName))
     TablishTable(nextId(), TablishAliasNone[Info], ref)
   }
 
-  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Node = {
-    println(s"-------visitUnquotedIdentifier called: ${ctx.getText}-------------")
-    ???
-  }
-
-  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Node = {
-    println(s"-------visitQuotedIdentifier called: ${ctx.getText}-------------")
-    ???
-  }
-
   override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): RawExpression = {
     println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
+  }
+
+  override def visitNumericLiteral(ctx: SqlBaseParser.NumericLiteralContext): RawExpression = {
+    println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
+    ConstantExpr(nextId(), DoubleConstant(nextId(), ctx.getText.toDouble))
   }
 
 }

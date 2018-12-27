@@ -52,7 +52,9 @@ final case class ColumnExpr[R, I](info: I, col: ColumnRef[R, I]) extends Express
 final case class SubQueryExpr[R, I](info: I, q: Query[R, I]) extends Expression[R, I]
 
 sealed trait Constant[I]
-final case class NumericConstant[I](info: I, value: Int) extends Constant[I]
+final case class IntConstant[I](info: I, value: Int) extends Constant[I]
+final case class DecimalConstant[I](info: I, value: Double) extends Constant[I]
+final case class DoubleConstant[I](info: I, value: Double) extends Constant[I]
 final case class StringConstant[I](info: I, value: String) extends Constant[I]
 final case class BoolConstant[I](info: I, value: Boolean) extends Constant[I]
 
