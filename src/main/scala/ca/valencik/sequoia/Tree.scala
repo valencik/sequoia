@@ -46,7 +46,7 @@ final case class ColumnRef[R, I](info: I, value: R)
 
 
 // Expression
-sealed trait Expression[R, I]
+sealed trait Expression[R, I] extends Node
 final case class ConstantExpr[R, I](info: I, col: Constant[I]) extends Expression[R, I]
 final case class ColumnExpr[R, I](info: I, col: ColumnRef[R, I]) extends Expression[R, I]
 final case class SubQueryExpr[R, I](info: I, q: Query[R, I]) extends Expression[R, I]

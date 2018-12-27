@@ -19,6 +19,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     RawColumnName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
 
+  def getColumnName(ctx: SqlBaseParser.IdentifierContext): RawColumnName = {
+    RawColumnName(ctx.getText)
+  }
+
   def getTableName(ctx: SqlBaseParser.QualifiedNameContext): RawTableName = {
     RawTableName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
@@ -65,9 +69,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ???
   }
 
-  override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): Node = {
+  override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): RawExpression = {
     println(s"-------visitColumnReference called: ${ctx.getText}-------------")
-    visit(ctx.identifier)
+    ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
   }
 
 }
