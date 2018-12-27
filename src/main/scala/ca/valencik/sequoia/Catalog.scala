@@ -2,6 +2,9 @@ package ca.valencik.sequoia
 
 import scala.collection.mutable.HashMap
 
+case class QualifiedName(name: String)
+case class Identifier[E](name: E)
+
 case class Catalog private (schemaMap: HashMap[String, HashMap[String, Seq[String]]],
                             tempViews: HashMap[String, Seq[String]]) {
 

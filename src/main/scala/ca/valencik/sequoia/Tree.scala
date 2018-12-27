@@ -1,205 +1,58 @@
 package ca.valencik.sequoia
 
+sealed trait RawNames
+final case class RawTableName(value: String) extends RawNames
+final case class RawColumnName(value: String) extends RawNames
+
+sealed trait ResolvedNames
+final case class ResolvedTableName(value: String) extends ResolvedNames
+final case class ResolvedColumnName(value: String) extends ResolvedNames
+
+final case class ColumnAlias[I](info: I, value: String)
+
+// --- TREE --
 sealed trait Node
-case class QualifiedName(name: String)
-case class RawIdentifier(name: String)
 
-sealed trait SelectItem                                                             extends Node
-case class SingleColumn[A](expression: Expression[A], alias: Option[Identifier[A]]) extends SelectItem
-case class AllColumns(name: Option[QualifiedName])                                  extends SelectItem
+sealed trait Query[R, I] extends Node
+final case class QuerySelect[R, I](info: I, qs: Select[R, I]) extends Query[R, I]
+final case class QueryLimit[R, I](info: I, limit: Limit[I], qs: Select[R, I]) extends Query[R, I]
 
-sealed trait Expression[+A] extends Node {
-  def map[B](f: A => B): Expression[B]
-}
-final case class Identifier[A](name: A) extends Expression[A] {
-  def map[B](f: A => B): Expression[B] = Identifier(f(name))
-}
-final case class BooleanExpression[A](left: Expression[A], op: Operator, right: Expression[A]) extends Expression[A] {
-  def map[B](f: A => B): Expression[B] = BooleanExpression(left.map(f), op, right.map(f))
-}
-final case class ComparisonExpression[A](left: Expression[A], op: Comparison, right: Expression[A])
-    extends Expression[A] {
-  def map[B](f: A => B): Expression[B] = ComparisonExpression(left.map(f), op, right.map(f))
-}
-final case class IsNullPredicate[A](value: Expression[A]) extends Expression[A] {
-  def map[B](f: A => B): Expression[B] = IsNullPredicate(value.map(f))
-}
-final case class IsNotNullPredicate[A](value: Expression[A]) extends Expression[A] {
-  def map[B](f: A => B): Expression[B] = IsNotNullPredicate(value.map(f))
-}
+final case class Limit[I](info: I, value: String)
 
-sealed trait Operator
-case object AND extends Operator
-case object OR  extends Operator
+final case class Select[R, I](info: I,
+                              select: SelectCols[R, I],
+                              from: Option[From[R, I]]
+                              ) extends Node
 
-sealed trait Comparison
-case object EQ  extends Comparison
-case object NEQ extends Comparison
-case object LT  extends Comparison
-case object LTE extends Comparison
-case object GT  extends Comparison
-case object GTE extends Comparison
+final case class SelectCols[R, I](info: I, cols: Seq[Selection[R, I]])
 
-case class SortItem[A](expression: Expression[A], ordering: Option[SortOrdering], nullOrdering: Option[NullOrdering])
-    extends Node
+sealed trait Selection[R, I] extends Node
+final case class SelectStar[R, I](info: I, ref: Option[TableRef[R, I]]) extends Selection[R, I]
+final case class SelectExpr[R, I](info: I, expr: Expression[R, I], alias: Option[ColumnAlias[I]]) extends Selection[R, I]
 
-sealed trait SortOrdering
-case object ASC  extends SortOrdering
-case object DESC extends SortOrdering
+final case class From[R, I](info: I, rels: Seq[Tablish[R, I]])
 
-sealed trait NullOrdering
-case object FIRST extends NullOrdering
-case object LAST  extends NullOrdering
+sealed trait Tablish[R, I] extends Node
+final case class TablishTable[R, I](info: I, alias: TablishAlias[I], ref: TableRef[R, I]) extends Tablish[R, I]
+final case class TablishSubquery[R, I](info: I, alias: TablishAlias[I], q: Query[R, I]) extends Tablish[R, I]
 
-sealed trait Relation[+A] extends Node {
-  def map[R](f: A => R): Relation[R]
-  def toList: List[A]
-  def mapJoinExpression(f: Expression[_] => Expression[_]): Relation[A] = {
-    this match {
-      case j: Join[A] => {
-        val critereaR = j.criterea.map {
-          case jo: JoinOn[_] => JoinOn(f(jo.expression))
-          case other         => other
-        }
-        Join(j.jointype, j.left.mapJoinExpression(f), j.right.mapJoinExpression(f), critereaR)
-      }
-      case other => other
-    }
-  }
-}
-case class Join[A](jointype: JoinType, left: Relation[A], right: Relation[A], criterea: Option[JoinCriteria])
-    extends Relation[A] {
-  def map[R](f: A => R): Relation[R]                                = Join(jointype, left.map(f), right.map(f), criterea)
-  def mapJoinCriteria(f: JoinCriteria => JoinCriteria): Relation[A] = Join(jointype, left, right, criterea.map(f))
-  def toList: List[A]                                               = left.toList ++ right.toList
-}
-case class SampledRelation[A, B](relation: Relation[A], sampleType: SampleType, samplePercentage: Expression[B])
-    extends Relation[A] {
-  def map[R](f: A => R): Relation[R] = SampledRelation(relation.map(f), sampleType, samplePercentage)
-  def toList: List[A]                = relation.toList
-}
-case class AliasedRelation[A, B](relation: Relation[A], alias: Identifier[B], columnNames: List[Identifier[B]])
-    extends Relation[A] {
-  def map[R](f: A => R): Relation[R] = AliasedRelation(relation.map(f), alias, columnNames)
-  def toList: List[A]                = relation.toList
-}
-case class Table[A](name: A) extends Relation[A] {
-  def map[R](f: A => R): Relation[R] = Table(f(name))
-  def toList: List[A]                = List(name)
-}
+sealed trait TablishAlias[I]
+final case class TablishAliasNone[I]() extends TablishAlias[I]
+final case class TablishAliasT[I](info: I, value: String) extends TablishAlias[I]
 
-sealed trait JoinType
-case object LeftJoin  extends JoinType
-case object RightJoin extends JoinType
-case object FullJoin  extends JoinType
-case object InnerJoin extends JoinType
-case object CrossJoin extends JoinType
+// TODO how do I encode the Resolution?
+final case class TableRef[R, I](info: I, value: R)
+final case class ColumnRef[R, I](info: I, value: R)
 
-sealed trait JoinCriteria
-case object NaturalJoin extends JoinCriteria
-case class JoinOn[B](expression: Expression[B]) extends JoinCriteria {
-  def map[A](f: Expression[B] => A): A = f(expression)
-}
-case class JoinUsing[B](columns: List[Identifier[B]]) extends JoinCriteria {
-  def map[A](f: Identifier[B] => A): List[A] = columns.map(f)
-}
 
-sealed trait SampleType
-case object Bernoulli extends SampleType
-case object System    extends SampleType
+// Expression
+sealed trait Expression[R, I]
+final case class ConstantExpr[R, I](info: I, col: Constant[I]) extends Expression[R, I]
+final case class ColumnExpr[R, I](info: I, col: ColumnRef[R, I]) extends Expression[R, I]
+final case class SubQueryExpr[R, I](info: I, q: Query[R, I]) extends Expression[R, I]
 
-case class Select(selectItems: List[SelectItem]) extends Node {
-  def show: String = s"Select: $selectItems"
-}
-case class From[A](relations: Option[List[Relation[A]]]) extends Node {
-  def show: String = if (relations.isDefined) s"From: ${relations.get}" else ""
-  def map[B](f: A => B): From[B] =
-    From({
-      relations.map { rs =>
-        rs.map { r =>
-          r.map(f)
-        }
-      }
-    })
-}
-case class Where[A](expression: Option[Expression[A]]) extends Node {
-  def show: String = if (expression.isDefined) s"Where: ${expression.get}" else ""
-}
-case class GroupingElement[+A](groupingSet: List[Expression[A]]) extends Node {
-  def show: String = if (groupingSet.size >= 1) s"GroupingSet: ${groupingSet}" else ""
-}
+sealed trait Constant[I]
+final case class NumericConstant[I](info: I, value: Int) extends Constant[I]
+final case class StringConstant[I](info: I, value: String) extends Constant[I]
+final case class BoolConstant[I](info: I, value: Boolean) extends Constant[I]
 
-case class GroupBy[+A](groupingElements: List[GroupingElement[A]]) extends Node {
-  def show: String = if (groupingElements.size >= 1) s"GroupBy: ${groupingElements}" else ""
-}
-
-case class Having[A](expression: Option[Expression[A]]) extends Node {
-  def show: String = if (expression.isDefined) s"Having: ${expression.get}" else ""
-}
-
-case class QuerySpecification[R, E](
-    select: Select,
-    from: From[R],
-    where: Where[E],
-    groupBy: GroupBy[E],
-    having: Having[E]
-) extends Node {
-  def show: String = {
-    val components = List(select.show, from.show, where.show, groupBy.show, having.show)
-    components.filter(_ != "").mkString("\n", "\n", "\n")
-  }
-}
-
-case class OrderBy[E](items: List[SortItem[E]]) extends Node {
-  def show: String = if (items.size >= 1) s"OrderBy: ${items}" else ""
-}
-
-case class Limit(value: String) extends Node {
-  def show: String = if (value != "") s"Limit: ${value}" else ""
-}
-
-case class QueryNoWith[R, E](querySpecification: QuerySpecification[R, E],
-                             orderBy: Option[OrderBy[E]],
-                             limit: Option[Limit])
-    extends Node {
-  def show: String = {
-    val ob         = if (orderBy.isDefined) orderBy.get.show else ""
-    val l          = if (limit.isDefined) limit.get.show else ""
-    val components = List(querySpecification.show, ob, l)
-    components
-      .filter { c =>
-        c != ""
-      }
-      .mkString("\n", "\n", "\n")
-  }
-}
-
-case class With[R, E](recursive: Boolean, queries: List[WithQuery[R, E]]) extends Node {
-  def show: String = {
-    val r = if (recursive) "Recursive" else ""
-    s"$r With ${queries.map(_.show)}"
-  }
-}
-case class WithQuery[R, E](name: Identifier[E], query: Query[R, E], columnNames: Option[List[RawIdentifier]])
-    extends Node {
-  def show: String = {
-    val cn         = if (columnNames.isDefined) columnNames.get.toString else ""
-    val components = List(cn, query.show)
-    components
-      .filter { c =>
-        c != ""
-      }
-      .mkString(s"WithQuery $name as\n", "\n", "\n")
-  }
-}
-case class Query[R, E](withz: Option[With[R, E]], queryNoWith: QueryNoWith[R, E]) extends Node {
-  def show: String = {
-    val w          = if (withz.isDefined) withz.get.show else ""
-    val components = List(w, queryNoWith.show)
-    components
-      .filter { c =>
-        c != ""
-      }
-      .mkString("Query\n", "\n", "\n")
-  }
-}
