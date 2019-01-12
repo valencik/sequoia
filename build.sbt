@@ -1,5 +1,6 @@
 lazy val ScalaTestVersion = "3.0.5"
 lazy val AntlrVersion     = "4.7.1"
+lazy val CatsVersion     = "1.5.0"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
@@ -59,8 +60,9 @@ lazy val root = (project in file("."))
       )),
     name := "Big SQL Parse",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest"     % ScalaTestVersion % Test,
-      "org.antlr"     % "antlr4-runtime" % AntlrVersion
+      "org.scalatest" %% "scalatest"      % ScalaTestVersion % Test,
+      "org.antlr"     %  "antlr4-runtime" % AntlrVersion,
+      "org.typelevel" %% "cats-core"      % CatsVersion
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
