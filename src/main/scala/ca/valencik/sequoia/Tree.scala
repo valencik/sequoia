@@ -1,12 +1,19 @@
 package ca.valencik.sequoia
 
-sealed trait RawNames
-final case class RawTableName(value: String) extends RawNames
-final case class RawColumnName(value: String) extends RawNames
+sealed trait RawName {
+  def value: String
+}
+final case class RawTableName(value: String) extends RawName
+final case class RawColumnName(value: String) extends RawName
 
-sealed trait ResolvedNames
-final case class ResolvedTableName(value: String) extends ResolvedNames
-final case class ResolvedColumnName(value: String) extends ResolvedNames
+sealed trait ResolvedName {
+  def value: String
+}
+final case class ResolvedTableName(value: String) extends ResolvedName
+final case class ResolvedTableAlias(value: String) extends ResolvedName
+final case class ResolvedColumnName(value: String) extends ResolvedName
+final case class UnresolvedTableName(value: String) extends ResolvedName
+final case class UnresolvedColumnName(value: String) extends ResolvedName
 
 final case class ColumnAlias[I](info: I, value: String)
 
