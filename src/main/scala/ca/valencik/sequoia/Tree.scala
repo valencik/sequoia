@@ -21,11 +21,11 @@ final case class ColumnAlias[I](info: I, value: String)
 sealed trait Node
 
 sealed trait Query[R, I] extends Node
-final case class QueryWith[R, I](info: I, ctes: Seq[CTE[R, I]], q: Query[R, I]) extends Query[R, I]
+final case class QueryWith[R, I](info: I, ctes: List[CTE[R, I]], q: Query[R, I]) extends Query[R, I]
 final case class QuerySelect[R, I](info: I, qs: Select[R, I]) extends Query[R, I]
 final case class QueryLimit[R, I](info: I, limit: Limit[I], qs: Select[R, I]) extends Query[R, I]
 
-final case class CTE[R, I](info: I, alias: TablishAliasT[I], cols: Seq[ColumnAlias[I]], q: Query[R, I]) extends Node
+final case class CTE[R, I](info: I, alias: TablishAliasT[I], cols: List[ColumnAlias[I]], q: Query[R, I]) extends Node
 
 final case class Limit[I](info: I, value: String)
 
@@ -34,13 +34,13 @@ final case class Select[R, I](info: I,
                               from: Option[From[R, I]]
                               ) extends Node
 
-final case class SelectCols[R, I](info: I, cols: Seq[Selection[R, I]])
+final case class SelectCols[R, I](info: I, cols: List[Selection[R, I]])
 
 sealed trait Selection[R, I] extends Node
 final case class SelectStar[R, I](info: I, ref: Option[TableRef[R, I]]) extends Selection[R, I]
 final case class SelectExpr[R, I](info: I, expr: Expression[R, I], alias: Option[ColumnAlias[I]]) extends Selection[R, I]
 
-final case class From[R, I](info: I, rels: Seq[Tablish[R, I]])
+final case class From[R, I](info: I, rels: List[Tablish[R, I]])
 
 sealed trait Tablish[R, I] extends Node
 final case class TablishTable[R, I](info: I, alias: TablishAlias[I], ref: TableRef[R, I]) extends Tablish[R, I]

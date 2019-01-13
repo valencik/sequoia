@@ -37,9 +37,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuery(ctx: SqlBaseParser.QueryContext): RawQuery = {
     println(s"-------visitQuery called: ${ctx.getText}-------------")
     if (ctx.`with` != null) {
-      val ctes: Seq[CTE[RawName, Info]] = ctx.`with`.namedQuery.asScala.map { n =>
+      val ctes: List[CTE[RawName, Info]] = ctx.`with`.namedQuery.asScala.map { n =>
         visitNamedQuery(n)
-      }.toSeq
+      }.toList
       QueryWith(nextId(), ctes, visitQueryNoWith(ctx.queryNoWith))
     }
     else
@@ -50,9 +50,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
     val alias = TablishAliasT(nextId(), ctx.name.getText)
     val query: RawQuery = visit(ctx.query).asInstanceOf[RawQuery]
-    val cols: Seq[ColumnAlias[Info]] = if (ctx.columnAliases != null)
-                                         ctx.columnAliases.identifier.asScala.map{a => ColumnAlias(nextId(), a.getText)}.toSeq
-                                       else Seq()
+    val cols: List[ColumnAlias[Info]] = if (ctx.columnAliases != null)
+                                         ctx.columnAliases.identifier.asScala.map{a => ColumnAlias(nextId(), a.getText)}.toList
+                                       else List()
     CTE(nextId(), alias, cols, query)
   }
 
@@ -67,8 +67,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): RawSelect = {
     println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
-    val select  = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toSeq)
-    val relationOptions = ctx.relation.asScala.map{ r=> Option(visit(r).asInstanceOf[RawTablish])}
+    val select  = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toList)
+    val relationOptions = ctx.relation.asScala.map{ r=> Option(visit(r).asInstanceOf[RawTablish])}.toList
     val from = if (relationOptions.size > 0 && relationOptions.forall(_.isDefined))
                  Some(From(nextId(), relationOptions.map(_.get)))
                else None
