@@ -1,17 +1,6 @@
 package ca.valencik.sequoia
 
-import scala.collection.mutable.HashMap
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
-
-sealed trait ResolvableRelation {
-  val value: String
-}
-case class ResolvedRelation(value: String)   extends ResolvableRelation
-case class UnresolvedRelation(value: String) extends ResolvableRelation
-
-sealed trait ResolvableReference
-case class ResolvedReference(value: String)   extends ResolvableReference
-case class UnresolvedReference(value: String) extends ResolvableReference
 
 object ParseBuddy {
 
@@ -30,7 +19,7 @@ object ParseBuddy {
     }
   }
 
-  def parse(input: String): Either[ParseFailure, Query[QualifiedName, String]] = {
+  def parse(input: String): Either[ParseFailure, Query[RawName, String]] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     lexer.removeErrorListeners()
@@ -44,21 +33,14 @@ object ParseBuddy {
 
     try {
       val node: Node = prestoVisitor.visit(parser.statement)
-      val qnw        = node.asInstanceOf[Query[QualifiedName, String]]
+      val qnw        = node.asInstanceOf[Query[RawName, String]]
       if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
     } catch {
       case e: AntlrParseException => Left(ParseFailure(e.msg))
     }
   }
 
-  val catalog = Catalog(
-    HashMap(
-      "db" -> HashMap(
-        "foo" -> Seq("a", "b", "c"),
-        "bar" -> Seq("x", "y", "z")
-      )))
-
-
+  val catalog = Resolver(Map("DB.FOO" -> Set("A", "B")))
 }
 
 object ParseBuddyApp extends App {
@@ -70,8 +52,13 @@ object ParseBuddyApp extends App {
   def inputLoop(): Unit = {
     val inputQuery = scala.io.StdIn.readLine("\nParseBuddy> ")
     if (!exitCommand(inputQuery)) {
-      val q = parse(inputQuery)
-      println(s"\n(main) Parse: $q \n")
+      val pq = parse(inputQuery)
+      pq.right.map {q =>
+        println(s"\n(main) Parse: $q \n")
+        val (racc, rq) = Resolver.resolveQuery(q).run(catalog).value
+        println(s"\n(main) Resolved: $rq \n")
+        println(s"\n(main) Resolved (state): $racc \n")
+      }
       inputLoop()
     }
   }
