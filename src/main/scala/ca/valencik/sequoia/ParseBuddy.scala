@@ -53,7 +53,7 @@ object ParseBuddyApp extends App {
     val inputQuery = scala.io.StdIn.readLine("\nParseBuddy> ")
     if (!exitCommand(inputQuery)) {
       val pq = parse(inputQuery)
-      pq.right.map {q =>
+      pq.right.map { q =>
         println(s"\n(main) Parse: $q \n")
         val (racc, rq) = Resolver.resolveQuery(q).run(catalog).value
         println(s"\n(main) Resolved: $rq \n")

@@ -4,16 +4,20 @@ import scala.collection.JavaConverters._
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
-  type Info = Int
-  type RawQuery = Query[RawName, Info]
-  type RawQueryLimit = QueryLimit[RawName, Info]
+  type Info           = Int
+  type RawQuery       = Query[RawName, Info]
+  type RawQueryLimit  = QueryLimit[RawName, Info]
   type RawQuerySelect = QuerySelect[RawName, Info]
-  type RawSelect = Select[RawName, Info]
-  type RawSelection = Selection[RawName, Info]
-  type RawTablish = Tablish[RawName, Info]
-  type RawExpression = Expression[RawName, Info]
+  type RawSelect      = Select[RawName, Info]
+  type RawSelection   = Selection[RawName, Info]
+  type RawTablish     = Tablish[RawName, Info]
+  type RawExpression  = Expression[RawName, Info]
 
-  val nextId = { var i = 0; () => { i += 1; i} }
+  val nextId = {
+    var i = 0;
+    () =>
+      { i += 1; i }
+  }
 
   def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawColumnName = {
     RawColumnName(ctx.identifier.asScala.map(_.getText).mkString("."))
@@ -41,18 +45,20 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         visitNamedQuery(n)
       }.toList
       QueryWith(nextId(), ctes, visitQueryNoWith(ctx.queryNoWith))
-    }
-    else
+    } else
       QuerySelect(nextId(), visit(ctx.queryNoWith.queryTerm).asInstanceOf[RawSelect])
   }
 
   override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): CTE[RawName, Info] = {
     println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
-    val alias = TablishAliasT(nextId(), ctx.name.getText)
+    val alias           = TablishAliasT(nextId(), ctx.name.getText)
     val query: RawQuery = visit(ctx.query).asInstanceOf[RawQuery]
-    val cols: List[ColumnAlias[Info]] = if (ctx.columnAliases != null)
-                                         ctx.columnAliases.identifier.asScala.map{a => ColumnAlias(nextId(), a.getText)}.toList
-                                       else List()
+    val cols: List[ColumnAlias[Info]] =
+      if (ctx.columnAliases != null)
+        ctx.columnAliases.identifier.asScala.map { a =>
+          ColumnAlias(nextId(), a.getText)
+        }.toList
+      else List()
     CTE(nextId(), alias, cols, query)
   }
 
@@ -67,23 +73,29 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): RawSelect = {
     println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
-    val select  = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toList)
-    val relationOptions = ctx.relation.asScala.map{ r=> Option(visit(r).asInstanceOf[RawTablish])}.toList
-    val from = if (relationOptions.size > 0 && relationOptions.forall(_.isDefined))
-                 Some(From(nextId(), relationOptions.map(_.get)))
-               else None
+    val select = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toList)
+    val relationOptions = ctx.relation.asScala.map { r =>
+      Option(visit(r).asInstanceOf[RawTablish])
+    }.toList
+    val from =
+      if (relationOptions.size > 0 && relationOptions.forall(_.isDefined))
+        Some(From(nextId(), relationOptions.map(_.get)))
+      else None
     Select(nextId(), select, from)
   }
 
   override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): RawSelection = {
     val ident = if (ctx.identifier != null) Option(ctx.identifier.getText) else None
-    val alias: Option[ColumnAlias[Info]] = ident.map{a => ColumnAlias(nextId(), a)}
+    val alias: Option[ColumnAlias[Info]] = ident.map { a =>
+      ColumnAlias(nextId(), a)
+    }
     val expr: RawExpression = visit(ctx.expression).asInstanceOf[RawExpression]
     SelectExpr(nextId(), expr, alias)
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): RawSelection = {
-    val ref: Option[TableRef[RawName, Info]] = if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName))) else None
+    val ref: Option[TableRef[RawName, Info]] =
+      if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName))) else None
     SelectStar(nextId(), ref)
   }
 
