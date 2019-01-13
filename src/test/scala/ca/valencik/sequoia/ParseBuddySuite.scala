@@ -3,9 +3,9 @@ package ca.valencik.sequoia
 import org.scalatest._
 import ca.valencik.sequoia.ParseBuddy._
 
-import scala.collection.mutable.HashMap
-
 class ParseBuddySpec extends FlatSpec with Matchers {
+
+  def catalog = Resolver(Map("DB.FOO" -> Set("A", "B", "C"), "DB.BAR" -> Set("X", "Y", "Z")))
 
   "ParseBuddy" should "parse valid SQL queries" in {
     val queries = List(
@@ -39,14 +39,4 @@ class ParseBuddySpec extends FlatSpec with Matchers {
     parse("func() over () as thing").isLeft shouldBe true
     parse("select x from").isLeft shouldBe true
   }
-
-  def catalog: Catalog =
-    Catalog(
-      HashMap(
-        "db" -> HashMap(
-          "foo" -> Seq("a", "b", "c"),
-          "bar" -> Seq("x", "y", "z")
-        )))
-
-
 }
