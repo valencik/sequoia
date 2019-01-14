@@ -29,17 +29,39 @@ object Resolver {
 
   type RState[A] = State[Resolver, A]
 
-//  def getSelectionColumns[I](query: Query[ResolvedName, I]): RState[Set[ResolvedName]] = State[Resolver, Set[ResolvedName]] { acc =>
-//    // TODO might not need R type param here, it might always be ResolvedName
-//    query match {
-//      case QueryWith(i, ctes, q) => getSelectionColumns(q)
-//      // TODO possibly and index/alias/or ref
-//      case QuerySelect(i, qs) => qs.select.cols.map {
-//        selection => selection match {
-//          case SelectStar[R, I] => acc.columnsInScope
-//          case SelectExpr[R, I] => ???
-//        }}.flatten
-//    }}
+  private def getSelectColsName[I](sc: SelectCols[ResolvedName, I]): RState[List[String]] =
+    State[Resolver, List[String]] { acc =>
+      {
+        // TODO might not need R type param here, it might always be ResolvedName
+        val rsc: List[String] = sc.cols.zipWithIndex.flatMap {
+          case (selection, index) =>
+            selection match {
+              // TODO handle optional tableref
+              case SelectStar(_, _) => acc.columnsInScope.toList
+              case SelectExpr(_, e, a) =>
+                List(
+                  a match {
+                    case Some(ca) => ca.value
+                    case None =>
+                      e match {
+                        case ColumnExpr(_, c)   => c.value.value
+                        case ConstantExpr(_, _) => s"col_${index}"
+                        // TODO not sure how Subqueries work for naming columns
+                        case SubQueryExpr(_, _) => ???
+                      }
+                  }
+                )
+            }
+        }
+        (acc, rsc)
+      }
+    }
+
+  private def getQueryColumnNames[I](q: Query[ResolvedName, I]): RState[List[String]] = q match {
+    case QueryWith(_, _, q)   => getQueryColumnNames(q)
+    case QuerySelect(_, qs)   => getSelectColsName(qs.select)
+    case QueryLimit(_, _, qs) => getSelectColsName(qs.select)
+  }
 
   def resolveOneRef(ref: RawName): RState[ResolvedName] = State[Resolver, ResolvedName] { acc =>
     if (acc.relationIsInCatalog(ref))
@@ -116,7 +138,7 @@ object Resolver {
       // Update state with the CTE alias and the selection columns
 
       // TODO implement getSelectionColumns
-      // _ <- State.modify[Resolver](c => c.addCTE(cte.alias.value, getSelectionColumns(cte.q).map(_.value).toSet))
+      _ <- State.modify[Resolver](c => c.addCTE(cte.alias.value, getQueryColumnNames(query).runA(c).value.toSet))
 
       // Update state to have no relations or columns in scope so we don't over resolve
       _ <- State.modify[Resolver](r => r.resetRelationScope)
