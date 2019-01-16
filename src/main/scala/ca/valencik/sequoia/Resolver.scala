@@ -59,7 +59,7 @@ object Resolver {
     case QueryLimit(_, _, qs) => getSelectColsName(qs.select)
   }
 
-  def resolveOneRef(ref: RawName): RState[ResolvedName] = State[Resolver, ResolvedName] { acc =>
+  def resolveOneRef(ref: RawName): RState[ResolvedName] = State { acc =>
     if (acc.relationIsInCatalog(ref))
       (acc.addRelationToScope(ref), ResolvedTableName(ref.value))
     else if (acc.relationIsAlias(ref))
@@ -70,7 +70,7 @@ object Resolver {
   }
 
   def resolveOneTablish[I](tablish: Tablish[RawName, I]): RState[Tablish[ResolvedName, I]] =
-    State[Resolver, Tablish[ResolvedName, I]] { acc =>
+    State { acc =>
       {
         tablish match {
           // TODO support alias
@@ -84,7 +84,7 @@ object Resolver {
       }
     }
 
-  def resolveFrom[I](from: From[RawName, I]): RState[From[ResolvedName, I]] = State[Resolver, From[ResolvedName, I]] {
+  def resolveFrom[I](from: From[RawName, I]): RState[From[ResolvedName, I]] = State {
     acc =>
       {
         // TODO perhaps clean with a for-yield? if not, a traverse
@@ -101,7 +101,7 @@ object Resolver {
   }
 
   def resolveExpression[I](exp: Expression[RawName, I]): RState[Expression[ResolvedName, I]] =
-    State[Resolver, Expression[ResolvedName, I]] { acc =>
+    State { acc =>
       exp match {
         case ColumnExpr(i, col) => {
           val (nacc, rcol) = resolveOneCol(col.value).run(acc).value
@@ -112,7 +112,7 @@ object Resolver {
     }
 
   def resolveSelection[I](selection: Selection[RawName, I]): RState[Selection[ResolvedName, I]] =
-    State[Resolver, Selection[ResolvedName, I]] { acc =>
+    State { acc =>
       selection match {
         case SelectExpr(i, e, a) => {
           val (nacc, re) = resolveExpression(e).run(acc).value
