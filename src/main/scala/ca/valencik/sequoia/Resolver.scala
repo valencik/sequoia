@@ -30,30 +30,26 @@ object Resolver {
   type RState[A] = State[Resolver, A]
 
   private def getSelectColsName[I](sc: SelectCols[ResolvedName, I]): RState[List[String]] =
-    State[Resolver, List[String]] { acc =>
-      {
-        // TODO might not need R type param here, it might always be ResolvedName
-        val rsc: List[String] = sc.cols.zipWithIndex.flatMap {
-          case (selection, index) =>
-            selection match {
-              // TODO handle optional tableref
-              case SelectStar(_, _) => acc.columnsInScope.toList
-              case SelectExpr(_, e, a) =>
-                List(
-                  a match {
-                    case Some(ca) => ca.value
-                    case None =>
-                      e match {
-                        case ColumnExpr(_, c)   => c.value.value
-                        case ConstantExpr(_, _) => s"col_${index}"
-                        // TODO not sure how Subqueries work for naming columns
-                        case SubQueryExpr(_, _) => ???
-                      }
-                  }
-                )
-            }
-        }
-        (acc, rsc)
+    State.inspect { acc =>
+      sc.cols.zipWithIndex.flatMap {
+        case (selection, index) =>
+          selection match {
+            // TODO handle optional tableref
+            case SelectStar(_, _) => acc.columnsInScope.toList
+            case SelectExpr(_, e, a) =>
+              List(
+                a match {
+                  case Some(ca) => ca.value
+                  case None =>
+                    e match {
+                      case ColumnExpr(_, c)   => c.value.value
+                      case ConstantExpr(_, _) => s"col_${index}"
+                      // TODO not sure how Subqueries work for naming columns
+                      case SubQueryExpr(_, _) => ???
+                    }
+                }
+              )
+          }
       }
     }
 
@@ -97,11 +93,11 @@ object Resolver {
       }
   }
 
-  def resolveOneCol(col: RawName): RState[ResolvedName] = State[Resolver, ResolvedName] { acc =>
+  def resolveOneCol(col: RawName): RState[ResolvedName] = State.inspect { acc =>
     if (acc.columnIsInScope(col))
-      (acc, ResolvedColumnName(col.value))
+      ResolvedColumnName(col.value)
     else
-      (acc, UnresolvedColumnName(col.value))
+      UnresolvedColumnName(col.value)
   }
 
   def resolveExpression[I](exp: Expression[RawName, I]): RState[Expression[ResolvedName, I]] =
