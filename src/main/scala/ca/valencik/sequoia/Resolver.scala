@@ -84,13 +84,12 @@ object Resolver {
       }
     }
 
-  def resolveFrom[I](from: From[RawName, I]): RState[From[ResolvedName, I]] = State {
-    acc =>
-      {
-        // TODO perhaps clean with a for-yield? if not, a traverse
-        val (nacc, rrels) = from.rels.traverse(resolveOneTablish).run(acc).value
-        (nacc, From(from.info, rrels))
-      }
+  def resolveFrom[I](from: From[RawName, I]): RState[From[ResolvedName, I]] = State { acc =>
+    {
+      // TODO perhaps clean with a for-yield? if not, a traverse
+      val (nacc, rrels) = from.rels.traverse(resolveOneTablish).run(acc).value
+      (nacc, From(from.info, rrels))
+    }
   }
 
   def resolveOneCol(col: RawName): RState[ResolvedName] = State.inspect { acc =>
