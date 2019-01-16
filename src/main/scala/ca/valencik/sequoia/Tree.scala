@@ -1,5 +1,8 @@
 package ca.valencik.sequoia
 
+import cats.Functor
+import cats.implicits._
+
 sealed trait RawName {
   def value: String
 }
@@ -16,6 +19,20 @@ final case class UnresolvedTableName(value: String)  extends ResolvedName
 final case class UnresolvedColumnName(value: String) extends ResolvedName
 
 final case class ColumnAlias[I](info: I, value: String)
+
+final case class TableRef[R, I](info: I, value: R)
+object TableRef {
+  implicit def tableRefInstances[I]: Functor[TableRef[?, I]] = new Functor[TableRef[?, I]] {
+    def map[A, B](fa: TableRef[A, I])(f: A => B): TableRef[B, I] = fa.copy(value = f(fa.value))
+  }
+}
+final case class ColumnRef[R, I](info: I, value: R)
+object ColumnRef {
+  implicit def tableRefInstances[I]: Functor[ColumnRef[?, I]] = new Functor[ColumnRef[?, I]] {
+    def map[A, B](fa: ColumnRef[A, I])(f: A => B): ColumnRef[B, I] = fa.copy(value = f(fa.value))
+  }
+}
+
 
 // --- TREE --
 sealed trait Node
@@ -42,15 +59,17 @@ final case class From[R, I](info: I, rels: List[Tablish[R, I]])
 
 sealed trait Tablish[R, I]                                                                extends Node
 final case class TablishTable[R, I](info: I, alias: TablishAlias[I], ref: TableRef[R, I]) extends Tablish[R, I]
+object TablishTable {
+  implicit def tablishTableInstances[I]: Functor[TablishTable[?, I]] = new Functor[TablishTable[?, I]] {
+    def map[A, B](fa: TablishTable[A, I])(f: A => B): TablishTable[B, I] = fa.copy(ref = fa.ref.map(f))
+  }
+}
 final case class TablishSubquery[R, I](info: I, alias: TablishAlias[I], q: Query[R, I])   extends Tablish[R, I]
 
 sealed trait TablishAlias[I]
 final case class TablishAliasNone[I]()                    extends TablishAlias[I]
 final case class TablishAliasT[I](info: I, value: String) extends TablishAlias[I]
 
-// TODO how do I encode the Resolution?
-final case class TableRef[R, I](info: I, value: R)
-final case class ColumnRef[R, I](info: I, value: R)
 
 // Expression
 sealed trait Expression[R, I]                                    extends Node

@@ -44,7 +44,8 @@ lazy val ScalacOptions = Seq(
     "-Ywarn-unused:params", // Warn if a value parameter is unused.
     "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
     "-Ywarn-unused:privates", // Warn if a private member is unused.
-    "-Ywarn-value-discard" // Warn when non-Unit expression results are unused.
+    "-Ywarn-value-discard", // Warn when non-Unit expression results are unused.
+    "-Ypartial-unification" // allow the compiler to unify type constructors of different arities
   )
 )
 
@@ -67,5 +68,6 @@ lazy val root = (project in file("."))
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia"),
+    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
     scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
   )
