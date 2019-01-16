@@ -130,11 +130,10 @@ object Resolver {
 
   def resolveOneCTE[I](cte: CTE[RawName, I]): RState[CTE[ResolvedName, I]] =
     for {
-      query <- resolveQuery(cte.q)
-      // Update state with the CTE alias and the selection columns
-
-      // TODO implement getSelectionColumns
-      _ <- State.modify[Resolver](c => c.addCTE(cte.alias.value, getQueryColumnNames(query).runA(c).value.toSet))
+      query    <- resolveQuery(cte.q)
+      colNames <- getQueryColumnNames(query)
+      // Update the state with the column names from the query
+      _ <- State.modify[Resolver](c => c.addCTE(cte.alias.value, colNames.toSet))
 
       // Update state to have no relations or columns in scope so we don't over resolve
       _ <- State.modify[Resolver](r => r.resetRelationScope)
