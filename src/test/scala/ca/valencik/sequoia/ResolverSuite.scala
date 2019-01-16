@@ -9,7 +9,7 @@ class ResolverSpec extends FlatSpec {
   def initialCatalog: Resolver = Resolver(Map("db.foo" -> Set("a", "b")))
 
   "Resolver" should "resolve columns in db in single Select" in {
-    val q: QuerySelect[RawName, Int] = QuerySelect(
+    val q: QuerySelect[Int, RawName] = QuerySelect(
       1,
       Select(
         9,
@@ -18,7 +18,7 @@ class ResolverSpec extends FlatSpec {
       )
     )
     val actual = Resolver.resolveQuery(q).runA(initialCatalog).value
-    val expected: QuerySelect[ResolvedName, Int] = QuerySelect(
+    val expected: QuerySelect[Int, ResolvedName] = QuerySelect(
       1,
       Select(
         9,
@@ -30,7 +30,7 @@ class ResolverSpec extends FlatSpec {
   }
 
   it should "resolve columns in db inside CTE and columns from that CTE" in {
-    val q: QueryWith[RawName, Int] = QueryWith(
+    val q: QueryWith[Int, RawName] = QueryWith(
       12,
       List(
         CTE(
@@ -56,7 +56,7 @@ class ResolverSpec extends FlatSpec {
       )
     )
     val actual = Resolver.resolveQuery(q).runA(initialCatalog).value
-    val expected: QueryWith[ResolvedName, Int] = QueryWith(
+    val expected: QueryWith[Int, ResolvedName] = QueryWith(
       12,
       List(
         CTE(
@@ -85,7 +85,7 @@ class ResolverSpec extends FlatSpec {
   }
 
   it should "not resolve columns in db but not inside CTE" in {
-    val q: QueryWith[RawName, Int] = QueryWith(
+    val q: QueryWith[Int, RawName] = QueryWith(
       12,
       List(
         CTE(
@@ -111,7 +111,7 @@ class ResolverSpec extends FlatSpec {
       )
     )
     val actual = Resolver.resolveQuery(q).runA(initialCatalog).value
-    val expected: QueryWith[ResolvedName, Int] = QueryWith(
+    val expected: QueryWith[Int, ResolvedName] = QueryWith(
       12,
       List(
         CTE(

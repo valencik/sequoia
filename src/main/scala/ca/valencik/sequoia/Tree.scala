@@ -18,64 +18,63 @@ final case class ResolvedColumnName(value: String)   extends ResolvedName
 final case class UnresolvedTableName(value: String)  extends ResolvedName
 final case class UnresolvedColumnName(value: String) extends ResolvedName
 
-final case class ColumnAlias[I](info: I, value: String)
-
-final case class TableRef[R, I](info: I, value: R)
+final case class TableRef[I, R](info: I, value: R)
 object TableRef {
-  implicit def tableRefInstances[I]: Functor[TableRef[?, I]] = new Functor[TableRef[?, I]] {
-    def map[A, B](fa: TableRef[A, I])(f: A => B): TableRef[B, I] = fa.copy(value = f(fa.value))
-  }
-}
-final case class ColumnRef[R, I](info: I, value: R)
-object ColumnRef {
-  implicit def tableRefInstances[I]: Functor[ColumnRef[?, I]] = new Functor[ColumnRef[?, I]] {
-    def map[A, B](fa: ColumnRef[A, I])(f: A => B): ColumnRef[B, I] = fa.copy(value = f(fa.value))
+  implicit def tableRefInstances[I]: Functor[TableRef[I, ?]] = new Functor[TableRef[I, ?]] {
+    def map[A, B](fa: TableRef[I, A])(f: A => B): TableRef[I, B] = fa.copy(value = f(fa.value))
   }
 }
 
+final case class ColumnRef[I, R](info: I, value: R)
+object ColumnRef {
+  implicit def tableRefInstances[I]: Functor[ColumnRef[I, ?]] = new Functor[ColumnRef[I, ?]] {
+    def map[A, B](fa: ColumnRef[I, A])(f: A => B): ColumnRef[I, B] = fa.copy(value = f(fa.value))
+  }
+}
+
+final case class ColumnAlias[I](info: I, value: String)
 
 // --- TREE --
 sealed trait Node
 
-sealed trait Query[R, I]                                                         extends Node
-final case class QueryWith[R, I](info: I, ctes: List[CTE[R, I]], q: Query[R, I]) extends Query[R, I]
-final case class QuerySelect[R, I](info: I, qs: Select[R, I])                    extends Query[R, I]
-final case class QueryLimit[R, I](info: I, limit: Limit[I], qs: Select[R, I])    extends Query[R, I]
+sealed trait Query[I, R]                                                         extends Node
+final case class QueryWith[I, R](info: I, ctes: List[CTE[I, R]], q: Query[I, R]) extends Query[I, R]
+final case class QuerySelect[I, R](info: I, qs: Select[I, R])                    extends Query[I, R]
+final case class QueryLimit[I, R](info: I, limit: Limit[I], qs: Select[I, R])    extends Query[I, R]
 
-final case class CTE[R, I](info: I, alias: TablishAliasT[I], cols: List[ColumnAlias[I]], q: Query[R, I]) extends Node
+final case class CTE[I, R](info: I, alias: TablishAliasT[I], cols: List[ColumnAlias[I]], q: Query[I, R]) extends Node
 
 final case class Limit[I](info: I, value: String)
 
-final case class Select[R, I](info: I, select: SelectCols[R, I], from: Option[From[R, I]]) extends Node
+final case class Select[I, R](info: I, select: SelectCols[I, R], from: Option[From[I, R]]) extends Node
 
-final case class SelectCols[R, I](info: I, cols: List[Selection[R, I]])
+final case class SelectCols[I, R](info: I, cols: List[Selection[I, R]])
 
-sealed trait Selection[R, I]                                            extends Node
-final case class SelectStar[R, I](info: I, ref: Option[TableRef[R, I]]) extends Selection[R, I]
-final case class SelectExpr[R, I](info: I, expr: Expression[R, I], alias: Option[ColumnAlias[I]])
-    extends Selection[R, I]
+sealed trait Selection[I, R]                                            extends Node
+final case class SelectStar[I, R](info: I, ref: Option[TableRef[I, R]]) extends Selection[I, R]
+final case class SelectExpr[I, R](info: I, expr: Expression[I, R], alias: Option[ColumnAlias[I]])
+    extends Selection[I, R]
 
-final case class From[R, I](info: I, rels: List[Tablish[R, I]])
+final case class From[I, R](info: I, rels: List[Tablish[I, R]])
 
-sealed trait Tablish[R, I]                                                                extends Node
-final case class TablishTable[R, I](info: I, alias: TablishAlias[I], ref: TableRef[R, I]) extends Tablish[R, I]
+sealed trait Tablish[I, R]                                                                extends Node
+final case class TablishTable[I, R](info: I, alias: TablishAlias[I], ref: TableRef[I, R]) extends Tablish[I, R]
 object TablishTable {
-  implicit def tablishTableInstances[I]: Functor[TablishTable[?, I]] = new Functor[TablishTable[?, I]] {
-    def map[A, B](fa: TablishTable[A, I])(f: A => B): TablishTable[B, I] = fa.copy(ref = fa.ref.map(f))
+  implicit def tablishTableInstances[I]: Functor[TablishTable[I, ?]] = new Functor[TablishTable[I, ?]] {
+    def map[A, B](fa: TablishTable[I, A])(f: A => B): TablishTable[I, B] = fa.copy(ref = fa.ref.map(f))
   }
 }
-final case class TablishSubquery[R, I](info: I, alias: TablishAlias[I], q: Query[R, I])   extends Tablish[R, I]
+final case class TablishSubquery[I, R](info: I, alias: TablishAlias[I], q: Query[I, R]) extends Tablish[I, R]
 
 sealed trait TablishAlias[I]
 final case class TablishAliasNone[I]()                    extends TablishAlias[I]
 final case class TablishAliasT[I](info: I, value: String) extends TablishAlias[I]
 
-
 // Expression
-sealed trait Expression[R, I]                                    extends Node
-final case class ConstantExpr[R, I](info: I, col: Constant[I])   extends Expression[R, I]
-final case class ColumnExpr[R, I](info: I, col: ColumnRef[R, I]) extends Expression[R, I]
-final case class SubQueryExpr[R, I](info: I, q: Query[R, I])     extends Expression[R, I]
+sealed trait Expression[I, R]                                    extends Node
+final case class ConstantExpr[I, R](info: I, col: Constant[I])   extends Expression[I, R]
+final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends Expression[I, R]
+final case class SubQueryExpr[I, R](info: I, q: Query[I, R])     extends Expression[I, R]
 
 sealed trait Constant[I]
 final case class IntConstant[I](info: I, value: Int)        extends Constant[I]

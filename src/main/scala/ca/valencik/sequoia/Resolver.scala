@@ -29,7 +29,7 @@ object Resolver {
 
   type RState[A] = State[Resolver, A]
 
-  private def getSelectColsName[I](sc: SelectCols[ResolvedName, I]): RState[List[String]] =
+  private def getSelectColsName[I](sc: SelectCols[I, ResolvedName]): RState[List[String]] =
     State.inspect { acc =>
       sc.cols.zipWithIndex.flatMap {
         case (selection, index) =>
@@ -53,7 +53,7 @@ object Resolver {
       }
     }
 
-  private def getQueryColumnNames[I](q: Query[ResolvedName, I]): RState[List[String]] = q match {
+  private def getQueryColumnNames[I](q: Query[I, ResolvedName]): RState[List[String]] = q match {
     case QueryWith(_, _, q)   => getQueryColumnNames(q)
     case QuerySelect(_, qs)   => getSelectColsName(qs.select)
     case QueryLimit(_, _, qs) => getSelectColsName(qs.select)
@@ -69,7 +69,7 @@ object Resolver {
     }
   }
 
-  def resolveOneTablish[I](tablish: Tablish[RawName, I]): RState[Tablish[ResolvedName, I]] =
+  def resolveOneTablish[I](tablish: Tablish[I, RawName]): RState[Tablish[I, ResolvedName]] =
     State { acc =>
       {
         tablish match {
@@ -84,7 +84,7 @@ object Resolver {
       }
     }
 
-  def resolveFrom[I](from: From[RawName, I]): RState[From[ResolvedName, I]] = State { acc =>
+  def resolveFrom[I](from: From[I, RawName]): RState[From[I, ResolvedName]] = State { acc =>
     {
       // TODO perhaps clean with a for-yield? if not, a traverse
       val (nacc, rrels) = from.rels.traverse(resolveOneTablish).run(acc).value
@@ -99,7 +99,7 @@ object Resolver {
       UnresolvedColumnName(col.value)
   }
 
-  def resolveExpression[I](exp: Expression[RawName, I]): RState[Expression[ResolvedName, I]] =
+  def resolveExpression[I](exp: Expression[I, RawName]): RState[Expression[I, ResolvedName]] =
     State { acc =>
       exp match {
         case ColumnExpr(i, col) => {
@@ -110,7 +110,7 @@ object Resolver {
       }
     }
 
-  def resolveSelection[I](selection: Selection[RawName, I]): RState[Selection[ResolvedName, I]] =
+  def resolveSelection[I](selection: Selection[I, RawName]): RState[Selection[I, ResolvedName]] =
     State { acc =>
       selection match {
         case SelectExpr(i, e, a) => {
@@ -121,13 +121,13 @@ object Resolver {
       }
     }
 
-  def resolveSelect[I](s: Select[RawName, I]): RState[Select[ResolvedName, I]] =
+  def resolveSelect[I](s: Select[I, RawName]): RState[Select[I, ResolvedName]] =
     for {
       from       <- s.from.traverse(resolveFrom)
       selectCols <- s.select.cols.traverse(resolveSelection)
     } yield Select(s.info, SelectCols(s.select.info, selectCols), from)
 
-  def resolveOneCTE[I](cte: CTE[RawName, I]): RState[CTE[ResolvedName, I]] =
+  def resolveOneCTE[I](cte: CTE[I, RawName]): RState[CTE[I, ResolvedName]] =
     for {
       query    <- resolveQuery(cte.q)
       colNames <- getQueryColumnNames(query)
@@ -139,13 +139,13 @@ object Resolver {
       // TODO support Alias
     } yield CTE(cte.info, cte.alias, cte.cols, query)
 
-  def resQueryWith[I](qw: QueryWith[RawName, I]): RState[Query[ResolvedName, I]] =
+  def resQueryWith[I](qw: QueryWith[I, RawName]): RState[Query[I, ResolvedName]] =
     for {
       ctes  <- qw.ctes.traverse(resolveOneCTE)
       query <- resolveQuery(qw.q)
     } yield QueryWith(qw.info, ctes, query)
 
-  def resolveQuery[I](q: Query[RawName, I]): RState[Query[ResolvedName, I]] = q match {
+  def resolveQuery[I](q: Query[I, RawName]): RState[Query[I, ResolvedName]] = q match {
     case QuerySelect(i, qs) =>
       resolveSelect(qs).map { s =>
         QuerySelect(i, s)

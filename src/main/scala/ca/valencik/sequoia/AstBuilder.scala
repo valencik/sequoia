@@ -5,13 +5,13 @@ import scala.collection.JavaConverters._
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   type Info           = Int
-  type RawQuery       = Query[RawName, Info]
-  type RawQueryLimit  = QueryLimit[RawName, Info]
-  type RawQuerySelect = QuerySelect[RawName, Info]
-  type RawSelect      = Select[RawName, Info]
-  type RawSelection   = Selection[RawName, Info]
-  type RawTablish     = Tablish[RawName, Info]
-  type RawExpression  = Expression[RawName, Info]
+  type RawQuery       = Query[Info, RawName]
+  type RawQueryLimit  = QueryLimit[Info, RawName]
+  type RawQuerySelect = QuerySelect[Info, RawName]
+  type RawSelect      = Select[Info, RawName]
+  type RawSelection   = Selection[Info, RawName]
+  type RawTablish     = Tablish[Info, RawName]
+  type RawExpression  = Expression[Info, RawName]
 
   val verbose: Boolean = false
 
@@ -43,7 +43,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuery(ctx: SqlBaseParser.QueryContext): RawQuery = {
     if (verbose) println(s"-------visitQuery called: ${ctx.getText}-------------")
     if (ctx.`with` != null) {
-      val ctes: List[CTE[RawName, Info]] = ctx.`with`.namedQuery.asScala.map { n =>
+      val ctes: List[CTE[Info, RawName]] = ctx.`with`.namedQuery.asScala.map { n =>
         visitNamedQuery(n)
       }.toList
       QueryWith(nextId(), ctes, visitQueryNoWith(ctx.queryNoWith))
@@ -51,7 +51,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       QuerySelect(nextId(), visit(ctx.queryNoWith.queryTerm).asInstanceOf[RawSelect])
   }
 
-  override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): CTE[RawName, Info] = {
+  override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): CTE[Info, RawName] = {
     if (verbose) println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
     val alias           = TablishAliasT(nextId(), ctx.name.getText)
     val query: RawQuery = visit(ctx.query).asInstanceOf[RawQuery]
@@ -96,13 +96,13 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): RawSelection = {
-    val ref: Option[TableRef[RawName, Info]] =
+    val ref: Option[TableRef[Info, RawName]] =
       if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName))) else None
     SelectStar(nextId(), ref)
   }
 
   override def visitTableName(ctx: SqlBaseParser.TableNameContext): RawTablish = {
-    val ref: TableRef[RawName, Info] = TableRef(nextId(), getTableName(ctx.qualifiedName))
+    val ref: TableRef[Info, RawName] = TableRef(nextId(), getTableName(ctx.qualifiedName))
     TablishTable(nextId(), TablishAliasNone[Info], ref)
   }
 

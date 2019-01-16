@@ -19,7 +19,7 @@ object ParseBuddy {
     }
   }
 
-  def parse(input: String): Either[ParseFailure, Query[RawName, String]] = {
+  def parse(input: String): Either[ParseFailure, Query[String, RawName]] = {
     val charStream = CharStreams.fromString(input.toUpperCase)
     val lexer      = new SqlBaseLexer(charStream)
     lexer.removeErrorListeners()
@@ -33,7 +33,7 @@ object ParseBuddy {
 
     try {
       val node: Node = prestoVisitor.visit(parser.statement)
-      val qnw        = node.asInstanceOf[Query[RawName, String]]
+      val qnw        = node.asInstanceOf[Query[String, RawName]]
       if (qnw == null) Left(ParseFailure("oops")) else Right(qnw)
     } catch {
       case e: AntlrParseException => Left(ParseFailure(e.msg))
