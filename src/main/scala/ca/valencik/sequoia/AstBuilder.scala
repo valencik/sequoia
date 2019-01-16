@@ -13,6 +13,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   type RawTablish     = Tablish[RawName, Info]
   type RawExpression  = Expression[RawName, Info]
 
+  val verbose: Boolean = false
+
   val nextId = {
     var i = 0;
     () =>
@@ -39,7 +41,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   // namedQuery: name=identifier (columnAliases)? AS '(' query ')' ;
   // columnAliases: '(' identifier (',' identifier)* ')' ;
   override def visitQuery(ctx: SqlBaseParser.QueryContext): RawQuery = {
-    println(s"-------visitQuery called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitQuery called: ${ctx.getText}-------------")
     if (ctx.`with` != null) {
       val ctes: List[CTE[RawName, Info]] = ctx.`with`.namedQuery.asScala.map { n =>
         visitNamedQuery(n)
@@ -50,7 +52,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): CTE[RawName, Info] = {
-    println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
     val alias           = TablishAliasT(nextId(), ctx.name.getText)
     val query: RawQuery = visit(ctx.query).asInstanceOf[RawQuery]
     val cols: List[ColumnAlias[Info]] =
@@ -63,7 +65,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): RawQuery = {
-    println(s"-------visitQueryNoWith called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitQueryNoWith called: ${ctx.getText}-------------")
     val qs: RawSelect = visit(ctx.queryTerm).asInstanceOf[RawSelect]
     if (ctx.LIMIT != null)
       QueryLimit(nextId(), Limit(nextId(), ctx.LIMIT.getText), qs)
@@ -72,7 +74,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): RawSelect = {
-    println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
     val select = SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toList)
     val relationOptions = ctx.relation.asScala.map { r =>
       Option(visit(r).asInstanceOf[RawTablish])
@@ -105,17 +107,17 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitSubqueryExpression(ctx: SqlBaseParser.SubqueryExpressionContext): RawExpression = {
-    println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
     SubQueryExpr(nextId(), visit(ctx.query).asInstanceOf[RawQuery])
   }
 
   override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): RawExpression = {
-    println(s"-------visitColumnReference called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
   }
 
   override def visitNumericLiteral(ctx: SqlBaseParser.NumericLiteralContext): RawExpression = {
-    println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
+    if (verbose) println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
     // TODO this forces DoubleConstant
     ConstantExpr(nextId(), DoubleConstant(nextId(), ctx.getText.toDouble))
   }
