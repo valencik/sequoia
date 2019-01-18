@@ -1,6 +1,7 @@
 package ca.valencik.sequoia
 
-import cats.{Functor}
+import scala.language.higherKinds
+import cats.{Applicative, Eval, Functor, Traverse}
 import cats.implicits._
 
 sealed trait RawName {
@@ -20,15 +21,25 @@ final case class UnresolvedColumnName(value: String) extends ResolvedName
 
 final case class TableRef[I, R](info: I, value: R)
 object TableRef {
-  implicit def tableRefInstances[I]: Functor[TableRef[I, ?]] = new Functor[TableRef[I, ?]] {
-    def map[A, B](fa: TableRef[I, A])(f: A => B): TableRef[I, B] = fa.copy(value = f(fa.value))
+  implicit def tableRefInstances[I]: Traverse[TableRef[I, ?]] = new Traverse[TableRef[I, ?]] {
+    override def map[A, B](fa: TableRef[I, A])(f: A => B): TableRef[I, B] = fa.copy(value = f(fa.value))
+    def foldLeft[A, B](fa: TableRef[I, A], b: B)(f: (B, A) => B): B       = f(b, fa.value)
+    def foldRight[A, B](fa: TableRef[I, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      Eval.defer(f(fa.value, lb))
+    def traverse[G[_], A, B](fa: TableRef[I, A])(f: A => G[B])(implicit G: Applicative[G]): G[TableRef[I, B]] =
+      Applicative[G].map(f(fa.value))(TableRef(fa.info, _))
   }
 }
 
 final case class ColumnRef[I, R](info: I, value: R)
 object ColumnRef {
-  implicit def columnRefInstances[I]: Functor[ColumnRef[I, ?]] = new Functor[ColumnRef[I, ?]] {
-    def map[A, B](fa: ColumnRef[I, A])(f: A => B): ColumnRef[I, B] = fa.copy(value = f(fa.value))
+  implicit def columnRefInstances[I]: Traverse[ColumnRef[I, ?]] = new Traverse[ColumnRef[I, ?]] {
+    override def map[A, B](fa: ColumnRef[I, A])(f: A => B): ColumnRef[I, B] = fa.copy(value = f(fa.value))
+    def foldLeft[A, B](fa: ColumnRef[I, A], b: B)(f: (B, A) => B): B        = f(b, fa.value)
+    def foldRight[A, B](fa: ColumnRef[I, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      Eval.defer(f(fa.value, lb))
+    def traverse[G[_], A, B](fa: ColumnRef[I, A])(f: A => G[B])(implicit G: Applicative[G]): G[ColumnRef[I, B]] =
+      Applicative[G].map(f(fa.value))(ColumnRef(fa.info, _))
   }
 }
 
@@ -166,8 +177,15 @@ object ConstantExpr {
 }
 final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends Expression[I, R]
 object ColumnExpr {
-  implicit def columnExprInstances[I]: Functor[ColumnExpr[I, ?]] = new Functor[ColumnExpr[I, ?]] {
-    def map[A, B](fa: ColumnExpr[I, A])(f: A => B): ColumnExpr[I, B] = fa.copy(col = fa.col.map(f))
+  implicit def columnExprInstances[I]: Traverse[ColumnExpr[I, ?]] = new Traverse[ColumnExpr[I, ?]] {
+    override def map[A, B](fa: ColumnExpr[I, A])(f: A => B): ColumnExpr[I, B] = fa.copy(col = fa.col.map(f))
+    def foldLeft[A, B](fa: ColumnExpr[I, A], b: B)(f: (B, A) => B): B         = f(b, fa.col.value)
+    def foldRight[A, B](fa: ColumnExpr[I, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      Eval.defer(f(fa.col.value, lb))
+    def traverse[G[_], A, B](fa: ColumnExpr[I, A])(f: A => G[B])(implicit G: Applicative[G]): G[ColumnExpr[I, B]] =
+      Applicative[G].map(f(fa.col.value)) { rn =>
+        ColumnExpr(fa.info, ColumnRef(fa.col.info, rn))
+      }
   }
 }
 final case class SubQueryExpr[I, R](info: I, q: Query[I, R]) extends Expression[I, R]

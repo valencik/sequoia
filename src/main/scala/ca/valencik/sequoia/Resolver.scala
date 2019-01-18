@@ -100,14 +100,9 @@ object Resolver {
   }
 
   def resolveExpression[I](exp: Expression[I, RawName]): RState[Expression[I, ResolvedName]] =
-    State { acc =>
-      exp match {
-        case ColumnExpr(i, col) => {
-          val (nacc, rcol) = resolveOneCol(col.value).run(acc).value
-          (nacc, ColumnExpr(i, ColumnRef(col.info, rcol)))
-        }
-        case _ => ???
-      }
+    exp match {
+      case ce: ColumnExpr[I, RawName] => ce.traverse(resolveOneCol).widen
+      case _                          => ???
     }
 
   def resolveSelection[I](selection: Selection[I, RawName]): RState[Selection[I, ResolvedName]] =
