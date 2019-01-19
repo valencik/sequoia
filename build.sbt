@@ -61,10 +61,10 @@ lazy val root = (project in file("."))
       )),
     name := "Big SQL Parse",
     libraryDependencies ++= Seq(
-      "org.antlr"     % "antlr4-runtime" % AntlrVersion,
-      "org.typelevel" %% "cats-core"     % CatsVersion,
-      "org.typelevel" %% "cats-testkit"     % CatsVersion % Test,
-      "org.scalatest" %% "scalatest"     % ScalaTestVersion % Test,
+      "org.antlr"                  % "antlr4-runtime"             % AntlrVersion,
+      "org.typelevel"              %% "cats-core"                 % CatsVersion,
+      "org.typelevel"              %% "cats-testkit"              % CatsVersion % Test,
+      "org.scalatest"              %% "scalatest"                 % ScalaTestVersion % Test,
       "com.github.alexarchambault" %% "scalacheck-shapeless_1.13" % "1.1.6" % Test
     ),
     antlr4GenListener in Antlr4 := false,
