@@ -184,7 +184,7 @@ object ColumnExpr {
       Eval.defer(f(fa.col.value, lb))
     def traverse[G[_], A, B](fa: ColumnExpr[I, A])(f: A => G[B])(implicit G: Applicative[G]): G[ColumnExpr[I, B]] =
       Applicative[G].map(f(fa.col.value)) { rn =>
-        ColumnExpr(fa.info, ColumnRef(fa.col.info, rn))
+        fa.map(_ => rn)
       }
   }
 }
