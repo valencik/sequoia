@@ -59,7 +59,7 @@ lazy val root = (project in file("."))
         scalaVersion := "2.12.7",
         version := "0.1.0-SNAPSHOT",
       )),
-    name := "Big SQL Parse",
+    name := "Sequoia",
     libraryDependencies ++= Seq(
       "org.antlr"                  % "antlr4-runtime"             % AntlrVersion,
       "org.typelevel"              %% "cats-core"                 % CatsVersion,
