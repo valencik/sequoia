@@ -1,6 +1,7 @@
-lazy val ScalaTestVersion = "3.0.5"
-lazy val AntlrVersion     = "4.7.1"
-lazy val CatsVersion      = "1.5.0"
+lazy val ScalaTestVersion  = "3.0.5"
+lazy val AntlrVersion      = "4.7.1"
+lazy val CatsVersion       = "1.5.0"
+lazy val ScalaCheckVersion = "1.13.5"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
@@ -61,15 +62,16 @@ lazy val root = (project in file("."))
       )),
     name := "Sequoia",
     libraryDependencies ++= Seq(
-      "org.antlr"                  % "antlr4-runtime"             % AntlrVersion,
-      "org.typelevel"              %% "cats-core"                 % CatsVersion,
-      "org.typelevel"              %% "cats-testkit"              % CatsVersion % Test,
-      "org.scalatest"              %% "scalatest"                 % ScalaTestVersion % Test,
-      "com.github.alexarchambault" %% "scalacheck-shapeless_1.13" % "1.1.6" % Test
+      "org.antlr"      % "antlr4-runtime" % AntlrVersion,
+      "org.typelevel"  %% "cats-core"     % CatsVersion,
+      "org.typelevel"  %% "cats-testkit"  % CatsVersion % Test,
+      "org.scalatest"  %% "scalatest"     % ScalaTestVersion % Test,
+      "org.scalacheck" %% "scalacheck"    % ScalaCheckVersion % Test
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia"),
     addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
-    scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
+    scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
+    scalacOptions in (Test) --= Seq("-Ywarn-unused:imports")
   )
