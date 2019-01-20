@@ -48,6 +48,7 @@ object ColumnRef {
 final case class ColumnAlias[I](info: I, value: String)
 
 // --- TREE --
+
 sealed trait Node
 
 sealed trait Query[I, R] extends Node
@@ -61,6 +62,7 @@ object Query {
     }
   }
 }
+
 final case class QueryWith[I, R](info: I, ctes: List[CTE[I, R]], q: Query[I, R]) extends Query[I, R]
 object QueryWith {
   implicit def eqQueryWith[I: Eq, R: Eq]: Eq[QueryWith[I, R]] = Eq.fromUniversalEquals
@@ -69,6 +71,7 @@ object QueryWith {
       fa.copy(ctes = fa.ctes.map(_.map(f)), q = fa.q.map(f))
   }
 }
+
 final case class QuerySelect[I, R](info: I, qs: Select[I, R]) extends Query[I, R]
 object QuerySelect {
   implicit def eqQuerySelect[I: Eq, R: Eq]: Eq[QuerySelect[I, R]] = Eq.fromUniversalEquals
@@ -76,6 +79,7 @@ object QuerySelect {
     def map[A, B](fa: QuerySelect[I, A])(f: A => B): QuerySelect[I, B] = fa.copy(qs = fa.qs.map(f))
   }
 }
+
 final case class QueryLimit[I, R](info: I, limit: Limit[I], qs: Select[I, R]) extends Query[I, R]
 object QueryLimit {
   implicit def eqQueryLimit[I: Eq, R: Eq]: Eq[QueryLimit[I, R]] = Eq.fromUniversalEquals
@@ -84,8 +88,8 @@ object QueryLimit {
   }
 }
 
-// TODO This alias might not be right
 final case class CTE[I, R](info: I, alias: TablishAliasT[I], cols: List[ColumnAlias[I]], q: Query[I, R]) extends Node
+// TODO This alias might not be right
 object CTE {
   implicit def eqCTE[I: Eq, R: Eq]: Eq[CTE[I, R]] = Eq.fromUniversalEquals
   implicit def cteInstances[I]: Functor[CTE[I, ?]] = new Functor[CTE[I, ?]] {
@@ -122,6 +126,7 @@ object Selection {
     }
   }
 }
+
 final case class SelectStar[I, R](info: I, ref: Option[TableRef[I, R]]) extends Selection[I, R]
 object SelectStar {
   implicit def eqSelectStar[I: Eq, R: Eq]: Eq[SelectStar[I, R]] = Eq.fromUniversalEquals
@@ -129,6 +134,7 @@ object SelectStar {
     def map[A, B](fa: SelectStar[I, A])(f: A => B): SelectStar[I, B] = fa.copy(ref = fa.ref.map(_.map(f)))
   }
 }
+
 final case class SelectExpr[I, R](info: I, expr: Expression[I, R], alias: Option[ColumnAlias[I]])
     extends Selection[I, R]
 object SelectExpr {
@@ -156,6 +162,7 @@ object Tablish {
     }
   }
 }
+
 final case class TablishTable[I, R](info: I, alias: TablishAlias[I], ref: TableRef[I, R]) extends Tablish[I, R]
 object TablishTable {
   implicit def eqTablishTable[I: Eq, R: Eq]: Eq[TablishTable[I, R]] = Eq.fromUniversalEquals
@@ -163,6 +170,7 @@ object TablishTable {
     def map[A, B](fa: TablishTable[I, A])(f: A => B): TablishTable[I, B] = fa.copy(ref = fa.ref.map(f))
   }
 }
+
 final case class TablishSubquery[I, R](info: I, alias: TablishAlias[I], q: Query[I, R]) extends Tablish[I, R]
 object TablishSubquery {
   implicit def eqTablishSubquery[I: Eq, R: Eq]: Eq[TablishSubquery[I, R]] = Eq.fromUniversalEquals
@@ -175,7 +183,6 @@ sealed trait TablishAlias[I]
 final case class TablishAliasNone[I]()                    extends TablishAlias[I]
 final case class TablishAliasT[I](info: I, value: String) extends TablishAlias[I]
 
-// Expression
 sealed trait Expression[I, R] extends Node
 object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
@@ -187,6 +194,7 @@ object Expression {
     }
   }
 }
+
 final case class ConstantExpr[I, R](info: I, col: Constant[I]) extends Expression[I, R]
 object ConstantExpr {
   implicit def eqConstantExpr[I: Eq, R: Eq]: Eq[ConstantExpr[I, R]] = Eq.fromUniversalEquals
@@ -194,6 +202,7 @@ object ConstantExpr {
     def map[A, B](fa: ConstantExpr[I, A])(f: A => B): ConstantExpr[I, B] = ConstantExpr(fa.info, fa.col)
   }
 }
+
 final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends Expression[I, R]
 object ColumnExpr {
   implicit def eqColumnExpr[I: Eq, R: Eq]: Eq[ColumnExpr[I, R]] = Eq.fromUniversalEquals
@@ -208,6 +217,7 @@ object ColumnExpr {
       }
   }
 }
+
 final case class SubQueryExpr[I, R](info: I, q: Query[I, R]) extends Expression[I, R]
 object SubQueryExpr {
   implicit def eqSubQueryExpr[I: Eq, R: Eq]: Eq[SubQueryExpr[I, R]] = Eq.fromUniversalEquals
