@@ -129,10 +129,29 @@ object Resolver {
 
   def resolveExpression[I](exp: Expression[I, RawName]): RState[Expression[I, ResolvedName]] =
     exp match {
-      case ce: ColumnExpr[I, RawName]   => ce.traverse(resolveOneCol).widen
-      case ce: ConstantExpr[I, RawName] => State.pure(ConstantExpr(ce.info, ce.col))
-      case _                            => ???
+      case ce: ColumnExpr[I, RawName]     => ce.traverse(resolveOneCol).widen
+      case ce: ConstantExpr[I, RawName]   => State.pure(ConstantExpr(ce.info, ce.col))
+      case sq: SubQueryExpr[I, RawName]   => resolveSubQueryExpr(sq).widen
+      case be: BooleanExpr[I, RawName]    => resolveBooleanExpr(be).widen
+      case ce: ComparisonExpr[I, RawName] => resolveComparisonExpr(ce).widen
     }
+
+  def resolveComparisonExpr[I](ce: ComparisonExpr[I, RawName]): RState[ComparisonExpr[I, ResolvedName]] =
+    for {
+      l <- resolveExpression(ce.left)
+      r <- resolveExpression(ce.right)
+    } yield ComparisonExpr(ce.info, l, ce.op, r)
+
+  def resolveBooleanExpr[I](be: BooleanExpr[I, RawName]): RState[BooleanExpr[I, ResolvedName]] =
+    for {
+      l <- resolveExpression(be.left)
+      r <- resolveExpression(be.right)
+    } yield BooleanExpr(be.info, l, be.op, r)
+
+  def resolveSubQueryExpr[I](sq: SubQueryExpr[I, RawName]): RState[SubQueryExpr[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(sq.q)
+    } yield SubQueryExpr(sq.info, q)
 
   def resolveSelection[I](selection: Selection[I, RawName]): RState[Selection[I, ResolvedName]] =
     State { acc =>

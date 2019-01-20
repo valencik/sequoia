@@ -56,9 +56,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       Some(NaturalJoin(nextId()))
     else {
       val jc = ctx.joinCriteria
-      if (jc.ON != null)
-        Some(JoinOn(nextId(), visit(ctx.joinCriteria.booleanExpression).asInstanceOf[BooleanExpr[Info, RawName]]))
-      else if (jc.USING != null) {
+      if (jc.ON != null) {
+        Some(JoinOn(nextId(), visit(jc.booleanExpression).asInstanceOf[RawExpression]))
+      } else if (jc.USING != null) {
         val ucs: List[UsingColumn[Info, RawName]] =
           ctx.joinCriteria().identifier.asScala.map { case ic => UsingColumn(nextId(), getColumnName(ic)) }.toList
         Some(JoinUsing(nextId(), ucs))
@@ -76,6 +76,23 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       else
         visit(ctx.rightRelation)
     rel.asInstanceOf[RawTablish]
+  }
+
+  def getComparisonOperator(ctx: SqlBaseParser.ComparisonOperatorContext): Comparison = {
+    if (ctx.EQ != null)
+      EQ
+    else if (ctx.NEQ != null)
+      NEQ
+    else if (ctx.GT != null)
+      GT
+    else if (ctx.LT != null)
+      LT
+    else if (ctx.GTE != null)
+      GTE
+    else if (ctx.LTE != null)
+      LTE
+    else
+      ???
   }
 
   // -- Overrides
@@ -151,9 +168,24 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     TablishTable(nextId(), TablishAliasNone[Info], ref)
   }
 
+  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): RawTablish = {
+    val left         = visit(ctx.left).asInstanceOf[RawTablish]
+    val right        = getRight(ctx)
+    val joinType     = getJoinType(ctx)
+    val joinCriteria = getJoinCriteria(ctx)
+    TablishJoin(nextId(), joinType, left, right, joinCriteria)
+  }
+
   override def visitSubqueryExpression(ctx: SqlBaseParser.SubqueryExpressionContext): RawExpression = {
     if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
     SubQueryExpr(nextId(), visit(ctx.query).asInstanceOf[RawQuery])
+  }
+
+  override def visitComparison(ctx: SqlBaseParser.ComparisonContext): Node = {
+    val op    = getComparisonOperator(ctx.comparisonOperator)
+    val left  = visit(ctx.value).asInstanceOf[RawExpression]
+    val right = visit(ctx.right).asInstanceOf[RawExpression]
+    ComparisonExpr(nextId(), left, op, right)
   }
 
   override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): Node = {
