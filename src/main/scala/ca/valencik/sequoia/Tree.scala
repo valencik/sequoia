@@ -45,6 +45,19 @@ object ColumnRef {
   }
 }
 
+final case class UsingColumn[I, R](info: I, value: R)
+object UsingColumn {
+  implicit def eqUsingColumn[I: Eq, R: Eq]: Eq[UsingColumn[I, R]] = Eq.fromUniversalEquals
+  implicit def columnRefInstances[I]: Traverse[UsingColumn[I, ?]] = new Traverse[UsingColumn[I, ?]] {
+    override def map[A, B](fa: UsingColumn[I, A])(f: A => B): UsingColumn[I, B] = fa.copy(value = f(fa.value))
+    def foldLeft[A, B](fa: UsingColumn[I, A], b: B)(f: (B, A) => B): B          = f(b, fa.value)
+    def foldRight[A, B](fa: UsingColumn[I, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      Eval.defer(f(fa.value, lb))
+    def traverse[G[_], A, B](fa: UsingColumn[I, A])(f: A => G[B])(implicit G: Applicative[G]): G[UsingColumn[I, B]] =
+      Applicative[G].map(f(fa.value))(UsingColumn(fa.info, _))
+  }
+}
+
 final case class ColumnAlias[I](info: I, value: String)
 
 // --- TREE --
@@ -229,7 +242,7 @@ object JoinOn {
   }
 }
 
-final case class JoinUsing[I, R](info: I, cols: List[ColumnRef[I, R]]) extends JoinCriteria[I, R]
+final case class JoinUsing[I, R](info: I, cols: List[UsingColumn[I, R]]) extends JoinCriteria[I, R]
 object JoinUsing {
   implicit def eqJoinUsing[I: Eq, R: Eq]: Eq[JoinUsing[I, R]] = Eq.fromUniversalEquals
   implicit def tablishTableInstances[I]: Functor[JoinUsing[I, ?]] = new Functor[JoinUsing[I, ?]] {
@@ -246,9 +259,11 @@ object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
   implicit def expressionInstances[I]: Functor[Expression[I, ?]] = new Functor[Expression[I, ?]] {
     def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
-      case e: ConstantExpr[I, _] => e.map(f)
-      case e: ColumnExpr[I, _]   => e.map(f)
-      case e: SubQueryExpr[I, _] => e.map(f)
+      case e: ConstantExpr[I, _]   => e.map(f)
+      case e: ColumnExpr[I, _]     => e.map(f)
+      case e: SubQueryExpr[I, _]   => e.map(f)
+      case e: BooleanExpr[I, _]    => e.map(f)
+      case e: ComparisonExpr[I, _] => e.map(f)
     }
   }
 }
@@ -284,9 +299,41 @@ object SubQueryExpr {
   }
 }
 
+final case class BooleanExpr[I, R](info: I, left: Expression[I, R], op: Operator, right: Expression[I, R])
+    extends Expression[I, R]
+object BooleanExpr {
+  implicit def eqBooleanExpr[I: Eq, R: Eq]: Eq[BooleanExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def booleanExprInstances[I]: Functor[BooleanExpr[I, ?]] = new Functor[BooleanExpr[I, ?]] {
+    def map[A, B](fa: BooleanExpr[I, A])(f: A => B): BooleanExpr[I, B] =
+      fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+  }
+}
+
+final case class ComparisonExpr[I, R](info: I, left: Expression[I, R], op: Comparison, right: Expression[I, R])
+    extends Expression[I, R]
+object ComparisonExpr {
+  implicit def eqComparisonExpr[I: Eq, R: Eq]: Eq[ComparisonExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def comparisonExprInstances[I]: Functor[ComparisonExpr[I, ?]] = new Functor[ComparisonExpr[I, ?]] {
+    def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
+      fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+  }
+}
+
 sealed trait Constant[I]
 final case class IntConstant[I](info: I, value: Int)        extends Constant[I]
 final case class DecimalConstant[I](info: I, value: Double) extends Constant[I]
 final case class DoubleConstant[I](info: I, value: Double)  extends Constant[I]
 final case class StringConstant[I](info: I, value: String)  extends Constant[I]
 final case class BoolConstant[I](info: I, value: Boolean)   extends Constant[I]
+
+sealed trait Operator
+final case object AND extends Operator
+final case object OR  extends Operator
+
+sealed trait Comparison
+final case object EQ  extends Comparison
+final case object NEQ extends Comparison
+final case object LT  extends Comparison
+final case object LTE extends Comparison
+final case object GT  extends Comparison
+final case object GTE extends Comparison

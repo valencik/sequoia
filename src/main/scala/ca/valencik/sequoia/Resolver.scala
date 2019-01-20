@@ -45,7 +45,7 @@ object Resolver {
                       case ColumnExpr(_, c)   => c.value.value
                       case ConstantExpr(_, _) => s"col_${index}"
                       // TODO not sure how Subqueries work for naming columns
-                      case SubQueryExpr(_, _) => ???
+                      case _ => ???
                     }
                 }
               )
@@ -97,7 +97,7 @@ object Resolver {
       case j: NaturalJoin[I, RawName] => State.pure(NaturalJoin(j.info))
       case j: JoinUsing[I, RawName] =>
         for {
-          cols <- j.cols.traverse(cr => resolveColumnRef(cr))
+          cols <- j.cols.traverse(cr => resolveUsingColumn(cr))
         } yield JoinUsing(j.info, cols)
       case j: JoinOn[I, RawName] => for { e <- resolveExpression(j.expression) } yield JoinOn(j.info, e)
     }
@@ -114,6 +114,11 @@ object Resolver {
     for {
       v <- resolveOneCol(cr.value)
     } yield ColumnRef(cr.info, v)
+
+  def resolveUsingColumn[I](uc: UsingColumn[I, RawName]): RState[UsingColumn[I, ResolvedName]] =
+    for {
+      v <- resolveOneCol(uc.value)
+    } yield UsingColumn(uc.info, v)
 
   def resolveOneCol(col: RawName): RState[ResolvedName] = State.inspect { acc =>
     if (acc.columnIsInScope(col))

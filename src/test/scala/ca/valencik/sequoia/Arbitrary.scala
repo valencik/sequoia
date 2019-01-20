@@ -12,6 +12,9 @@ object arbitrary {
   implicit def arbColumnRef[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnRef[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; r <- getArbitrary[R] } yield ColumnRef(i, r))
 
+  implicit def arbUsingColumn[I: Arbitrary, R: Arbitrary]: Arbitrary[UsingColumn[I, R]] =
+    Arbitrary(for { i <- getArbitrary[I]; r <- getArbitrary[R] } yield UsingColumn(i, r))
+
   implicit def arbColumnAlias[I: Arbitrary]: Arbitrary[ColumnAlias[I]] =
     Arbitrary(for { i <- getArbitrary[I]; s <- getArbitrary[String] } yield ColumnAlias(i, s))
 
@@ -127,7 +130,7 @@ object arbitrary {
   implicit def arbJoinUsing[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinUsing[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      c <- Gen.resize(5, getArbitrary[List[ColumnRef[I, R]]])
+      c <- Gen.resize(5, getArbitrary[List[UsingColumn[I, R]]])
     } yield JoinUsing(i, c))
 
   implicit def arbTablishAlias[I: Arbitrary]: Arbitrary[TablishAlias[I]] =
@@ -150,6 +153,28 @@ object arbitrary {
 
   implicit def arbSubQueryExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield SubQueryExpr(i, v))
+
+  implicit def arbOperator: Arbitrary[Operator] =
+    Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))
+
+  implicit def arbComparison: Arbitrary[Comparison] =
+    Arbitrary(Gen.oneOf(Gen.const(EQ), Gen.const(NEQ), Gen.const(LT), Gen.const(LTE), Gen.const(GT), Gen.const(GTE)))
+
+  implicit def arbBooleanExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[BooleanExpr[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      l  <- getArbitrary[Expression[I, R]]
+      op <- getArbitrary[Operator]
+      r  <- getArbitrary[Expression[I, R]]
+    } yield BooleanExpr(i, l, op, r))
+
+  implicit def arbComparisonExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ComparisonExpr[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      l  <- getArbitrary[Expression[I, R]]
+      op <- getArbitrary[Comparison]
+      r  <- getArbitrary[Expression[I, R]]
+    } yield ComparisonExpr(i, l, op, r))
 
   implicit def arbConstant[I: Arbitrary]: Arbitrary[Constant[I]] = {
     def intConstant     = for { i <- getArbitrary[I]; v <- getArbitrary[Int] } yield IntConstant(i, v)

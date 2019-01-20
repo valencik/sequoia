@@ -21,16 +21,61 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       { i += 1; i }
   }
 
-  def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawColumnName = {
+  def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawName = {
     RawColumnName(ctx.identifier.asScala.map(_.getText).mkString("."))
   }
 
-  def getColumnName(ctx: SqlBaseParser.IdentifierContext): RawColumnName = {
+  def getColumnName(ctx: SqlBaseParser.IdentifierContext): RawName = {
     RawColumnName(ctx.getText)
   }
 
   def getTableName(ctx: SqlBaseParser.QualifiedNameContext): RawTableName = {
     RawTableName(ctx.identifier.asScala.map(_.getText).mkString("."))
+  }
+
+  def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
+    if (ctx.CROSS != null)
+      CrossJoin
+    else {
+      val jt = ctx.joinType
+      if (jt.LEFT != null)
+        LeftJoin
+      else if (jt.RIGHT != null)
+        RightJoin
+      else if (jt.FULL != null)
+        FullJoin
+      else
+        InnerJoin
+    }
+  }
+
+  def getJoinCriteria(ctx: SqlBaseParser.JoinRelationContext): Option[JoinCriteria[Info, RawName]] = {
+    if (ctx.CROSS != null)
+      None
+    else if (ctx.NATURAL != null)
+      Some(NaturalJoin(nextId()))
+    else {
+      val jc = ctx.joinCriteria
+      if (jc.ON != null)
+        Some(JoinOn(nextId(), visit(ctx.joinCriteria.booleanExpression).asInstanceOf[BooleanExpr[Info, RawName]]))
+      else if (jc.USING != null) {
+        val ucs: List[UsingColumn[Info, RawName]] =
+          ctx.joinCriteria().identifier.asScala.map { case ic => UsingColumn(nextId(), getColumnName(ic)) }.toList
+        Some(JoinUsing(nextId(), ucs))
+      } else
+        None
+    }
+  }
+
+  def getRight(ctx: SqlBaseParser.JoinRelationContext): RawTablish = {
+    val rel =
+      if (ctx.CROSS != null)
+        visit(ctx.right)
+      else if (ctx.NATURAL != null)
+        visit(ctx.right)
+      else
+        visit(ctx.rightRelation)
+    rel.asInstanceOf[RawTablish]
   }
 
   // -- Overrides
@@ -109,6 +154,13 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitSubqueryExpression(ctx: SqlBaseParser.SubqueryExpressionContext): RawExpression = {
     if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
     SubQueryExpr(nextId(), visit(ctx.query).asInstanceOf[RawQuery])
+  }
+
+  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): Node = {
+    val op    = if (ctx.AND != null) AND else OR
+    val left  = visit(ctx.left).asInstanceOf[RawExpression]
+    val right = visit(ctx.right).asInstanceOf[RawExpression]
+    BooleanExpr(nextId(), left, op, right)
   }
 
   override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): RawExpression = {

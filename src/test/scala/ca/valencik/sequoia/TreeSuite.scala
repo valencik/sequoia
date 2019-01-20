@@ -76,4 +76,10 @@ class TreeLawTests extends CatsSuite {
 
   checkAll("SubQueryExpr[Int, ?]", FunctorTests[SubQueryExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[SubQueryExpr[Int, ?]]", SerializableTests.serializable(Functor[SubQueryExpr[Int, ?]]))
+
+  checkAll("BooleanExpr[Int, ?]", FunctorTests[BooleanExpr[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[BooleanExpr[Int, ?]]", SerializableTests.serializable(Functor[BooleanExpr[Int, ?]]))
+
+  checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ComparisonExpr[Int, ?]]", SerializableTests.serializable(Functor[ComparisonExpr[Int, ?]]))
 }
