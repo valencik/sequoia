@@ -79,9 +79,27 @@ object Resolver {
             val (nacc, rref) = resolveOneRef(r.value).run(acc).value
             (nacc, TablishTable(i, a, TableRef(r.info, rref)))
           }
-          case _ => ??? // TablishSubquery(i, a, resolveQuery(q))
+          case join: TablishJoin[I, RawName] => resolveTablishJoin(join).run(acc).value
+          case _                             => ??? // TablishSubquery(i, a, resolveQuery(q))
         }
       }
+    }
+
+  def resolveTablishJoin[I](join: TablishJoin[I, RawName]): RState[TablishJoin[I, ResolvedName]] =
+    for {
+      left     <- resolveOneTablish(join.left)
+      right    <- resolveOneTablish(join.right)
+      criteria <- join.criteria.traverse(resolveJoinCriteria)
+    } yield TablishJoin(join.info, join.jointype, left, right, criteria)
+
+  def resolveJoinCriteria[I](criteria: JoinCriteria[I, RawName]): RState[JoinCriteria[I, ResolvedName]] =
+    criteria match {
+      case j: NaturalJoin[I, RawName] => State.pure(NaturalJoin(j.info))
+      case j: JoinUsing[I, RawName] =>
+        for {
+          cols <- j.cols.traverse(cr => resolveColumnRef(cr))
+        } yield JoinUsing(j.info, cols)
+      case j: JoinOn[I, RawName] => for { e <- resolveExpression(j.expression) } yield JoinOn(j.info, e)
     }
 
   def resolveFrom[I](from: From[I, RawName]): RState[From[I, ResolvedName]] = State { acc =>
@@ -92,6 +110,11 @@ object Resolver {
     }
   }
 
+  def resolveColumnRef[I](cr: ColumnRef[I, RawName]): RState[ColumnRef[I, ResolvedName]] =
+    for {
+      v <- resolveOneCol(cr.value)
+    } yield ColumnRef(cr.info, v)
+
   def resolveOneCol(col: RawName): RState[ResolvedName] = State.inspect { acc =>
     if (acc.columnIsInScope(col))
       ResolvedColumnName(col.value)
@@ -101,8 +124,9 @@ object Resolver {
 
   def resolveExpression[I](exp: Expression[I, RawName]): RState[Expression[I, ResolvedName]] =
     exp match {
-      case ce: ColumnExpr[I, RawName] => ce.traverse(resolveOneCol).widen
-      case _                          => ???
+      case ce: ColumnExpr[I, RawName]   => ce.traverse(resolveOneCol).widen
+      case ce: ConstantExpr[I, RawName] => State.pure(ConstantExpr(ce.info, ce.col))
+      case _                            => ???
     }
 
   def resolveSelection[I](selection: Selection[I, RawName]): RState[Selection[I, ResolvedName]] =

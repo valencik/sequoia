@@ -184,13 +184,13 @@ final case class TablishJoin[I, R](info: I,
                                    jointype: JoinType,
                                    left: Tablish[I, R],
                                    right: Tablish[I, R],
-                                   criterea: Option[JoinCriteria[I, R]])
+                                   criteria: Option[JoinCriteria[I, R]])
     extends Tablish[I, R]
 object TablishJoin {
   implicit def eqTablishJoin[I: Eq, R: Eq]: Eq[TablishJoin[I, R]] = Eq.fromUniversalEquals
   implicit def tablishJoinInstances[I]: Functor[TablishJoin[I, ?]] = new Functor[TablishJoin[I, ?]] {
     def map[A, B](fa: TablishJoin[I, A])(f: A => B): TablishJoin[I, B] =
-      fa.copy(left = fa.left.map(f), right = fa.right.map(f), criterea = fa.criterea.map(_.map(f)))
+      fa.copy(left = fa.left.map(f), right = fa.right.map(f), criteria = fa.criteria.map(_.map(f)))
   }
 }
 
