@@ -159,6 +159,7 @@ object Tablish {
     def map[A, B](fa: Tablish[I, A])(f: A => B): Tablish[I, B] = fa match {
       case t: TablishTable[I, _]    => t.map(f)
       case t: TablishSubquery[I, _] => t.map(f)
+      case t: TablishJoin[I, _]     => t.map(f)
     }
   }
 }
@@ -176,6 +177,63 @@ object TablishSubquery {
   implicit def eqTablishSubquery[I: Eq, R: Eq]: Eq[TablishSubquery[I, R]] = Eq.fromUniversalEquals
   implicit def tablishSubqueryInstances[I]: Functor[TablishSubquery[I, ?]] = new Functor[TablishSubquery[I, ?]] {
     def map[A, B](fa: TablishSubquery[I, A])(f: A => B): TablishSubquery[I, B] = fa.copy(q = fa.q.map(f))
+  }
+}
+
+final case class TablishJoin[I, R](info: I,
+                                   jointype: JoinType,
+                                   left: Tablish[I, R],
+                                   right: Tablish[I, R],
+                                   criterea: Option[JoinCriteria[I, R]])
+    extends Tablish[I, R]
+object TablishJoin {
+  implicit def eqTablishJoin[I: Eq, R: Eq]: Eq[TablishJoin[I, R]] = Eq.fromUniversalEquals
+  implicit def tablishJoinInstances[I]: Functor[TablishJoin[I, ?]] = new Functor[TablishJoin[I, ?]] {
+    def map[A, B](fa: TablishJoin[I, A])(f: A => B): TablishJoin[I, B] =
+      fa.copy(left = fa.left.map(f), right = fa.right.map(f), criterea = fa.criterea.map(_.map(f)))
+  }
+}
+
+sealed trait JoinType
+final case object LeftJoin  extends JoinType
+final case object RightJoin extends JoinType
+final case object FullJoin  extends JoinType
+final case object InnerJoin extends JoinType
+final case object CrossJoin extends JoinType
+
+sealed trait JoinCriteria[I, R]
+object JoinCriteria {
+  implicit def eqJoinCriteria[I: Eq, R: Eq]: Eq[JoinCriteria[I, R]] = Eq.fromUniversalEquals
+  implicit def tablishInstance[I]: Functor[JoinCriteria[I, ?]] = new Functor[JoinCriteria[I, ?]] {
+    def map[A, B](fa: JoinCriteria[I, A])(f: A => B): JoinCriteria[I, B] = fa match {
+      case t: NaturalJoin[I, _] => t.map(f)
+      case t: JoinOn[I, _]      => t.map(f)
+      case t: JoinUsing[I, _]   => t.map(f)
+    }
+  }
+}
+
+final case class NaturalJoin[I, R](info: I) extends JoinCriteria[I, R]
+object NaturalJoin {
+  implicit def eqNaturalJoin[I: Eq, R: Eq]: Eq[NaturalJoin[I, R]] = Eq.fromUniversalEquals
+  implicit def tablishTableInstances[I]: Functor[NaturalJoin[I, ?]] = new Functor[NaturalJoin[I, ?]] {
+    def map[A, B](fa: NaturalJoin[I, A])(f: A => B): NaturalJoin[I, B] = NaturalJoin(fa.info)
+  }
+}
+
+final case class JoinOn[I, R](info: I, expression: Expression[I, R]) extends JoinCriteria[I, R]
+object JoinOn {
+  implicit def eqJoinOn[I: Eq, R: Eq]: Eq[JoinOn[I, R]] = Eq.fromUniversalEquals
+  implicit def tablishTableInstances[I]: Functor[JoinOn[I, ?]] = new Functor[JoinOn[I, ?]] {
+    def map[A, B](fa: JoinOn[I, A])(f: A => B): JoinOn[I, B] = fa.copy(expression = fa.expression.map(f))
+  }
+}
+
+final case class JoinUsing[I, R](info: I, cols: List[ColumnRef[I, R]]) extends JoinCriteria[I, R]
+object JoinUsing {
+  implicit def eqJoinUsing[I: Eq, R: Eq]: Eq[JoinUsing[I, R]] = Eq.fromUniversalEquals
+  implicit def tablishTableInstances[I]: Functor[JoinUsing[I, ?]] = new Functor[JoinUsing[I, ?]] {
+    def map[A, B](fa: JoinUsing[I, A])(f: A => B): JoinUsing[I, B] = fa.copy(cols = fa.cols.map(_.map(f)))
   }
 }
 

@@ -3,6 +3,7 @@ package ca.valencik.sequoia
 import cats.{Functor, Traverse}
 import cats.tests.CatsSuite
 import ca.valencik.sequoia.arbitrary._
+import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
 
 import cats.laws.discipline.{FunctorTests, SerializableTests, TraverseTests}
 
@@ -56,6 +57,12 @@ class TreeLawTests extends CatsSuite {
 
   checkAll("TablishSubquery[Int, ?]", FunctorTests[TablishSubquery[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[TablishSubquery[Int, ?]]", SerializableTests.serializable(Functor[TablishSubquery[Int, ?]]))
+
+  checkAll("TablishJoin[Int, ?]", FunctorTests[TablishJoin[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[TablishJoin[Int, ?]]", SerializableTests.serializable(Functor[TablishJoin[Int, ?]]))
+
+  checkAll("JoinCriteria[Int, ?]", FunctorTests[JoinCriteria[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[JoinCriteria[Int, ?]]", SerializableTests.serializable(Functor[JoinCriteria[Int, ?]]))
 
   checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Expression[Int, ?]]", SerializableTests.serializable(Functor[Expression[Int, ?]]))
