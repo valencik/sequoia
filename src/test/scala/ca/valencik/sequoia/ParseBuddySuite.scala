@@ -5,7 +5,8 @@ import ca.valencik.sequoia.ParseBuddy._
 
 class ParseBuddySpec extends FlatSpec with Matchers {
 
-  def catalog: Resolver = Resolver(Map("DB.FOO" -> Set("A", "B", "C"), "DB.BAR" -> Set("X", "Y", "Z")))
+  def catalog: Resolver =
+    Resolver(Map("DB.FOO" -> Set("A", "B", "C"), "DB.BAR" -> Set("X", "Y", "Z")))
 
   "ParseBuddy" should "parse valid SQL queries" in {
     val queries = List(

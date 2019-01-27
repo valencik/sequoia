@@ -35,9 +35,9 @@ object arbitrary {
     Arbitrary(for { i <- getArbitrary[I]; s <- getArbitrary[Select[I, R]] } yield QuerySelect(i, s))
 
   implicit def arbQueryLimit[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryLimit[I, R]] =
-    Arbitrary(
-      for { i <- getArbitrary[I]; l <- getArbitrary[Limit[I]]; s <- getArbitrary[Select[I, R]] } yield
-        QueryLimit(i, l, s))
+    Arbitrary(for {
+      i <- getArbitrary[I]; l <- getArbitrary[Limit[I]]; s <- getArbitrary[Select[I, R]]
+    } yield QueryLimit(i, l, s))
 
   implicit def arbCTE[I: Arbitrary, R: Arbitrary]: Arbitrary[CTE[I, R]] =
     Arbitrary(for {
@@ -63,7 +63,8 @@ object arbitrary {
     } yield SelectCols(i, v))
 
   implicit def arbSelection[I: Arbitrary, R: Arbitrary]: Arbitrary[Selection[I, R]] =
-    Arbitrary(Gen.frequency((1, getArbitrary[SelectStar[I, R]]), (2, getArbitrary[SelectExpr[I, R]])))
+    Arbitrary(
+      Gen.frequency((1, getArbitrary[SelectStar[I, R]]), (2, getArbitrary[SelectExpr[I, R]])))
 
   implicit def arbSelectStar[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectStar[I, R]] =
     Arbitrary(for {
@@ -91,14 +92,14 @@ object arbitrary {
                     (1, getArbitrary[TablishSubquery[I, R]])))
 
   implicit def arbTablishTable[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishTable[I, R]] =
-    Arbitrary(
-      for { i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[TableRef[I, R]] } yield
-        TablishTable(i, ta, v))
+    Arbitrary(for {
+      i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[TableRef[I, R]]
+    } yield TablishTable(i, ta, v))
 
   implicit def arbTablishSubquery[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishSubquery[I, R]] =
-    Arbitrary(
-      for { i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[Query[I, R]] } yield
-        TablishSubquery(i, ta, v))
+    Arbitrary(for {
+      i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[Query[I, R]]
+    } yield TablishSubquery(i, ta, v))
 
   implicit def arbTablishJoin[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishJoin[I, R]] =
     Arbitrary(for {
@@ -149,7 +150,8 @@ object arbitrary {
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Constant[I]] } yield ConstantExpr(i, v))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
-    Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[ColumnRef[I, R]] } yield ColumnExpr(i, v))
+    Arbitrary(
+      for { i <- getArbitrary[I]; v <- getArbitrary[ColumnRef[I, R]] } yield ColumnExpr(i, v))
 
   implicit def arbSubQueryExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield SubQueryExpr(i, v))
@@ -158,7 +160,13 @@ object arbitrary {
     Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))
 
   implicit def arbComparison: Arbitrary[Comparison] =
-    Arbitrary(Gen.oneOf(Gen.const(EQ), Gen.const(NEQ), Gen.const(LT), Gen.const(LTE), Gen.const(GT), Gen.const(GTE)))
+    Arbitrary(
+      Gen.oneOf(Gen.const(EQ),
+                Gen.const(NEQ),
+                Gen.const(LT),
+                Gen.const(LTE),
+                Gen.const(GT),
+                Gen.const(GTE)))
 
   implicit def arbBooleanExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[BooleanExpr[I, R]] =
     Arbitrary(for {
@@ -177,11 +185,15 @@ object arbitrary {
     } yield ComparisonExpr(i, l, op, r))
 
   implicit def arbConstant[I: Arbitrary]: Arbitrary[Constant[I]] = {
-    def intConstant     = for { i <- getArbitrary[I]; v <- getArbitrary[Int] } yield IntConstant(i, v)
-    def decimalConstant = for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DecimalConstant(i, v)
-    def doubleConstant  = for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DoubleConstant(i, v)
-    def stringConstant  = for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringConstant(i, v)
-    def boolConstant    = for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield BoolConstant(i, v)
+    def intConstant = for { i <- getArbitrary[I]; v <- getArbitrary[Int] } yield IntConstant(i, v)
+    def decimalConstant =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DecimalConstant(i, v)
+    def doubleConstant =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DoubleConstant(i, v)
+    def stringConstant =
+      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringConstant(i, v)
+    def boolConstant =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield BoolConstant(i, v)
     Arbitrary(Gen.oneOf(intConstant, decimalConstant, doubleConstant, stringConstant, boolConstant))
   }
 }

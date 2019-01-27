@@ -21,11 +21,13 @@ case class Resolver private (
   }.flatten
   def columnIsInScope(rc: RawName): Boolean = columnsInScope(rc.value)
 
-  def addCTE(alias: String, cols: Set[String]): Resolver = this.copy(ctes = ctes.updated(alias, cols))
-  def resetRelationScope(): Resolver                     = this.copy(r = Set.empty, s = Set.empty)
+  def addCTE(alias: String, cols: Set[String]): Resolver =
+    this.copy(ctes = ctes.updated(alias, cols))
+  def resetRelationScope(): Resolver = this.copy(r = Set.empty, s = Set.empty)
 }
 object Resolver {
-  def apply(c: Map[String, Set[String]]): Resolver = new Resolver(c, Map.empty, Set.empty, Set.empty)
+  def apply(c: Map[String, Set[String]]): Resolver =
+    new Resolver(c, Map.empty, Set.empty, Set.empty)
 
   type RState[A] = State[Resolver, A]
 
@@ -92,14 +94,16 @@ object Resolver {
       criteria <- join.criteria.traverse(resolveJoinCriteria)
     } yield TablishJoin(join.info, join.jointype, left, right, criteria)
 
-  def resolveJoinCriteria[I](criteria: JoinCriteria[I, RawName]): RState[JoinCriteria[I, ResolvedName]] =
+  def resolveJoinCriteria[I](
+      criteria: JoinCriteria[I, RawName]): RState[JoinCriteria[I, ResolvedName]] =
     criteria match {
       case j: NaturalJoin[I, RawName] => State.pure(NaturalJoin(j.info))
       case j: JoinUsing[I, RawName] =>
         for {
           cols <- j.cols.traverse(cr => resolveUsingColumn(cr))
         } yield JoinUsing(j.info, cols)
-      case j: JoinOn[I, RawName] => for { e <- resolveExpression(j.expression) } yield JoinOn(j.info, e)
+      case j: JoinOn[I, RawName] =>
+        for { e <- resolveExpression(j.expression) } yield JoinOn(j.info, e)
     }
 
   def resolveFrom[I](from: From[I, RawName]): RState[From[I, ResolvedName]] = State { acc =>
@@ -136,7 +140,8 @@ object Resolver {
       case ce: ComparisonExpr[I, RawName] => resolveComparisonExpr(ce).widen
     }
 
-  def resolveComparisonExpr[I](ce: ComparisonExpr[I, RawName]): RState[ComparisonExpr[I, ResolvedName]] =
+  def resolveComparisonExpr[I](
+      ce: ComparisonExpr[I, RawName]): RState[ComparisonExpr[I, ResolvedName]] =
     for {
       l <- resolveExpression(ce.left)
       r <- resolveExpression(ce.right)

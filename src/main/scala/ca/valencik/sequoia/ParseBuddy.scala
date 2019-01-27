@@ -1,6 +1,12 @@
 package ca.valencik.sequoia
 
-import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
+import org.antlr.v4.runtime.{
+  BaseErrorListener,
+  CharStreams,
+  CommonTokenStream,
+  RecognitionException,
+  Recognizer
+}
 
 object ParseBuddy {
 

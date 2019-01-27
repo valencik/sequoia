@@ -14,7 +14,8 @@ class ResolverSpec extends FlatSpec {
       Select(
         9,
         SelectCols(2, List(SelectExpr(5, ColumnExpr(3, ColumnRef(4, RawColumnName("a"))), None))),
-        Some(From(8, List(TablishTable(7, TablishAliasNone(), TableRef(6, RawTableName("db.foo"))))))
+        Some(
+          From(8, List(TablishTable(7, TablishAliasNone(), TableRef(6, RawTableName("db.foo"))))))
       )
     )
     val actual = Resolver.resolveQuery(q).runA(initialCatalog).value
@@ -22,8 +23,11 @@ class ResolverSpec extends FlatSpec {
       1,
       Select(
         9,
-        SelectCols(2, List(SelectExpr(5, ColumnExpr(3, ColumnRef(4, ResolvedColumnName("a"))), None))),
-        Some(From(8, List(TablishTable(7, TablishAliasNone(), TableRef(6, ResolvedTableName("db.foo"))))))
+        SelectCols(2,
+                   List(SelectExpr(5, ColumnExpr(3, ColumnRef(4, ResolvedColumnName("a"))), None))),
+        Some(
+          From(8,
+               List(TablishTable(7, TablishAliasNone(), TableRef(6, ResolvedTableName("db.foo"))))))
       )
     )
     actual shouldBe expected
@@ -41,8 +45,13 @@ class ResolverSpec extends FlatSpec {
             2,
             Select(
               10,
-              SelectCols(3, List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, RawColumnName("a"))), None))),
-              Some(From(9, List(TablishTable(8, TablishAliasNone(), TableRef(7, RawTableName("db.foo"))))))
+              SelectCols(
+                3,
+                List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, RawColumnName("a"))), None))),
+              Some(
+                From(
+                  9,
+                  List(TablishTable(8, TablishAliasNone(), TableRef(7, RawTableName("db.foo"))))))
             )
           )
         )),
@@ -50,8 +59,11 @@ class ResolverSpec extends FlatSpec {
         21,
         Select(
           20,
-          SelectCols(13, List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, RawColumnName("a"))), None))),
-          Some(From(19, List(TablishTable(18, TablishAliasNone(), TableRef(17, RawTableName("hasA"))))))
+          SelectCols(13,
+                     List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, RawColumnName("a"))), None))),
+          Some(
+            From(19,
+                 List(TablishTable(18, TablishAliasNone(), TableRef(17, RawTableName("hasA"))))))
         )
       )
     )
@@ -67,8 +79,14 @@ class ResolverSpec extends FlatSpec {
             2,
             Select(
               10,
-              SelectCols(3, List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, ResolvedColumnName("a"))), None))),
-              Some(From(9, List(TablishTable(8, TablishAliasNone(), TableRef(7, ResolvedTableName("db.foo"))))))
+              SelectCols(
+                3,
+                List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, ResolvedColumnName("a"))), None))),
+              Some(
+                From(
+                  9,
+                  List(
+                    TablishTable(8, TablishAliasNone(), TableRef(7, ResolvedTableName("db.foo"))))))
             )
           )
         )),
@@ -76,8 +94,13 @@ class ResolverSpec extends FlatSpec {
         21,
         Select(
           20,
-          SelectCols(13, List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, ResolvedColumnName("a"))), None))),
-          Some(From(19, List(TablishTable(18, TablishAliasNone(), TableRef(17, ResolvedTableAlias("hasA"))))))
+          SelectCols(
+            13,
+            List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, ResolvedColumnName("a"))), None))),
+          Some(
+            From(
+              19,
+              List(TablishTable(18, TablishAliasNone(), TableRef(17, ResolvedTableAlias("hasA"))))))
         )
       )
     )
@@ -96,8 +119,13 @@ class ResolverSpec extends FlatSpec {
             2,
             Select(
               10,
-              SelectCols(3, List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, RawColumnName("a"))), None))),
-              Some(From(9, List(TablishTable(8, TablishAliasNone(), TableRef(7, RawTableName("db.foo"))))))
+              SelectCols(
+                3,
+                List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, RawColumnName("a"))), None))),
+              Some(
+                From(
+                  9,
+                  List(TablishTable(8, TablishAliasNone(), TableRef(7, RawTableName("db.foo"))))))
             )
           )
         )),
@@ -105,8 +133,11 @@ class ResolverSpec extends FlatSpec {
         21,
         Select(
           20,
-          SelectCols(13, List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, RawColumnName("b"))), None))),
-          Some(From(19, List(TablishTable(18, TablishAliasNone(), TableRef(17, RawTableName("hasA"))))))
+          SelectCols(13,
+                     List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, RawColumnName("b"))), None))),
+          Some(
+            From(19,
+                 List(TablishTable(18, TablishAliasNone(), TableRef(17, RawTableName("hasA"))))))
         )
       )
     )
@@ -122,8 +153,14 @@ class ResolverSpec extends FlatSpec {
             2,
             Select(
               10,
-              SelectCols(3, List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, ResolvedColumnName("a"))), None))),
-              Some(From(9, List(TablishTable(8, TablishAliasNone(), TableRef(7, ResolvedTableName("db.foo"))))))
+              SelectCols(
+                3,
+                List(SelectExpr(6, ColumnExpr(4, ColumnRef(5, ResolvedColumnName("a"))), None))),
+              Some(
+                From(
+                  9,
+                  List(
+                    TablishTable(8, TablishAliasNone(), TableRef(7, ResolvedTableName("db.foo"))))))
             )
           )
         )),
@@ -131,8 +168,13 @@ class ResolverSpec extends FlatSpec {
         21,
         Select(
           20,
-          SelectCols(13, List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, UnresolvedColumnName("b"))), None))),
-          Some(From(19, List(TablishTable(18, TablishAliasNone(), TableRef(17, ResolvedTableAlias("hasA"))))))
+          SelectCols(
+            13,
+            List(SelectExpr(16, ColumnExpr(14, ColumnRef(15, UnresolvedColumnName("b"))), None))),
+          Some(
+            From(
+              19,
+              List(TablishTable(18, TablishAliasNone(), TableRef(17, ResolvedTableAlias("hasA"))))))
         )
       )
     )
