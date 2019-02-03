@@ -1,11 +1,16 @@
 package ca.valencik.sequoia
 
 import cats._
+import cats.data.NonEmptyList
 import cats.tests.CatsSuite
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
 
 object arbitrary {
+  implicit def arbNonEmptyList[A](implicit A: Arbitrary[A]): Arbitrary[NonEmptyList[A]] =
+    Arbitrary(implicitly[Arbitrary[List[A]]].arbitrary.flatMap(fa =>
+      A.arbitrary.map(a => NonEmptyList(a, fa))))
+
   implicit def arbTableRef[I: Arbitrary, R: Arbitrary]: Arbitrary[TableRef[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; r <- getArbitrary[R] } yield TableRef(i, r))
 
@@ -18,112 +23,156 @@ object arbitrary {
   implicit def arbColumnAlias[I: Arbitrary]: Arbitrary[ColumnAlias[I]] =
     Arbitrary(for { i <- getArbitrary[I]; s <- getArbitrary[String] } yield ColumnAlias(i, s))
 
-  implicit def arbQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[Query[I, R]] =
-    Arbitrary(
-      Gen.frequency((1, getArbitrary[QueryWith[I, R]]),
-                    (10, getArbitrary[QuerySelect[I, R]]),
-                    (4, getArbitrary[QueryLimit[I, R]])))
+  implicit def arbTableAlias[I: Arbitrary]: Arbitrary[TableAlias[I]] =
+    Arbitrary(for { i <- getArbitrary[I]; s <- getArbitrary[String] } yield TableAlias(i, s))
 
-  implicit def arbQueryWith[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryWith[I, R]] =
+  implicit def arbQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[Query[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      c <- Gen.resize(5, getArbitrary[List[CTE[I, R]]])
-      q <- getArbitrary[Query[I, R]]
-    } yield QueryWith(i, c, q))
+      w <- Gen.frequency((19, Gen.const(None)), (1, Gen.some(getArbitrary[With[I, R]])))
+      q <- getArbitrary[QueryNoWith[I, R]]
+    } yield Query(i, w, q))
 
-  implicit def arbQuerySelect[I: Arbitrary, R: Arbitrary]: Arbitrary[QuerySelect[I, R]] =
-    Arbitrary(for { i <- getArbitrary[I]; s <- getArbitrary[Select[I, R]] } yield QuerySelect(i, s))
-
-  implicit def arbQueryLimit[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryLimit[I, R]] =
+  implicit def arbWith[I: Arbitrary, R: Arbitrary]: Arbitrary[With[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]; l <- getArbitrary[Limit[I]]; s <- getArbitrary[Select[I, R]]
-    } yield QueryLimit(i, l, s))
+      i <- getArbitrary[I]
+      n <- Gen.resize(3, getArbitrary[NonEmptyList[NamedQuery[I, R]]])
+    } yield With(i, n))
 
-  implicit def arbCTE[I: Arbitrary, R: Arbitrary]: Arbitrary[CTE[I, R]] =
+  implicit def arbQueryNoWith[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryNoWith[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]; a <- getArbitrary[TablishAliasT[I]]
-      c <- Gen.resize(5, getArbitrary[List[ColumnAlias[I]]])
-      q <- getArbitrary[Query[I, R]]
-    } yield CTE(i, a, c, q))
+      i <- getArbitrary[I]
+      q <- getArbitrary[QueryTerm[I, R]]
+      o <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[OrderBy[I, R]])))
+      l <- Gen.option(getArbitrary[Limit[I]])
+    } yield QueryNoWith(i, q, o, l))
+
+  implicit def arbOrderBy[I: Arbitrary, R: Arbitrary]: Arbitrary[OrderBy[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      s <- Gen.resize(3, getArbitrary[NonEmptyList[SortItem[I, R]]])
+    } yield OrderBy(i, s))
+
+  implicit def arbOrdering: Arbitrary[Ordering] =
+    Arbitrary(Gen.oneOf(Gen.const(ASC), Gen.const(DESC)))
+
+  implicit def arbNullOrdering: Arbitrary[NullOrdering] =
+    Arbitrary(Gen.oneOf(Gen.const(FIRST), Gen.const(LAST)))
+
+  implicit def arbSortItem[I: Arbitrary, R: Arbitrary]: Arbitrary[SortItem[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- getArbitrary[Expression[I, R]]
+      o <- Gen.option(getArbitrary[Ordering])
+      n <- Gen.option(getArbitrary[NullOrdering])
+    } yield SortItem(i, e, o, n))
 
   implicit def arbLimit[I: Arbitrary]: Arbitrary[Limit[I]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield Limit(i, v))
 
-  implicit def arbSelect[I: Arbitrary, R: Arbitrary]: Arbitrary[Select[I, R]] =
-    Arbitrary(for {
-      i <- getArbitrary[I]
-      s <- getArbitrary[SelectCols[I, R]]
-      f <- Gen.frequency((6, Gen.const(None)), (4, Gen.some(getArbitrary[From[I, R]])))
-    } yield Select(i, s, f))
-
-  implicit def arbSelectCols[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectCols[I, R]] =
-    Arbitrary(for {
-      i <- getArbitrary[I]
-      v <- Gen.resize(5, getArbitrary[List[Selection[I, R]]])
-    } yield SelectCols(i, v))
-
-  implicit def arbSelection[I: Arbitrary, R: Arbitrary]: Arbitrary[Selection[I, R]] =
+  implicit def arbQueryTerm[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryTerm[I, R]] =
     Arbitrary(
-      Gen.frequency((1, getArbitrary[SelectStar[I, R]]), (2, getArbitrary[SelectExpr[I, R]])))
+      Gen.frequency((4, getArbitrary[QueryPrimary[I, R]]), (1, getArbitrary[SetOperation[I, R]])))
 
-  implicit def arbSelectStar[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectStar[I, R]] =
+  implicit def arbSetOperation[I: Arbitrary, R: Arbitrary]: Arbitrary[SetOperation[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      v <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[TableRef[I, R]])))
-    } yield SelectStar(i, v))
+      l <- getArbitrary[QueryTerm[I, R]]
+      o <- getArbitrary[SetOperator]
+      s <- Gen.option(getArbitrary[SetQuantifier])
+      r <- getArbitrary[QueryTerm[I, R]]
+    } yield SetOperation(i, l, o, s, r))
 
-  implicit def arbSelectExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectExpr[I, R]] =
-    Arbitrary(for {
-      i <- getArbitrary[I]
-      v <- getArbitrary[Expression[I, R]]
-      a <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[ColumnAlias[I]])))
-    } yield SelectExpr(i, v, a))
+  implicit def arbSetOperator: Arbitrary[SetOperator] =
+    Arbitrary(Gen.oneOf(Gen.const(INTERSECT), Gen.const(UNION), Gen.const(EXCEPT)))
 
-  implicit def arbFrom[I: Arbitrary, R: Arbitrary]: Arbitrary[From[I, R]] =
-    Arbitrary(for {
-      i <- getArbitrary[I]
-      v <- Gen.resize(3, getArbitrary[List[Tablish[I, R]]])
-    } yield From(i, v))
+  implicit def arbSetQuantifier: Arbitrary[SetQuantifier] =
+    Arbitrary(Gen.oneOf(Gen.const(DISTINCT), Gen.const(ALL)))
 
-  implicit def arbTablish[I: Arbitrary, R: Arbitrary]: Arbitrary[Tablish[I, R]] =
+  implicit def arbQueryPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryPrimary[I, R]] =
     Arbitrary(
-      Gen.frequency((15, getArbitrary[TablishTable[I, R]]),
-                    (4, getArbitrary[TablishJoin[I, R]]),
-                    (1, getArbitrary[TablishSubquery[I, R]])))
+      Gen.frequency((8, getArbitrary[QuerySpecification[I, R]]),
+                    (2, getArbitrary[QueryPrimaryTable[I, R]]),
+                    (1, getArbitrary[InlineTable[I, R]]),
+                    (1, getArbitrary[SubQuery[I, R]])))
 
-  implicit def arbTablishTable[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishTable[I, R]] =
+  implicit def arbQueryPrimaryTable[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[QueryPrimaryTable[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[TableRef[I, R]]
-    } yield TablishTable(i, ta, v))
+      i <- getArbitrary[I]
+      t <- getArbitrary[TableRef[I, R]]
+    } yield QueryPrimaryTable(i, t))
 
-  implicit def arbTablishSubquery[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishSubquery[I, R]] =
+  implicit def arbInlineTable[I: Arbitrary, R: Arbitrary]: Arbitrary[InlineTable[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]; ta <- getArbitrary[TablishAlias[I]]; v <- getArbitrary[Query[I, R]]
-    } yield TablishSubquery(i, ta, v))
+      i <- getArbitrary[I]
+      v <- Gen.resize(3, getArbitrary[NonEmptyList[Expression[I, R]]])
+    } yield InlineTable(i, v))
 
-  implicit def arbTablishJoin[I: Arbitrary, R: Arbitrary]: Arbitrary[TablishJoin[I, R]] =
+  implicit def arbSubQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQuery[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]; jt <- getArbitrary[JoinType]; l <- getArbitrary[Tablish[I, R]]
-      r <- getArbitrary[Tablish[I, R]]
-      c <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[JoinCriteria[I, R]])))
-    } yield TablishJoin(i, jt, l, r, c))
+      i <- getArbitrary[I]
+      q <- getArbitrary[QueryNoWith[I, R]]
+    } yield SubQuery(i, q))
+
+  implicit def arbQuerySpecification[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[QuerySpecification[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
+      s <- Gen.resize(5, getArbitrary[NonEmptyList[SelectItem[I, R]]])
+      f <- Gen.option(getArbitrary[NonEmptyList[Relation[I, R]]])
+    } yield QuerySpecification(i, q, s, f))
+
+  implicit def arbNamedQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[NamedQuery[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      n <- getArbitrary[String]
+      c <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[ColumnAliases[I]])))
+      q <- getArbitrary[Query[I, R]]
+    } yield NamedQuery(i, n, c, q))
+
+  implicit def arbSelectItem[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectItem[I, R]] =
+    Arbitrary(
+      Gen.frequency((1, getArbitrary[SelectAll[I, R]]), (2, getArbitrary[SelectSingle[I, R]])))
+
+  implicit def arbSelectAll[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectAll[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      r <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[TableRef[I, R]])))
+    } yield SelectAll(i, r))
+
+  implicit def arbSelectSingle[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectSingle[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- getArbitrary[Expression[I, R]]
+      c <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[ColumnAlias[I]])))
+    } yield SelectSingle(i, e, c))
+
+  implicit def arbRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[Relation[I, R]] =
+    Arbitrary(
+      Gen.frequency((1, getArbitrary[JoinRelation[I, R]]),
+                    (9, getArbitrary[SampledRelation[I, R]])))
+
+  implicit def arbJoinRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinRelation[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      jt <- getArbitrary[JoinType]
+      l  <- getArbitrary[Relation[I, R]]
+      r  <- getArbitrary[Relation[I, R]]
+      c  <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[JoinCriteria[I, R]])))
+    } yield JoinRelation(i, jt, l, r, c))
 
   implicit def arbJoinType: Arbitrary[JoinType] =
     Arbitrary(
-      Gen.oneOf(Gen.const(LeftJoin),
+      Gen.oneOf(Gen.const(InnerJoin),
+                Gen.const(LeftJoin),
                 Gen.const(RightJoin),
                 Gen.const(FullJoin),
-                Gen.const(InnerJoin),
                 Gen.const(CrossJoin)))
 
   implicit def arbJoinCriteria[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinCriteria[I, R]] =
-    Arbitrary(
-      Gen.frequency((7, getArbitrary[NaturalJoin[I, R]]),
-                    (3, getArbitrary[JoinOn[I, R]]),
-                    (5, getArbitrary[JoinUsing[I, R]])))
-
-  implicit def arbNaturalJoin[I: Arbitrary, R: Arbitrary]: Arbitrary[NaturalJoin[I, R]] =
-    Arbitrary(for { i <- getArbitrary[I] } yield NaturalJoin(i))
+    Arbitrary(Gen.frequency((8, getArbitrary[JoinOn[I, R]]), (2, getArbitrary[JoinUsing[I, R]])))
 
   implicit def arbJoinOn[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinOn[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; e <- getArbitrary[Expression[I, R]] } yield JoinOn(i, e))
@@ -131,20 +180,64 @@ object arbitrary {
   implicit def arbJoinUsing[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinUsing[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      c <- Gen.resize(5, getArbitrary[List[UsingColumn[I, R]]])
+      c <- Gen.resize(5, getArbitrary[NonEmptyList[UsingColumn[I, R]]])
     } yield JoinUsing(i, c))
 
-  implicit def arbTablishAlias[I: Arbitrary]: Arbitrary[TablishAlias[I]] =
-    Arbitrary(Gen.oneOf(Gen.const(TablishAliasNone[I]), getArbitrary[TablishAliasT[I]]))
+  implicit def arbSampledRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[SampledRelation[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      a <- getArbitrary[AliasedRelation[I, R]]
+      t <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[TableSample[I, R]])))
+    } yield SampledRelation(i, a, t))
 
-  implicit def arbTablishAliasT[I: Arbitrary]: Arbitrary[TablishAliasT[I]] =
-    Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield TablishAliasT(i, v))
+  implicit def arbTableSample[I: Arbitrary, R: Arbitrary]: Arbitrary[TableSample[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      t <- getArbitrary[SampleType]
+      e <- getArbitrary[Expression[I, R]]
+    } yield TableSample(i, t, e))
+
+  implicit def arbSampleType: Arbitrary[SampleType] =
+    Arbitrary(Gen.oneOf(Gen.const(BERNOULLI), Gen.const(SYSTEM)))
+
+  implicit def arbAliasedRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[AliasedRelation[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      r <- getArbitrary[RelationPrimary[I, R]]
+      a <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[TableAlias[I]])))
+      c <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[ColumnAliases[I]])))
+    } yield AliasedRelation(i, r, a, c))
+
+  implicit def arbColumnAliases[I: Arbitrary]: Arbitrary[ColumnAliases[I]] =
+    Arbitrary(for {
+      c <- Gen.resize(5, getArbitrary[NonEmptyList[ColumnAlias[I]]])
+    } yield ColumnAliases(c))
+
+  implicit def arbRelationPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[RelationPrimary[I, R]] =
+    Arbitrary(
+      Gen.frequency((5, getArbitrary[TableName[I, R]]), (1, getArbitrary[SubQueryRelation[I, R]])))
+
+  implicit def arbTableName[I: Arbitrary, R: Arbitrary]: Arbitrary[TableName[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      r <- getArbitrary[TableRef[I, R]]
+    } yield TableName(i, r))
+
+  implicit def arbSubQueryRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryRelation[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      q <- getArbitrary[Query[I, R]]
+    } yield SubQueryRelation(i, q))
 
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
-      Gen.frequency((5, getArbitrary[ConstantExpr[I, R]]),
-                    (5, getArbitrary[ColumnExpr[I, R]]),
-                    (1, getArbitrary[SubQueryExpr[I, R]])))
+      Gen.frequency(
+        (7, getArbitrary[ConstantExpr[I, R]]),
+        (7, getArbitrary[ColumnExpr[I, R]]),
+        (4, getArbitrary[ComparisonExpr[I, R]]),
+        (4, getArbitrary[BooleanExpr[I, R]]),
+        (1, getArbitrary[SubQueryExpr[I, R]])
+      ))
 
   implicit def arbConstantExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ConstantExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Constant[I]] } yield ConstantExpr(i, v))
