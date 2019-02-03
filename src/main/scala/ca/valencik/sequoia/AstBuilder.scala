@@ -1,17 +1,14 @@
 package ca.valencik.sequoia
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.Buffer
+
+import cats.data.NonEmptyList
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
-  type Info           = Int
-  type RawQuery       = Query[Info, RawName]
-  type RawQueryLimit  = QueryLimit[Info, RawName]
-  type RawQuerySelect = QuerySelect[Info, RawName]
-  type RawSelect      = Select[Info, RawName]
-  type RawSelection   = Selection[Info, RawName]
-  type RawTablish     = Tablish[Info, RawName]
-  type RawExpression  = Expression[Info, RawName]
+  type Info          = Int
+  type RawExpression = Expression[Info, RawName]
 
   val verbose: Boolean = false
 
@@ -20,6 +17,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     () =>
       { i += 1; i }
   }
+
+  def toUnsafeNEL[A](xs: Buffer[A]): NonEmptyList[A] = NonEmptyList.fromListUnsafe(xs.toList)
 
   def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawName = {
     RawColumnName(ctx.identifier.asScala.map(_.getText).mkString("."))
@@ -53,12 +52,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.JoinRelationContext): Option[JoinCriteria[Info, RawName]] = {
     if (ctx.CROSS != null)
       None
-    else if (ctx.NATURAL != null)
-      Some(NaturalJoin(nextId()))
     else {
       val jc = ctx.joinCriteria
       if (jc.ON != null) {
-        Some(JoinOn(nextId(), visit(jc.booleanExpression).asInstanceOf[RawExpression]))
+        Some(JoinOn(nextId(), visit(jc.booleanExpression).asInstanceOf[Expression[Info, RawName]]))
       } else if (jc.USING != null) {
         val ucs: List[UsingColumn[Info, RawName]] =
           ctx
@@ -67,21 +64,19 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
             .asScala
             .map { case ic => UsingColumn(nextId(), getColumnName(ic)) }
             .toList
-        Some(JoinUsing(nextId(), ucs))
+        Some(JoinUsing(nextId(), NonEmptyList.fromListUnsafe(ucs)))
       } else
         None
     }
   }
 
-  def getRight(ctx: SqlBaseParser.JoinRelationContext): RawTablish = {
-    val rel =
-      if (ctx.CROSS != null)
-        visit(ctx.right)
-      else if (ctx.NATURAL != null)
-        visit(ctx.right)
-      else
-        visit(ctx.rightRelation)
-    rel.asInstanceOf[RawTablish]
+  def getRight(ctx: SqlBaseParser.JoinRelationContext): Relation[Info, RawName] = {
+    if (ctx.CROSS != null)
+      visitSampledRelation(ctx.right)
+    else if (ctx.NATURAL != null)
+      visitSampledRelation(ctx.right)
+    else
+      visit(ctx.rightRelation).asInstanceOf[Relation[Info, RawName]]
   }
 
   def getComparisonOperator(ctx: SqlBaseParser.ComparisonOperatorContext): Comparison = {
@@ -103,113 +98,172 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   // -- Overrides
 
-  // query:  with? queryNoWith ;
-  // with: WITH RECURSIVE? namedQuery (',' namedQuery)* ;
-  // queryNoWith: queryTerm...;
-  // namedQuery: name=identifier (columnAliases)? AS '(' query ')' ;
-  // columnAliases: '(' identifier (',' identifier)* ')' ;
-  override def visitQuery(ctx: SqlBaseParser.QueryContext): RawQuery = {
+  override def visitQuery(ctx: SqlBaseParser.QueryContext): Query[Info, RawName] = {
     if (verbose) println(s"-------visitQuery called: ${ctx.getText}-------------")
-    if (ctx.`with` != null) {
-      val ctes: List[CTE[Info, RawName]] = ctx.`with`.namedQuery.asScala.map { n =>
-        visitNamedQuery(n)
-      }.toList
-      QueryWith(nextId(), ctes, visitQueryNoWith(ctx.queryNoWith))
-    } else
-      QuerySelect(nextId(), visit(ctx.queryNoWith.queryTerm).asInstanceOf[RawSelect])
+    val maybeWith = if (ctx.`with` != null) Some(visitWith(ctx.`with`)) else None
+    Query(nextId(), maybeWith, visitQueryNoWith(ctx.queryNoWith))
   }
 
-  override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): CTE[Info, RawName] = {
-    if (verbose) println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
-    val alias           = TablishAliasT(nextId(), ctx.name.getText)
-    val query: RawQuery = visit(ctx.query).asInstanceOf[RawQuery]
-    val cols: List[ColumnAlias[Info]] =
-      if (ctx.columnAliases != null)
-        ctx.columnAliases.identifier.asScala.map { a =>
-          ColumnAlias(nextId(), a.getText)
-        }.toList
-      else List()
-    CTE(nextId(), alias, cols, query)
+  override def visitWith(ctx: SqlBaseParser.WithContext): With[Info, RawName] = {
+    if (verbose) println(s"-------visitWith called: ${ctx.getText}-------------")
+    val nqs = toUnsafeNEL(ctx.namedQuery.asScala.map(visitNamedQuery))
+    With(nextId(), nqs)
   }
 
-  override def visitQueryNoWith(ctx: SqlBaseParser.QueryNoWithContext): RawQuery = {
+  override def visitQueryNoWith(
+      ctx: SqlBaseParser.QueryNoWithContext): QueryNoWith[Info, RawName] = {
     if (verbose) println(s"-------visitQueryNoWith called: ${ctx.getText}-------------")
-    val qs: RawSelect = visit(ctx.queryTerm).asInstanceOf[RawSelect]
-    if (ctx.LIMIT != null)
-      QueryLimit(nextId(), Limit(nextId(), ctx.LIMIT.getText), qs)
-    else
-      QuerySelect(nextId(), qs)
+    val qt = visit(ctx.queryTerm).asInstanceOf[QueryTerm[Info, RawName]]
+    val orderBy = {
+      if (ctx.sortItem.size > 0)
+        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+      else
+        None
+    }
+    val limit = if (ctx.LIMIT != null) Some(Limit(nextId(), ctx.limit.getText)) else None
+    QueryNoWith(nextId(), qt, orderBy, limit)
   }
 
-  override def visitQuerySpecification(ctx: SqlBaseParser.QuerySpecificationContext): RawSelect = {
-    if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
-    val select =
-      SelectCols(nextId(), ctx.selectItem.asScala.map(visit(_).asInstanceOf[RawSelection]).toList)
-    val relationOptions = ctx.relation.asScala.map { r =>
-      Option(visit(r).asInstanceOf[RawTablish])
-    }.toList
-    val from =
-      if (relationOptions.size > 0 && relationOptions.forall(_.isDefined))
-        Some(From(nextId(), relationOptions.map(_.get)))
+  override def visitSetOperation(
+      ctx: SqlBaseParser.SetOperationContext): SetOperation[Info, RawName] = {
+    ???
+  }
+
+  override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem[Info, RawName] = {
+    if (verbose) println(s"-------visitSortItem called: ${ctx.getText}-------------")
+    // TODO
+    val exp = visitExpression(ctx.expression).asInstanceOf[Expression[Info, RawName]]
+    val o =
+      if (ctx.ordering != null)
+        Some(
+          if (ctx.ASC != null) ASC else DESC
+        )
       else None
-    Select(nextId(), select, from)
+    val no =
+      if (ctx.nullOrdering != null)
+        Some(
+          if (ctx.FIRST != null) FIRST else LAST
+        )
+      else None
+    SortItem(nextId(), exp, o, no)
   }
 
-  override def visitSelectSingle(ctx: SqlBaseParser.SelectSingleContext): RawSelection = {
-    val ident = if (ctx.identifier != null) Option(ctx.identifier.getText) else None
+  override def visitQuerySpecification(
+      ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification[Info, RawName] = {
+    if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
+    val sis = toUnsafeNEL(
+      ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]))
+    val f = NonEmptyList.fromList(
+      ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList)
+    // TODO SetQuantifier
+    QuerySpecification(nextId(), None, sis, f)
+  }
+
+  override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): NamedQuery[Info, RawName] = {
+    if (verbose) println(s"-------visitNamedQuery called: ${ctx.getText}-------------")
+    val query = visitQuery(ctx.query)
+    val colAs =
+      if (ctx.columnAliases != null)
+        Some(visitColumnAliases(ctx.columnAliases))
+      else
+        None
+    NamedQuery(nextId(), ctx.name.getText, colAs, query)
+  }
+
+  override def visitSelectSingle(
+      ctx: SqlBaseParser.SelectSingleContext): SelectSingle[Info, RawName] = {
+    val ident = if (ctx.identifier != null) Some(ctx.identifier.getText) else None
     val alias: Option[ColumnAlias[Info]] = ident.map { a =>
       ColumnAlias(nextId(), a)
     }
-    val expr: RawExpression = visit(ctx.expression).asInstanceOf[RawExpression]
-    SelectExpr(nextId(), expr, alias)
+    val expr = visit(ctx.expression).asInstanceOf[RawExpression]
+    SelectSingle(nextId(), expr, alias)
   }
 
-  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): RawSelection = {
+  override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): SelectAll[Info, RawName] = {
     val ref: Option[TableRef[Info, RawName]] =
       if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName)))
       else None
-    SelectStar(nextId(), ref)
+    SelectAll(nextId(), ref)
   }
 
-  override def visitTableName(ctx: SqlBaseParser.TableNameContext): RawTablish = {
-    val ref: TableRef[Info, RawName] = TableRef(nextId(), getTableName(ctx.qualifiedName))
-    TablishTable(nextId(), TablishAliasNone[Info], ref)
-  }
-
-  override def visitJoinRelation(ctx: SqlBaseParser.JoinRelationContext): RawTablish = {
-    val left         = visit(ctx.left).asInstanceOf[RawTablish]
+  override def visitJoinRelation(
+      ctx: SqlBaseParser.JoinRelationContext): JoinRelation[Info, RawName] = {
+    val left         = visit(ctx.left).asInstanceOf[Relation[Info, RawName]]
     val right        = getRight(ctx)
     val joinType     = getJoinType(ctx)
     val joinCriteria = getJoinCriteria(ctx)
-    TablishJoin(nextId(), joinType, left, right, joinCriteria)
+    JoinRelation(nextId(), joinType, left, right, joinCriteria)
+  }
+
+  override def visitSampledRelation(
+      ctx: SqlBaseParser.SampledRelationContext): SampledRelation[Info, RawName] = {
+    val ar = visitAliasedRelation(ctx.aliasedRelation)
+    val ts = if (ctx.sampleType != null) {
+      val st = if (ctx.sampleType.BERNOULLI != null) BERNOULLI else SYSTEM
+      val p  = visit(ctx.percentage).asInstanceOf[RawExpression]
+      Some(TableSample(nextId(), st, p))
+    } else None
+    SampledRelation(nextId(), ar, ts)
+  }
+
+  override def visitAliasedRelation(
+      ctx: SqlBaseParser.AliasedRelationContext): AliasedRelation[Info, RawName] = {
+    val rp = visit(ctx.relationPrimary).asInstanceOf[RelationPrimary[Info, RawName]]
+    val alias =
+      if (ctx.identifier != null) Some(TableAlias(nextId(), ctx.identifier.getText)) else None
+    val colAs =
+      if (ctx.columnAliases != null)
+        Some(visitColumnAliases(ctx.columnAliases))
+      else
+        None
+    AliasedRelation(nextId(), rp, alias, colAs)
+  }
+
+  override def visitColumnAliases(ctx: SqlBaseParser.ColumnAliasesContext): ColumnAliases[Info] = {
+    val cols = toUnsafeNEL(ctx.identifier.asScala.map { i =>
+      ColumnAlias(nextId(), i.getText)
+    })
+    ColumnAliases(cols)
+  }
+
+  // TODO More relationPrimary
+  override def visitTableName(
+      ctx: SqlBaseParser.TableNameContext): RelationPrimary[Info, RawName] = {
+    val ref: TableRef[Info, RawName] = TableRef(nextId(), getTableName(ctx.qualifiedName))
+    TableName(nextId(), ref)
   }
 
   override def visitSubqueryExpression(
-      ctx: SqlBaseParser.SubqueryExpressionContext): RawExpression = {
+      ctx: SqlBaseParser.SubqueryExpressionContext): SubQueryExpr[Info, RawName] = {
     if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
-    SubQueryExpr(nextId(), visit(ctx.query).asInstanceOf[RawQuery])
+    SubQueryExpr(nextId(), visitQuery(ctx.query))
   }
 
-  override def visitComparison(ctx: SqlBaseParser.ComparisonContext): Node = {
+  override def visitComparison(
+      ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
     val op    = getComparisonOperator(ctx.comparisonOperator)
     val left  = visit(ctx.value).asInstanceOf[RawExpression]
     val right = visit(ctx.right).asInstanceOf[RawExpression]
     ComparisonExpr(nextId(), left, op, right)
   }
 
-  override def visitLogicalBinary(ctx: SqlBaseParser.LogicalBinaryContext): Node = {
+  override def visitLogicalBinary(
+      ctx: SqlBaseParser.LogicalBinaryContext): BooleanExpr[Info, RawName] = {
     val op    = if (ctx.AND != null) AND else OR
     val left  = visit(ctx.left).asInstanceOf[RawExpression]
     val right = visit(ctx.right).asInstanceOf[RawExpression]
     BooleanExpr(nextId(), left, op, right)
   }
 
-  override def visitColumnReference(ctx: SqlBaseParser.ColumnReferenceContext): RawExpression = {
+  override def visitColumnReference(
+      ctx: SqlBaseParser.ColumnReferenceContext): ColumnExpr[Info, RawName] = {
     if (verbose) println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
   }
 
-  override def visitNumericLiteral(ctx: SqlBaseParser.NumericLiteralContext): RawExpression = {
+  override def visitNumericLiteral(
+      ctx: SqlBaseParser.NumericLiteralContext): ConstantExpr[Info, RawName] = {
     if (verbose) println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
     // TODO this forces DoubleConstant
     ConstantExpr(nextId(), DoubleConstant(nextId(), ctx.getText.toDouble))
