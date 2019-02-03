@@ -22,7 +22,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "select x from foo join bar as derp (alias1, alias2) on foo.a = derp.a",
       "select * from foo f join bar b using (a)",
       "with everything as (select * from events limit 2) select year, month from everything where year > month and year > 1000",
-      "with everything as (select * from events limit 2) select year, month from everything",
+      "with everything as (select * from events limit 2) select year, month from everything"
     )
     queries.foreach { q =>
       assert(parse(q).isRight)
