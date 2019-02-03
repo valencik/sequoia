@@ -153,6 +153,16 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[SubQueryRelation[Int, ?]]",
            SerializableTests.serializable(Functor[SubQueryRelation[Int, ?]]))
 
+  checkAll("LateralRelation[Int, ?]",
+           FunctorTests[LateralRelation[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[LateralRelation[Int, ?]]",
+           SerializableTests.serializable(Functor[LateralRelation[Int, ?]]))
+
+  checkAll("ParenthesizedRelation[Int, ?]",
+           FunctorTests[ParenthesizedRelation[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ParenthesizedRelation[Int, ?]]",
+           SerializableTests.serializable(Functor[ParenthesizedRelation[Int, ?]]))
+
   checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Expression[Int, ?]]",
            SerializableTests.serializable(Functor[Expression[Int, ?]]))

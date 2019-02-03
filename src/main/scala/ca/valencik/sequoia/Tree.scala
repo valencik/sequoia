@@ -487,8 +487,10 @@ object RelationPrimary {
   implicit def relationPrimaryInstance[I]: Functor[RelationPrimary[I, ?]] =
     new Functor[RelationPrimary[I, ?]] {
       def map[A, B](fa: RelationPrimary[I, A])(f: A => B): RelationPrimary[I, B] = fa match {
-        case r: TableName[I, _]        => r.map(f)
-        case r: SubQueryRelation[I, _] => r.map(f)
+        case r: TableName[I, _]             => r.map(f)
+        case r: SubQueryRelation[I, _]      => r.map(f)
+        case r: LateralRelation[I, _]       => r.map(f)
+        case r: ParenthesizedRelation[I, _] => r.map(f)
       }
     }
 }
@@ -509,6 +511,28 @@ object SubQueryRelation {
     new Functor[SubQueryRelation[I, ?]] {
       def map[A, B](fa: SubQueryRelation[I, A])(f: A => B): SubQueryRelation[I, B] =
         fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class LateralRelation[I, R](info: I, q: Query[I, R]) extends RelationPrimary[I, R]
+object LateralRelation {
+  implicit def eqLateralRelation[I: Eq, R: Eq]: Eq[LateralRelation[I, R]] = Eq.fromUniversalEquals
+  implicit def constantExprInstances[I]: Functor[LateralRelation[I, ?]] =
+    new Functor[LateralRelation[I, ?]] {
+      def map[A, B](fa: LateralRelation[I, A])(f: A => B): LateralRelation[I, B] =
+        fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class ParenthesizedRelation[I, R](info: I, r: Relation[I, R])
+    extends RelationPrimary[I, R]
+object ParenthesizedRelation {
+  implicit def eqParenthesizedRelation[I: Eq, R: Eq]: Eq[ParenthesizedRelation[I, R]] =
+    Eq.fromUniversalEquals
+  implicit def constantExprInstances[I]: Functor[ParenthesizedRelation[I, ?]] =
+    new Functor[ParenthesizedRelation[I, ?]] {
+      def map[A, B](fa: ParenthesizedRelation[I, A])(f: A => B): ParenthesizedRelation[I, B] =
+        fa.copy(r = fa.r.map(f))
     }
 }
 

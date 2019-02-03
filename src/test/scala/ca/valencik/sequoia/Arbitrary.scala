@@ -278,6 +278,19 @@ object arbitrary {
       q <- getArbitrary[Query[I, R]]
     } yield SubQueryRelation(i, q))
 
+  implicit def arbLateralRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[LateralRelation[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      q <- getArbitrary[Query[I, R]]
+    } yield LateralRelation(i, q))
+
+  implicit def arbParenthesizedRelation[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[ParenthesizedRelation[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      r <- getArbitrary[Relation[I, R]]
+    } yield ParenthesizedRelation(i, r))
+
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
       Gen.frequency(

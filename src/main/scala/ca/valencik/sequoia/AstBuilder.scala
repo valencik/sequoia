@@ -266,11 +266,28 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ColumnAliases(cols)
   }
 
-  // TODO More relationPrimary
   override def visitTableName(
       ctx: SqlBaseParser.TableNameContext): RelationPrimary[Info, RawName] = {
     val ref: TableRef[Info, RawName] = TableRef(nextId(), getTableName(ctx.qualifiedName))
     TableName(nextId(), ref)
+  }
+
+  override def visitSubqueryRelation(
+      ctx: SqlBaseParser.SubqueryRelationContext): RelationPrimary[Info, RawName] = {
+    SubQueryRelation(nextId(), visit(ctx.query).asInstanceOf[Query[Info, RawName]])
+  }
+
+  override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = ???
+
+  override def visitLateral(ctx: SqlBaseParser.LateralContext): RelationPrimary[Info, RawName] = {
+    val q = visitQuery(ctx.query)
+    LateralRelation(nextId(), q)
+  }
+
+  override def visitParenthesizedRelation(
+      ctx: SqlBaseParser.ParenthesizedRelationContext): RelationPrimary[Info, RawName] = {
+    val r = visit(ctx.relation).asInstanceOf[Relation[Info, RawName]]
+    ParenthesizedRelation(nextId(), r)
   }
 
   override def visitSubqueryExpression(
