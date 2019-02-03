@@ -97,6 +97,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   // -- Overrides
+  override def visitSingleStatement(ctx: SqlBaseParser.SingleStatementContext): Node = {
+    visit(ctx.statement)
+  }
 
   override def visitQuery(ctx: SqlBaseParser.QueryContext): Query[Info, RawName] = {
     if (verbose) println(s"-------visitQuery called: ${ctx.getText}-------------")
