@@ -122,7 +122,56 @@ object arbitrary {
       q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
       s <- Gen.resize(5, getArbitrary[NonEmptyList[SelectItem[I, R]]])
       f <- Gen.option(getArbitrary[NonEmptyList[Relation[I, R]]])
-    } yield QuerySpecification(i, q, s, f))
+      w <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[BooleanExpr[I, R]])))
+      g <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[GroupBy[I, R]])))
+      h <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[BooleanExpr[I, R]])))
+    } yield QuerySpecification(i, q, s, f, w, g, h))
+
+  implicit def arbGroupBy[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupBy[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      s <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
+      g <- Gen.resize(5, getArbitrary[NonEmptyList[GroupingElement[I, R]]])
+    } yield GroupBy(i, s, g))
+
+  implicit def arbGroupingElement[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupingElement[I, R]] =
+    Arbitrary(
+      Gen.frequency((5, getArbitrary[SingleGroupingSet[I, R]]),
+                    (2, getArbitrary[Rollup[I, R]]),
+                    (2, getArbitrary[Cube[I, R]]),
+                    (1, getArbitrary[MultipleGroupingSets[I, R]])))
+
+  implicit def arbSingleGroupingSet[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[SingleGroupingSet[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      g <- getArbitrary[GroupingSet[I, R]]
+    } yield SingleGroupingSet(i, g))
+
+  implicit def arbRollup[I: Arbitrary, R: Arbitrary]: Arbitrary[Rollup[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- Gen.resize(2, getArbitrary[List[Expression[I, R]]])
+    } yield Rollup(i, e))
+
+  implicit def arbCube[I: Arbitrary, R: Arbitrary]: Arbitrary[Cube[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- Gen.resize(2, getArbitrary[List[Expression[I, R]]])
+    } yield Cube(i, e))
+
+  implicit def arbMultipleGroupingSets[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[MultipleGroupingSets[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      g <- Gen.resize(2, getArbitrary[NonEmptyList[GroupingSet[I, R]]])
+    } yield MultipleGroupingSets(i, g))
+
+  implicit def arbGroupingSet[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupingSet[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      g <- Gen.resize(2, getArbitrary[List[Expression[I, R]]])
+    } yield GroupingSet(i, g))
 
   implicit def arbNamedQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[NamedQuery[I, R]] =
     Arbitrary(for {
@@ -232,10 +281,10 @@ object arbitrary {
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (7, getArbitrary[ConstantExpr[I, R]]),
-        (7, getArbitrary[ColumnExpr[I, R]]),
-        (4, getArbitrary[ComparisonExpr[I, R]]),
-        (4, getArbitrary[BooleanExpr[I, R]]),
+        (9, getArbitrary[ConstantExpr[I, R]]),
+        (9, getArbitrary[ColumnExpr[I, R]]),
+        (3, getArbitrary[ComparisonExpr[I, R]]),
+        (3, getArbitrary[BooleanExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]])
       ))
 

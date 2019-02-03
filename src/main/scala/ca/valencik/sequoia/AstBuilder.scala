@@ -154,12 +154,48 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(
       ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
+    val s =
+      if (ctx.setQuantifier != null)
+        Some(
+          if (ctx.setQuantifier.DISTINCT != null) DISTINCT else ALL
+        )
+      else None
     val sis = toUnsafeNEL(
       ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]))
     val f = NonEmptyList.fromList(
       ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList)
     // TODO SetQuantifier
-    QuerySpecification(nextId(), None, sis, f)
+    val w = if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[RawExpression]) else None
+    val g =
+      if (ctx.groupBy != null) Some(visit(ctx.groupBy).asInstanceOf[GroupBy[Info, RawName]])
+      else None
+    val h = if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[RawExpression]) else None
+
+    QuerySpecification(nextId(), s, sis, f, w, g, h)
+  }
+
+  override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
+    val s =
+      if (ctx.setQuantifier != null)
+        Some(
+          if (ctx.setQuantifier.DISTINCT != null) DISTINCT else ALL
+        )
+      else None
+    val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
+      visit(g).asInstanceOf[GroupingElement[Info, RawName]]
+    })
+    GroupBy(nextId(), s, ges)
+  }
+
+  override def visitSingleGroupingSet(
+      ctx: SqlBaseParser.SingleGroupingSetContext): GroupingElement[Info, RawName] = {
+    SingleGroupingSet(nextId(), visit(ctx.groupingSet).asInstanceOf[GroupingSet[Info, RawName]])
+  }
+
+  override def visitGroupingSet(
+      ctx: SqlBaseParser.GroupingSetContext): GroupingSet[Info, RawName] = {
+    val es = ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
+    GroupingSet(nextId(), es)
   }
 
   override def visitNamedQuery(ctx: SqlBaseParser.NamedQueryContext): NamedQuery[Info, RawName] = {

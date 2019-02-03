@@ -66,6 +66,34 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[QuerySpecification[Int, ?]]",
            SerializableTests.serializable(Functor[QuerySpecification[Int, ?]]))
 
+  checkAll("GroupBy[Int, ?]", FunctorTests[GroupBy[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[GroupBy[Int, ?]]", SerializableTests.serializable(Functor[GroupBy[Int, ?]]))
+
+  checkAll("GroupingElement[Int, ?]",
+           FunctorTests[GroupingElement[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[GroupingElement[Int, ?]]",
+           SerializableTests.serializable(Functor[GroupingElement[Int, ?]]))
+
+  checkAll("SingleGroupingSet[Int, ?]",
+           FunctorTests[SingleGroupingSet[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[SingleGroupingSet[Int, ?]]",
+           SerializableTests.serializable(Functor[SingleGroupingSet[Int, ?]]))
+
+  checkAll("Rollup[Int, ?]", FunctorTests[Rollup[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Rollup[Int, ?]]", SerializableTests.serializable(Functor[Rollup[Int, ?]]))
+
+  checkAll("Cube[Int, ?]", FunctorTests[Cube[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Cube[Int, ?]]", SerializableTests.serializable(Functor[Cube[Int, ?]]))
+
+  checkAll("MultipleGroupingSets[Int, ?]",
+           FunctorTests[MultipleGroupingSets[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[MultipleGroupingSets[Int, ?]]",
+           SerializableTests.serializable(Functor[MultipleGroupingSets[Int, ?]]))
+
+  checkAll("GroupingSet[Int, ?]", FunctorTests[GroupingSet[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[GroupingSet[Int, ?]]",
+           SerializableTests.serializable(Functor[GroupingSet[Int, ?]]))
+
   checkAll("NamedQuery[Int, ?]", FunctorTests[NamedQuery[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[NamedQuery[Int, ?]]",
            SerializableTests.serializable(Functor[NamedQuery[Int, ?]]))

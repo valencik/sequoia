@@ -231,11 +231,13 @@ object SortItem {
   }
 }
 
-// TODO Lots of clauses missing
 final case class QuerySpecification[I, R](info: I,
                                           sq: Option[SetQuantifier],
                                           sis: NonEmptyList[SelectItem[I, R]],
-                                          f: Option[NonEmptyList[Relation[I, R]]])
+                                          f: Option[NonEmptyList[Relation[I, R]]],
+                                          w: Option[Expression[I, R]],
+                                          g: Option[GroupBy[I, R]],
+                                          h: Option[Expression[I, R]])
     extends QueryPrimary[I, R]
 object QuerySpecification {
   implicit def eqQuerySpecification[I: Eq, R: Eq]: Eq[QuerySpecification[I, R]] =
@@ -243,8 +245,86 @@ object QuerySpecification {
   implicit def queryLimitInstances[I]: Functor[QuerySpecification[I, ?]] =
     new Functor[QuerySpecification[I, ?]] {
       def map[A, B](fa: QuerySpecification[I, A])(f: A => B): QuerySpecification[I, B] =
-        fa.copy(sis = fa.sis.map(_.map(f)), f = fa.f.map(_.map(_.map(f))))
+        fa.copy(sis = fa.sis.map(_.map(f)),
+                f = fa.f.map(_.map(_.map(f))),
+                w = fa.w.map(_.map(f)),
+                g = fa.g.map(_.map(f)),
+                h = fa.h.map(_.map(f)))
     }
+}
+
+final case class GroupBy[I, R](info: I,
+                               sq: Option[SetQuantifier],
+                               ges: NonEmptyList[GroupingElement[I, R]])
+    extends Node
+object GroupBy {
+  implicit def eqGroupBy[I: Eq, R: Eq]: Eq[GroupBy[I, R]] = Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[GroupBy[I, ?]] = new Functor[GroupBy[I, ?]] {
+    def map[A, B](fa: GroupBy[I, A])(f: A => B): GroupBy[I, B] = fa.copy(ges = fa.ges.map(_.map(f)))
+  }
+}
+
+sealed trait GroupingElement[I, R] extends Node
+object GroupingElement {
+  implicit def eqGroupingElement[I: Eq, R: Eq]: Eq[GroupingElement[I, R]] = Eq.fromUniversalEquals
+  implicit def selectionInstances[I]: Functor[GroupingElement[I, ?]] =
+    new Functor[GroupingElement[I, ?]] {
+      def map[A, B](fa: GroupingElement[I, A])(f: A => B): GroupingElement[I, B] = fa match {
+        case s: SingleGroupingSet[I, _]    => s.map(f)
+        case s: Rollup[I, _]               => s.map(f)
+        case s: Cube[I, _]                 => s.map(f)
+        case s: MultipleGroupingSets[I, _] => s.map(f)
+      }
+    }
+}
+
+final case class SingleGroupingSet[I, R](info: I, g: GroupingSet[I, R])
+    extends GroupingElement[I, R]
+object SingleGroupingSet {
+  implicit def eqSingleGroupingSet[I: Eq, R: Eq]: Eq[SingleGroupingSet[I, R]] =
+    Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[SingleGroupingSet[I, ?]] =
+    new Functor[SingleGroupingSet[I, ?]] {
+      def map[A, B](fa: SingleGroupingSet[I, A])(f: A => B): SingleGroupingSet[I, B] =
+        fa.copy(g = fa.g.map(f))
+    }
+}
+
+final case class Rollup[I, R](info: I, es: List[Expression[I, R]]) extends GroupingElement[I, R]
+object Rollup {
+  implicit def eqRollup[I: Eq, R: Eq]: Eq[Rollup[I, R]] = Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[Rollup[I, ?]] = new Functor[Rollup[I, ?]] {
+    def map[A, B](fa: Rollup[I, A])(f: A => B): Rollup[I, B] = fa.copy(es = fa.es.map(_.map(f)))
+  }
+}
+
+final case class Cube[I, R](info: I, es: List[Expression[I, R]]) extends GroupingElement[I, R]
+object Cube {
+  implicit def eqCube[I: Eq, R: Eq]: Eq[Cube[I, R]] = Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[Cube[I, ?]] = new Functor[Cube[I, ?]] {
+    def map[A, B](fa: Cube[I, A])(f: A => B): Cube[I, B] = fa.copy(es = fa.es.map(_.map(f)))
+  }
+}
+
+final case class MultipleGroupingSets[I, R](info: I, gs: NonEmptyList[GroupingSet[I, R]])
+    extends GroupingElement[I, R]
+object MultipleGroupingSets {
+  implicit def eqMultipleGroupingSets[I: Eq, R: Eq]: Eq[MultipleGroupingSets[I, R]] =
+    Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[MultipleGroupingSets[I, ?]] =
+    new Functor[MultipleGroupingSets[I, ?]] {
+      def map[A, B](fa: MultipleGroupingSets[I, A])(f: A => B): MultipleGroupingSets[I, B] =
+        fa.copy(gs = fa.gs.map(_.map(f)))
+    }
+}
+
+final case class GroupingSet[I, R](info: I, es: List[Expression[I, R]]) extends Node
+object GroupingSet {
+  implicit def eqGroupingSet[I: Eq, R: Eq]: Eq[GroupingSet[I, R]] = Eq.fromUniversalEquals
+  implicit def queryLimitInstances[I]: Functor[GroupingSet[I, ?]] = new Functor[GroupingSet[I, ?]] {
+    def map[A, B](fa: GroupingSet[I, A])(f: A => B): GroupingSet[I, B] =
+      fa.copy(es = fa.es.map(_.map(f)))
+  }
 }
 
 final case class NamedQuery[I, R](info: I, n: String, ca: Option[ColumnAliases[I]], q: Query[I, R])
