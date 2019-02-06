@@ -498,10 +498,18 @@ object RelationPrimary {
 final case class TableName[I, R](info: I, r: TableRef[I, R]) extends RelationPrimary[I, R]
 object TableName {
   implicit def eqTableName[I: Eq, R: Eq]: Eq[TableName[I, R]] = Eq.fromUniversalEquals
-  implicit def constantExprInstances[I]: Functor[TableName[I, ?]] =
-    new Functor[TableName[I, ?]] {
-      def map[A, B](fa: TableName[I, A])(f: A => B): TableName[I, B] = fa.copy(r = fa.r.map(f))
-    }
+  implicit def tableNameInstances[I]: Traverse[TableName[I, ?]] = new Traverse[TableName[I, ?]] {
+    override def map[A, B](fa: TableName[I, A])(f: A => B): TableName[I, B] =
+      fa.copy(r = fa.r.map(f))
+    def foldLeft[A, B](fa: TableName[I, A], b: B)(f: (B, A) => B): B = f(b, fa.r.value)
+    def foldRight[A, B](fa: TableName[I, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      Eval.defer(f(fa.r.value, lb))
+    def traverse[G[_], A, B](fa: TableName[I, A])(f: A => G[B])(
+        implicit G: Applicative[G]): G[TableName[I, B]] =
+      Applicative[G].map(f(fa.r.value)) { rn =>
+        fa.map(_ => rn)
+      }
+  }
 }
 
 final case class SubQueryRelation[I, R](info: I, q: Query[I, R]) extends RelationPrimary[I, R]

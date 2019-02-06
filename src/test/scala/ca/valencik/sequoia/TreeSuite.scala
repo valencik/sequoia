@@ -145,8 +145,10 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[RelationPrimary[Int, ?]]",
            SerializableTests.serializable(Functor[RelationPrimary[Int, ?]]))
 
-  checkAll("TableName[Int, ?]", FunctorTests[TableName[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[TableName[Int, ?]]", SerializableTests.serializable(Functor[TableName[Int, ?]]))
+  checkAll("TableName[Int, Int] with Option",
+           TraverseTests[TableName[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option])
+  checkAll("Traverse[TableName[Int, ?]]",
+           SerializableTests.serializable(Traverse[TableName[Int, ?]]))
 
   checkAll("SubQueryRelation[Int, ?]",
            FunctorTests[SubQueryRelation[Int, ?]].functor[Int, Int, String])
