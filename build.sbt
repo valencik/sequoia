@@ -64,6 +64,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime" % AntlrVersion,
       "org.typelevel"  %% "cats-core"     % CatsVersion,
+      "com.lihaoyi"    %% "pprint"        % "0.5.3",
       "org.typelevel"  %% "cats-testkit"  % CatsVersion % Test,
       "org.scalatest"  %% "scalatest"     % ScalaTestVersion % Test,
       "org.scalacheck" %% "scalacheck"    % ScalaCheckVersion % Test

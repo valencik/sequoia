@@ -11,6 +11,7 @@ import org.antlr.v4.runtime.{
   Recognizer
 }
 import org.antlr.v4.runtime.misc.Interval
+import pprint.pprintln
 
 object ParseBuddy {
 
@@ -63,7 +64,7 @@ object ParseBuddyApp extends App {
     val inputQuery = scala.io.StdIn.readLine("\nParseBuddy> ")
     if (!exitCommand(inputQuery)) {
       val pq = parse(inputQuery)
-      println(s"\n(main) Parse: $pq \n")
+      pprintln(pq, height = 10000)
       inputLoop()
     }
   }
