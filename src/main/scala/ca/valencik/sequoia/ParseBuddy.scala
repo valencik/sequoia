@@ -15,6 +15,8 @@ import pprint.pprintln
 
 object ParseBuddy {
 
+  type Info = Int
+
   case class ParseFailure(error: String)
 
   case class AntlrParseException(msg: String) extends Exception(msg)
@@ -30,7 +32,7 @@ object ParseBuddy {
     }
   }
 
-  def parse(input: String): Either[ParseFailure, Query[String, RawName]] = {
+  def parse(input: String): Either[ParseFailure, Query[Info, RawName]] = {
     val charStream = new UpperCaseCharStream(CharStreams.fromString(input))
     val lexer      = new SqlBaseLexer(charStream)
     lexer.removeErrorListeners()
@@ -44,7 +46,7 @@ object ParseBuddy {
 
     try {
       val node: Node = prestoVisitor.visit(parser.singleStatement)
-      val qnw        = node.asInstanceOf[Query[String, RawName]]
+      val qnw        = node.asInstanceOf[Query[Info, RawName]]
       if (qnw == null) Left(ParseFailure("Parser returned null")) else Right(qnw)
     } catch {
       case e: AntlrParseException => Left(ParseFailure(e.msg))
