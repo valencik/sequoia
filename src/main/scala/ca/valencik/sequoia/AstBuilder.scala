@@ -21,15 +21,18 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   def toUnsafeNEL[A](xs: Buffer[A]): NonEmptyList[A] = NonEmptyList.fromListUnsafe(xs.toList)
 
   def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawName = {
-    RawColumnName(ctx.identifier.asScala.map(_.getText).mkString("."))
+    val idents = ctx.identifier.asScala.map(visit(_).asInstanceOf[Identifier])
+    RawColumnName(idents.map(_.value).mkString("."))
   }
 
   def getColumnName(ctx: SqlBaseParser.IdentifierContext): RawName = {
-    RawColumnName(ctx.getText)
+    val ident = visit(ctx).asInstanceOf[Identifier]
+    RawColumnName(ident.value)
   }
 
   def getTableName(ctx: SqlBaseParser.QualifiedNameContext): RawTableName = {
-    RawTableName(ctx.identifier.asScala.map(_.getText).mkString("."))
+    val idents = ctx.identifier.asScala.map(visit(_).asInstanceOf[Identifier])
+    RawTableName(idents.map(_.value).mkString("."))
   }
 
   def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
@@ -261,7 +264,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitColumnAliases(ctx: SqlBaseParser.ColumnAliasesContext): ColumnAliases[Info] = {
     val cols = toUnsafeNEL(ctx.identifier.asScala.map { i =>
-      ColumnAlias(nextId(), i.getText)
+      ColumnAlias(nextId(), visit(i).asInstanceOf[Identifier].value)
     })
     ColumnAliases(cols)
   }
@@ -290,6 +293,18 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ParenthesizedRelation(nextId(), r)
   }
 
+  override def visitPredicated(ctx: SqlBaseParser.PredicatedContext): Node = {
+    if (verbose) println(s"-------visitPredicated called: ${ctx.getText}-------------")
+    if (ctx.predicate != null) visit(ctx.predicate) else visit(ctx.valueExpression)
+  }
+
+  override def visitDereference(ctx: SqlBaseParser.DereferenceContext): Node = {
+    if (verbose) println(s"-------visitDereference called: ${ctx.getText}-------------")
+    val base      = visit(ctx.base).asInstanceOf[RawExpression]
+    val fieldName = visit(ctx.fieldName).asInstanceOf[Identifier]
+    DereferenceExpr(nextId(), base, fieldName.value)
+  }
+
   override def visitSubqueryExpression(
       ctx: SqlBaseParser.SubqueryExpressionContext): SubQueryExpr[Info, RawName] = {
     if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
@@ -298,6 +313,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitComparison(
       ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
+    if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")
     val op    = getComparisonOperator(ctx.comparisonOperator)
     val left  = visit(ctx.value).asInstanceOf[RawExpression]
     val right = visit(ctx.right).asInstanceOf[RawExpression]
@@ -323,6 +339,17 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (verbose) println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
     // TODO this forces DoubleConstant
     ConstantExpr(nextId(), DoubleConstant(nextId(), ctx.getText.toDouble))
+  }
+
+  override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {
+    if (verbose) println(s"-------visitUnquotedIdentifier called: ${ctx.getText}-------------")
+    new Identifier(ctx.getText)
+  }
+
+  override def visitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Identifier = {
+    val token      = ctx.getText
+    val identifier = new Identifier(token.substring(1, token.size - 1))
+    identifier
   }
 
 }

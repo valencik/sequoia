@@ -73,6 +73,8 @@ final case class TableAlias[I](info: I, value: String)
 
 sealed trait Node
 
+final case class Identifier(value: String) extends Node
+
 final case class Query[I, R](info: I, w: Option[With[I, R]], qnw: QueryNoWith[I, R]) extends Node
 object Query {
   implicit def eqQuery[I: Eq, R: Eq]: Eq[Query[I, R]] = Eq.fromUniversalEquals
@@ -550,11 +552,12 @@ object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
   implicit def expressionInstances[I]: Functor[Expression[I, ?]] = new Functor[Expression[I, ?]] {
     def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
-      case e: ConstantExpr[I, _]   => e.map(f)
-      case e: ColumnExpr[I, _]     => e.map(f)
-      case e: SubQueryExpr[I, _]   => e.map(f)
-      case e: BooleanExpr[I, _]    => e.map(f)
-      case e: ComparisonExpr[I, _] => e.map(f)
+      case e: ConstantExpr[I, _]    => e.map(f)
+      case e: ColumnExpr[I, _]      => e.map(f)
+      case e: SubQueryExpr[I, _]    => e.map(f)
+      case e: BooleanExpr[I, _]     => e.map(f)
+      case e: ComparisonExpr[I, _]  => e.map(f)
+      case e: DereferenceExpr[I, _] => e.map(f)
     }
   }
 }
@@ -621,6 +624,17 @@ object ComparisonExpr {
     new Functor[ComparisonExpr[I, ?]] {
       def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+    }
+}
+
+final case class DereferenceExpr[I, R](info: I, base: Expression[I, R], fieldName: String)
+    extends Expression[I, R]
+object DereferenceExpr {
+  implicit def eqDereferenceExpr[I: Eq, R: Eq]: Eq[DereferenceExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def dereferenceExprInstances[I]: Functor[DereferenceExpr[I, ?]] =
+    new Functor[DereferenceExpr[I, ?]] {
+      def map[A, B](fa: DereferenceExpr[I, A])(f: A => B): DereferenceExpr[I, B] =
+        fa.copy(base = fa.base.map(f))
     }
 }
 

@@ -339,6 +339,13 @@ object arbitrary {
       r  <- getArbitrary[Expression[I, R]]
     } yield ComparisonExpr(i, l, op, r))
 
+  implicit def arbDereferenceExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[DereferenceExpr[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      b <- getArbitrary[Expression[I, R]]
+      f <- getArbitrary[String]
+    } yield DereferenceExpr(i, b, f))
+
   implicit def arbConstant[I: Arbitrary]: Arbitrary[Constant[I]] = {
     def intConstant = for { i <- getArbitrary[I]; v <- getArbitrary[Int] } yield IntConstant(i, v)
     def decimalConstant =
