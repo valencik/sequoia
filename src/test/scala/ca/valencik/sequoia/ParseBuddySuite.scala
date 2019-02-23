@@ -1,12 +1,13 @@
 package ca.valencik.sequoia
 
 import org.scalatest._
+import org.scalatest.prop.PropertyChecks
 import ca.valencik.sequoia.ParseBuddy._
 
-class ParseBuddySpec extends FlatSpec with Matchers {
+class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
 
   "ParseBuddy" should "parse valid SQL queries" in {
-    val queries = List(
+    val queries = Table(
       "SELECT COUNT(1)",
       "SELECT name, COUNT(*) FROM bar",
       "SELECT DISTINCT name, COUNT(*) FROM bar",
@@ -24,7 +25,7 @@ class ParseBuddySpec extends FlatSpec with Matchers {
       "with everything as (select * from events limit 2) select year, month from everything where year > month and year > 1000",
       "with everything as (select * from events limit 2) select year, month from everything"
     )
-    queries.foreach { q =>
+    forAll(queries) { q =>
       assert(parse(q).isRight)
     }
   }
