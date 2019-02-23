@@ -294,15 +294,12 @@ object arbitrary {
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (9, getArbitrary[ConstantExpr[I, R]]),
+        (9, getArbitrary[LiteralExpr[I, R]]),
         (9, getArbitrary[ColumnExpr[I, R]]),
         (3, getArbitrary[ComparisonExpr[I, R]]),
         (3, getArbitrary[BooleanExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]])
       ))
-
-  implicit def arbConstantExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ConstantExpr[I, R]] =
-    Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Constant[I]] } yield ConstantExpr(i, v))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
     Arbitrary(
@@ -346,16 +343,19 @@ object arbitrary {
       f <- getArbitrary[String]
     } yield DereferenceExpr(i, b, f))
 
-  implicit def arbConstant[I: Arbitrary]: Arbitrary[Constant[I]] = {
-    def intConstant = for { i <- getArbitrary[I]; v <- getArbitrary[Int] } yield IntConstant(i, v)
-    def decimalConstant =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DecimalConstant(i, v)
-    def doubleConstant =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DoubleConstant(i, v)
-    def stringConstant =
-      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringConstant(i, v)
-    def boolConstant =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield BoolConstant(i, v)
-    Arbitrary(Gen.oneOf(intConstant, decimalConstant, doubleConstant, stringConstant, boolConstant))
+  implicit def arbLiteralExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[LiteralExpr[I, R]] = {
+    def intLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Long] } yield
+        IntLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+    def doubleLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield
+        DoubleLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+    def stringLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield
+        StringLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+    def booleanLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield
+        BooleanLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+    Arbitrary(Gen.oneOf(intLiteral, doubleLiteral, stringLiteral, booleanLiteral))
   }
 }

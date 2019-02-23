@@ -334,11 +334,30 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
   }
 
-  override def visitNumericLiteral(
-      ctx: SqlBaseParser.NumericLiteralContext): ConstantExpr[Info, RawName] = {
-    if (verbose) println(s"-------visitNumericLiteral called: ${ctx.getText}-------------")
-    // TODO this forces DoubleConstant
-    ConstantExpr(nextId(), DoubleConstant(nextId(), ctx.getText.toDouble))
+  override def visitBasicStringLiteral(
+      ctx: SqlBaseParser.BasicStringLiteralContext): StringLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitStringLiteral called: ${ctx.getText}-------------")
+    val text    = ctx.STRING.getText
+    val literal = text.substring(1, text.size - 1).replaceAll("''", "'")
+    StringLiteral(nextId(), literal)
+  }
+
+  override def visitBooleanValue(
+      ctx: SqlBaseParser.BooleanValueContext): BooleanLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitBooleanLiteral called: ${ctx.getText}-------------")
+    BooleanLiteral(nextId(), ctx.getText.toBoolean)
+  }
+
+  override def visitDoubleLiteral(
+      ctx: SqlBaseParser.DoubleLiteralContext): DoubleLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitDoubleLiteral called: ${ctx.getText}-------------")
+    DoubleLiteral(nextId(), ctx.getText.toDouble)
+  }
+
+  override def visitIntegerLiteral(
+      ctx: SqlBaseParser.IntegerLiteralContext): IntLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitIntegerLiteral called: ${ctx.getText}-------------")
+    IntLiteral(nextId(), ctx.getText.toLong)
   }
 
   override def visitUnquotedIdentifier(ctx: SqlBaseParser.UnquotedIdentifierContext): Identifier = {

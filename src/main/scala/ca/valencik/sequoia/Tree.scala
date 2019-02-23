@@ -552,7 +552,7 @@ object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
   implicit def expressionInstances[I]: Functor[Expression[I, ?]] = new Functor[Expression[I, ?]] {
     def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
-      case e: ConstantExpr[I, _]    => e.map(f)
+      case e: LiteralExpr[I, _]     => e.map(f)
       case e: ColumnExpr[I, _]      => e.map(f)
       case e: SubQueryExpr[I, _]    => e.map(f)
       case e: BooleanExpr[I, _]     => e.map(f)
@@ -562,15 +562,19 @@ object Expression {
   }
 }
 
-final case class ConstantExpr[I, R](info: I, col: Constant[I]) extends Expression[I, R]
-object ConstantExpr {
-  implicit def eqConstantExpr[I: Eq, R: Eq]: Eq[ConstantExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def constantExprInstances[I]: Functor[ConstantExpr[I, ?]] =
-    new Functor[ConstantExpr[I, ?]] {
-      def map[A, B](fa: ConstantExpr[I, A])(f: A => B): ConstantExpr[I, B] =
-        ConstantExpr(fa.info, fa.col)
+sealed trait LiteralExpr[I, R] extends Expression[I, R]
+object LiteralExpr {
+  implicit def eqLiteralExpr[I: Eq, R: Eq]: Eq[LiteralExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def literalExprInstances[I]: Functor[LiteralExpr[I, ?]] =
+    new Functor[LiteralExpr[I, ?]] {
+      def map[A, B](fa: LiteralExpr[I, A])(f: A => B): LiteralExpr[I, B] =
+        fa.asInstanceOf[LiteralExpr[I, B]]
     }
 }
+final case class DoubleLiteral[I, R](info: I, value: Double)   extends LiteralExpr[I, R]
+final case class IntLiteral[I, R](info: I, value: Long)        extends LiteralExpr[I, R]
+final case class StringLiteral[I, R](info: I, value: String)   extends LiteralExpr[I, R]
+final case class BooleanLiteral[I, R](info: I, value: Boolean) extends LiteralExpr[I, R]
 
 final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends Expression[I, R]
 object ColumnExpr {
@@ -637,13 +641,6 @@ object DereferenceExpr {
         fa.copy(base = fa.base.map(f))
     }
 }
-
-sealed trait Constant[I]
-final case class IntConstant[I](info: I, value: Int)        extends Constant[I]
-final case class DecimalConstant[I](info: I, value: Double) extends Constant[I]
-final case class DoubleConstant[I](info: I, value: Double)  extends Constant[I]
-final case class StringConstant[I](info: I, value: String)  extends Constant[I]
-final case class BoolConstant[I](info: I, value: Boolean)   extends Constant[I]
 
 sealed trait Operator
 final case object AND extends Operator
