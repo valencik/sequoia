@@ -6,12 +6,20 @@ import ca.valencik.sequoia.ParseBuddy._
 
 class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
 
+  def noNulls(p: Product): Boolean = {
+    p.productIterator.forall {
+      case pp: Product => noNulls(pp)
+      case x           => x != null
+    }
+  }
+
   "ParseBuddy" should "parse valid SQL queries" in {
     val queries = Table(
       "SELECT COUNT(1)",
       "SELECT name, COUNT(*) FROM bar",
       "SELECT DISTINCT name, COUNT(*) FROM bar",
       """SELECT "two words" FROM bar""",
+      """SELECT a FROM bar WHERE a <> 'text'""",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 AND bar.other = something",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 GROUP BY name",
@@ -27,7 +35,8 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "with everything as (select * from events limit 2) select year, month from everything"
     )
     forAll(queries) { q =>
-      assert(parse(q).isRight)
+      val pq = parse(q)
+      assert(pq.isRight && pq.map(noNulls).getOrElse(false))
     }
   }
 
