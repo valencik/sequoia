@@ -11,6 +11,7 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT COUNT(1)",
       "SELECT name, COUNT(*) FROM bar",
       "SELECT DISTINCT name, COUNT(*) FROM bar",
+      """SELECT "two words" FROM bar""",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 AND bar.other = something",
       "SELECT name, COUNT(*) FROM bar WHERE bar.age >= 18 GROUP BY name",
