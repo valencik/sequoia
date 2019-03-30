@@ -194,4 +194,37 @@ class TreeLawTests extends CatsSuite {
            FunctorTests[DereferenceExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[DereferenceExpr[Int, ?]]",
            SerializableTests.serializable(Functor[DereferenceExpr[Int, ?]]))
+
+  checkAll("FunctionCall[Int, ?]", FunctorTests[FunctionCall[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[FunctionCall[Int, ?]]",
+           SerializableTests.serializable(Functor[FunctionCall[Int, ?]]))
+
+  checkAll("FunctionFilter[Int, ?]", FunctorTests[FunctionFilter[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[FunctionFilter[Int, ?]]",
+           SerializableTests.serializable(Functor[FunctionFilter[Int, ?]]))
+
+  checkAll("FunctionOver[Int, ?]", FunctorTests[FunctionOver[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[FunctionOver[Int, ?]]",
+           SerializableTests.serializable(Functor[FunctionOver[Int, ?]]))
+
+  checkAll("WindowFrame[Int, ?]", FunctorTests[WindowFrame[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[WindowFrame[Int, ?]]",
+           SerializableTests.serializable(Functor[WindowFrame[Int, ?]]))
+
+  checkAll("FrameBound[Int, ?]", FunctorTests[FrameBound[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[FrameBound[Int, ?]]",
+           SerializableTests.serializable(Functor[FrameBound[Int, ?]]))
+
+  checkAll("UnboundedFrame[Int, ?]", FunctorTests[UnboundedFrame[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[UnboundedFrame[Int, ?]]",
+           SerializableTests.serializable(Functor[UnboundedFrame[Int, ?]]))
+
+  checkAll("CurrentRowBound[Int, ?]",
+           FunctorTests[CurrentRowBound[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[CurrentRowBound[Int, ?]]",
+           SerializableTests.serializable(Functor[CurrentRowBound[Int, ?]]))
+
+  checkAll("BoundedFrame[Int, ?]", FunctorTests[BoundedFrame[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[BoundedFrame[Int, ?]]",
+           SerializableTests.serializable(Functor[BoundedFrame[Int, ?]]))
 }

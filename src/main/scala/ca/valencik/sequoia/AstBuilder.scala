@@ -20,9 +20,13 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   def toUnsafeNEL[A](xs: Buffer[A]): NonEmptyList[A] = NonEmptyList.fromListUnsafe(xs.toList)
 
-  def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawName = {
+  def qualifiedNameAsString(ctx: SqlBaseParser.QualifiedNameContext): String = {
     val idents = ctx.identifier.asScala.map(visit(_).asInstanceOf[Identifier])
-    RawColumnName(idents.map(_.value).mkString("."))
+    idents.map(_.value).mkString(".")
+  }
+
+  def getColumnName(ctx: SqlBaseParser.QualifiedNameContext): RawName = {
+    RawColumnName(qualifiedNameAsString(ctx))
   }
 
   def getColumnName(ctx: SqlBaseParser.IdentifierContext): RawName = {
@@ -31,8 +35,15 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   def getTableName(ctx: SqlBaseParser.QualifiedNameContext): RawTableName = {
-    val idents = ctx.identifier.asScala.map(visit(_).asInstanceOf[Identifier])
-    RawTableName(idents.map(_.value).mkString("."))
+    RawTableName(qualifiedNameAsString(ctx))
+  }
+
+  def maybeSetQuantifier(ctx: SqlBaseParser.SetQuantifierContext): Option[SetQuantifier] = {
+    if (ctx != null)
+      Some(
+        if (ctx.DISTINCT != null) DISTINCT else ALL
+      )
+    else None
   }
 
   def getJoinType(ctx: SqlBaseParser.JoinRelationContext): JoinType = {
@@ -157,6 +168,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(
       ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
+    // TODO use maybeSetQuantifier
     val s =
       if (ctx.setQuantifier != null)
         Some(
@@ -332,6 +344,83 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.ColumnReferenceContext): ColumnExpr[Info, RawName] = {
     if (verbose) println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
+  }
+
+  override def visitFunctionCall(
+      ctx: SqlBaseParser.FunctionCallContext): FunctionCall[Info, RawName] = {
+    if (verbose) println(s"-------visitFunctionCall called: ${ctx.getText}-------------")
+    val name  = qualifiedNameAsString(ctx.qualifiedName)
+    val sq    = maybeSetQuantifier(ctx.setQuantifier)
+    val exprs = ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
+    val orderby = {
+      if (ctx.sortItem.size > 0)
+        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+      else
+        None
+    }
+    val filter = if (ctx.filter != null) Some(visitFilter(ctx.filter)) else None
+    val over   = if (ctx.over != null) Some(visitOver(ctx.over)) else None
+
+    FunctionCall(nextId(), name, sq, exprs, orderby, filter, over)
+  }
+
+  override def visitFilter(ctx: SqlBaseParser.FilterContext): FunctionFilter[Info, RawName] = {
+    if (verbose) println(s"-------visitFunctionFilter called: ${ctx.getText}-------------")
+    val exp = visit(ctx.booleanExpression).asInstanceOf[BooleanExpr[Info, RawName]]
+    FunctionFilter(nextId(), exp)
+  }
+
+  override def visitOver(ctx: SqlBaseParser.OverContext): FunctionOver[Info, RawName] = {
+    if (verbose) println(s"-------visitFunctionOver called: ${ctx.getText}-------------")
+    val partitionBy = ctx.partition.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
+    val orderBy = {
+      if (ctx.sortItem.size > 0)
+        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+      else
+        None
+    }
+    val window = if (ctx.windowFrame != null) Some(visitWindowFrame(ctx.windowFrame)) else None
+    FunctionOver(nextId(), partitionBy, orderBy, window)
+  }
+
+  override def visitWindowFrame(
+      ctx: SqlBaseParser.WindowFrameContext): WindowFrame[Info, RawName] = {
+    if (verbose) println(s"-------visitWindowFrame called: ${ctx.getText}-------------")
+    val ft = ctx.frameType.getType match {
+      case SqlBaseLexer.RANGE => RANGE
+      case SqlBaseLexer.ROWS  => ROWS
+    }
+    val start = visit(ctx.start).asInstanceOf[FrameBound[Info, RawName]]
+    val end =
+      if (ctx.end != null) Some(visit(ctx.end).asInstanceOf[FrameBound[Info, RawName]]) else None
+    WindowFrame(nextId(), ft, start, end)
+  }
+
+  override def visitUnboundedFrame(
+      ctx: SqlBaseParser.UnboundedFrameContext): UnboundedFrame[Info, RawName] = {
+    if (verbose) println(s"-------visitUnboundedFrame called: ${ctx.getText}-------------")
+    val bound = ctx.boundType.getType match {
+      case SqlBaseLexer.PRECEDING => PRECEDING
+      case SqlBaseLexer.FOLLOWING => FOLLOWING
+    }
+    UnboundedFrame(nextId(), bound)
+  }
+
+  override def visitBoundedFrame(
+      ctx: SqlBaseParser.BoundedFrameContext): BoundedFrame[Info, RawName] = {
+    if (verbose) println(s"-------visitBoundedFrame called: ${ctx.getText}-------------")
+    val bound = ctx.boundType.getType match {
+      case SqlBaseLexer.PRECEDING => PRECEDING
+      case SqlBaseLexer.FOLLOWING => FOLLOWING
+    }
+    val exp = visit(ctx.expression).asInstanceOf[RawExpression]
+    BoundedFrame(nextId(), bound, exp)
+  }
+
+  override def visitCurrentRowBound(
+      ctx: SqlBaseParser.CurrentRowBoundContext): CurrentRowBound[Info, RawName] = {
+    if (verbose) println(s"-------visitCurrentRowBound called: ${ctx.getText}-------------")
+    CurrentRowBound(nextId())
   }
 
   override def visitBasicStringLiteral(

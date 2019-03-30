@@ -558,6 +558,7 @@ object Expression {
       case e: BooleanExpr[I, _]     => e.map(f)
       case e: ComparisonExpr[I, _]  => e.map(f)
       case e: DereferenceExpr[I, _] => e.map(f)
+      case e: FunctionCall[I, _]    => e.map(f)
     }
   }
 }
@@ -641,6 +642,119 @@ object DereferenceExpr {
         fa.copy(base = fa.base.map(f))
     }
 }
+
+// TODO Option[NonEmptyList] or just List?
+final case class FunctionCall[I, R](info: I,
+                                    name: String,
+                                    sq: Option[SetQuantifier],
+                                    exprs: List[Expression[I, R]],
+                                    order: Option[OrderBy[I, R]],
+                                    filter: Option[FunctionFilter[I, R]],
+                                    over: Option[FunctionOver[I, R]])
+    extends Expression[I, R]
+object FunctionCall {
+  implicit def eqFunctionCall[I: Eq, R: Eq]: Eq[FunctionCall[I, R]] = Eq.fromUniversalEquals
+  implicit def functionCallInstances[I]: Functor[FunctionCall[I, ?]] =
+    new Functor[FunctionCall[I, ?]] {
+      def map[A, B](fa: FunctionCall[I, A])(f: A => B): FunctionCall[I, B] =
+        fa.copy(exprs = fa.exprs.map(_.map(f)),
+                order = fa.order.map(_.map(f)),
+                filter = fa.filter.map(_.map(f)),
+                over = fa.over.map(_.map(f)))
+    }
+}
+
+final case class FunctionFilter[I, R](info: I, exp: BooleanExpr[I, R]) extends Node
+object FunctionFilter {
+  implicit def eqFunctionFilter[I: Eq, R: Eq]: Eq[FunctionFilter[I, R]] = Eq.fromUniversalEquals
+  implicit def functionFilterInstances[I]: Functor[FunctionFilter[I, ?]] =
+    new Functor[FunctionFilter[I, ?]] {
+      def map[A, B](fa: FunctionFilter[I, A])(f: A => B): FunctionFilter[I, B] =
+        fa.copy(exp = fa.exp.map(f))
+    }
+}
+
+final case class FunctionOver[I, R](info: I,
+                                    partitionBy: List[Expression[I, R]],
+                                    orderBy: Option[OrderBy[I, R]],
+                                    window: Option[WindowFrame[I, R]])
+    extends Node
+object FunctionOver {
+  implicit def eqFunctionOver[I: Eq, R: Eq]: Eq[FunctionOver[I, R]] = Eq.fromUniversalEquals
+  implicit def functionOverInstances[I]: Functor[FunctionOver[I, ?]] =
+    new Functor[FunctionOver[I, ?]] {
+      def map[A, B](fa: FunctionOver[I, A])(f: A => B): FunctionOver[I, B] =
+        fa.copy(partitionBy = fa.partitionBy.map(_.map(f)),
+                orderBy = fa.orderBy.map(_.map(f)),
+                window = fa.window.map(_.map(f)))
+    }
+}
+
+final case class WindowFrame[I, R](info: I,
+                                   frameType: FrameType,
+                                   start: FrameBound[I, R],
+                                   end: Option[FrameBound[I, R]])
+    extends Node
+object WindowFrame {
+  implicit def eqWindowFrame[I: Eq, R: Eq]: Eq[WindowFrame[I, R]] = Eq.fromUniversalEquals
+  implicit def windowFrameInstances[I]: Functor[WindowFrame[I, ?]] =
+    new Functor[WindowFrame[I, ?]] {
+      def map[A, B](fa: WindowFrame[I, A])(f: A => B): WindowFrame[I, B] =
+        fa.copy(start = fa.start.map(f), end = fa.end.map(_.map(f)))
+    }
+}
+
+sealed trait FrameBound[I, R] extends Node
+object FrameBound {
+  implicit def eqFrameBound[I: Eq, R: Eq]: Eq[FrameBound[I, R]] = Eq.fromUniversalEquals
+  implicit def frameBoundInstances[I]: Functor[FrameBound[I, ?]] = new Functor[FrameBound[I, ?]] {
+    def map[A, B](fa: FrameBound[I, A])(f: A => B): FrameBound[I, B] = fa match {
+      case e: UnboundedFrame[I, _]  => e.map(f)
+      case e: CurrentRowBound[I, _] => e.map(f)
+      case e: BoundedFrame[I, _]    => e.map(f)
+    }
+  }
+}
+
+final case class UnboundedFrame[I, R](info: I, boundType: BoundType) extends FrameBound[I, R]
+object UnboundedFrame {
+  implicit def eqUnboundedFrame[I: Eq, R: Eq]: Eq[UnboundedFrame[I, R]] = Eq.fromUniversalEquals
+  implicit def unboundedFrameInstances[I]: Functor[UnboundedFrame[I, ?]] =
+    new Functor[UnboundedFrame[I, ?]] {
+      def map[A, B](fa: UnboundedFrame[I, A])(f: A => B): UnboundedFrame[I, B] =
+        fa.asInstanceOf[UnboundedFrame[I, B]]
+    }
+}
+
+final case class CurrentRowBound[I, R](info: I) extends FrameBound[I, R]
+object CurrentRowBound {
+  implicit def eqCurrentRowBound[I: Eq, R: Eq]: Eq[CurrentRowBound[I, R]] = Eq.fromUniversalEquals
+  implicit def currentRowBoundInstances[I]: Functor[CurrentRowBound[I, ?]] =
+    new Functor[CurrentRowBound[I, ?]] {
+      def map[A, B](fa: CurrentRowBound[I, A])(f: A => B): CurrentRowBound[I, B] =
+        fa.asInstanceOf[CurrentRowBound[I, B]]
+    }
+}
+
+// TODO maybe it's fine to use a numeric literal here instead?
+final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: Expression[I, R])
+    extends FrameBound[I, R]
+object BoundedFrame {
+  implicit def eqBoundedFrame[I: Eq, R: Eq]: Eq[BoundedFrame[I, R]] = Eq.fromUniversalEquals
+  implicit def boundedFrameInstances[I]: Functor[BoundedFrame[I, ?]] =
+    new Functor[BoundedFrame[I, ?]] {
+      def map[A, B](fa: BoundedFrame[I, A])(f: A => B): BoundedFrame[I, B] =
+        fa.copy(exp = fa.exp.map(f))
+    }
+}
+
+sealed trait BoundType
+final case object PRECEDING extends BoundType
+final case object FOLLOWING extends BoundType
+
+sealed trait FrameType
+final case object RANGE extends FrameType
+final case object ROWS  extends FrameType
 
 sealed trait Operator
 final case object AND extends Operator

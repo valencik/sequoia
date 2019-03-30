@@ -21,6 +21,9 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT 'hello'",
       "SELECT name FROM bar",
       "SELECT DISTINCT name FROM bar",
+      "SELECT COUNT(1)",
+      "SELECT name, COUNT(*) FROM bar",
+      "SELECT DISTINCT name, COUNT(*) FROM bar",
       """SELECT "two words" FROM bar""",
       """SELECT a FROM bar WHERE a <> 'text'""",
       "SELECT name FROM bar WHERE bar.age >= 18",
@@ -36,6 +39,19 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "select * from foo f join bar b using (a)",
       "with everything as (select * from events limit 2) select year, month from everything where year > month and year > 1000",
       "with everything as (select * from events limit 2) select year, month from everything"
+    )
+    forAll(queries) { q =>
+      val pq = parse(q)
+      assert(pq.isRight && pq.map(noNulls).getOrElse(false))
+    }
+  }
+
+  it should "parse SQL queries with function calls" in {
+    val queries = Table(
+      "SELECT COUNT(1)",
+      "select count(DISTINCT name) from db.friends",
+      """select count("Full name") over (partition by f."ID number") number_of_friends from db.friends f""",
+      """select sum(f."Canadian") over (order by f.day rows 90 preceding) as "Canadian" from db.friends f"""
     )
     forAll(queries) { q =>
       val pq = parse(q)

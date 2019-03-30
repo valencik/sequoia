@@ -298,7 +298,9 @@ object arbitrary {
         (9, getArbitrary[ColumnExpr[I, R]]),
         (3, getArbitrary[ComparisonExpr[I, R]]),
         (3, getArbitrary[BooleanExpr[I, R]]),
-        (1, getArbitrary[SubQueryExpr[I, R]])
+        (1, getArbitrary[SubQueryExpr[I, R]]),
+        (2, getArbitrary[DereferenceExpr[I, R]]),
+        (2, getArbitrary[FunctionCall[I, R]])
       ))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
@@ -358,4 +360,68 @@ object arbitrary {
         BooleanLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
     Arbitrary(Gen.oneOf(intLiteral, doubleLiteral, stringLiteral, booleanLiteral))
   }
+
+  implicit def arbFunctionCall[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionCall[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      n  <- getArbitrary[String]
+      s  <- Gen.option(getArbitrary[SetQuantifier])
+      e  <- Gen.resize(3, getArbitrary[List[Expression[I, R]]])
+      or <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[OrderBy[I, R]])))
+      f  <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[FunctionFilter[I, R]])))
+      ov <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[FunctionOver[I, R]])))
+    } yield FunctionCall(i, n, s, e, or, f, ov))
+
+  implicit def arbFunctionFilter[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionFilter[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- getArbitrary[BooleanExpr[I, R]]
+    } yield FunctionFilter(i, e))
+
+  implicit def arbFunctionOver[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionOver[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- Gen.resize(3, getArbitrary[List[Expression[I, R]]])
+      o <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[OrderBy[I, R]])))
+      w <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[WindowFrame[I, R]])))
+    } yield FunctionOver(i, e, o, w))
+
+  implicit def arbWindowFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[WindowFrame[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      f <- getArbitrary[FrameType]
+      s <- getArbitrary[FrameBound[I, R]]
+      e <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[FrameBound[I, R]])))
+    } yield WindowFrame(i, f, s, e))
+
+  implicit def arbFrameBound[I: Arbitrary, R: Arbitrary]: Arbitrary[FrameBound[I, R]] =
+    Arbitrary(
+      Gen.frequency((5, getArbitrary[UnboundedFrame[I, R]]),
+                    (2, getArbitrary[CurrentRowBound[I, R]]),
+                    (1, getArbitrary[BoundedFrame[I, R]])))
+
+  implicit def arbUnboundedFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[UnboundedFrame[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      b <- getArbitrary[BoundType]
+    } yield UnboundedFrame(i, b))
+
+  implicit def arbCurrentRowBound[I: Arbitrary, R: Arbitrary]: Arbitrary[CurrentRowBound[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+    } yield CurrentRowBound(i))
+
+  implicit def arbBoundedFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[BoundedFrame[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      b <- getArbitrary[BoundType]
+      e <- getArbitrary[Expression[I, R]]
+    } yield BoundedFrame(i, b, e))
+
+  implicit def arbBoundType: Arbitrary[BoundType] =
+    Arbitrary(Gen.oneOf(Gen.const(PRECEDING), Gen.const(FOLLOWING)))
+
+  implicit def arbFrameType: Arbitrary[FrameType] =
+    Arbitrary(Gen.oneOf(Gen.const(RANGE), Gen.const(ROWS)))
+
 }
