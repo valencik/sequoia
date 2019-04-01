@@ -8,6 +8,7 @@ stages:
   - test
 
 before_script:
+  - sed -i '/jessie-updates/d' /etc/apt/sources.list  # Now archived
   - apt-get update -y
   - apt-get install apt-transport-https -y
   ## Install SBT
