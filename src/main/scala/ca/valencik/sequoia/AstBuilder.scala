@@ -143,7 +143,15 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitSetOperation(
       ctx: SqlBaseParser.SetOperationContext): SetOperation[Info, RawName] = {
-    ???
+    val left  = visit(ctx.left).asInstanceOf[QueryTerm[Info, RawName]]
+    val right = visit(ctx.right).asInstanceOf[QueryTerm[Info, RawName]]
+    val sq    = maybeSetQuantifier(ctx.setQuantifier)
+    val op = ctx.operator.getType match {
+      case SqlBaseLexer.INTERSECT => INTERSECT
+      case SqlBaseLexer.UNION     => UNION
+      case SqlBaseLexer.EXCEPT    => EXCEPT
+    }
+    SetOperation(nextId(), left, op, sq, right)
   }
 
   override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem[Info, RawName] = {

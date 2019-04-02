@@ -46,6 +46,24 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     }
   }
 
+  it should "parse set operations" in {
+    val queries = Table(
+      "select col from db UNION select col from db2",
+      "select col from db UNION ALL select col from db2",
+      "select col from db UNION DISTINCT select col from db2",
+      "select col from db EXCEPT select col from db2",
+      "select col from db EXCEPT ALL select col from db2",
+      "select col from db EXCEPT DISTINCT select col from db2",
+      "select col from db INTERSECT select col from db2",
+      "select col from db INTERSECT ALL select col from db2",
+      "select col from db INTERSECT DISTINCT select col from db2"
+    )
+    forAll(queries) { q =>
+      val pq = parse(q)
+      assert(pq.isRight && pq.map(noNulls).getOrElse(false))
+    }
+  }
+
   it should "parse SQL queries with function calls" in {
     val queries = Table(
       "SELECT COUNT(1)",
