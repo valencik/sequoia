@@ -177,12 +177,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
     // TODO use maybeSetQuantifier
-    val s =
-      if (ctx.setQuantifier != null)
-        Some(
-          if (ctx.setQuantifier.DISTINCT != null) DISTINCT else ALL
-        )
-      else None
+    val sq = maybeSetQuantifier(ctx.setQuantifier)
     val sis = toUnsafeNEL(
       ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]))
     val f = NonEmptyList.fromList(
@@ -194,20 +189,15 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       else None
     val h = if (ctx.having != null) Some(visit(ctx.having).asInstanceOf[RawExpression]) else None
 
-    QuerySpecification(nextId(), s, sis, f, w, g, h)
+    QuerySpecification(nextId(), sq, sis, f, w, g, h)
   }
 
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
-    val s =
-      if (ctx.setQuantifier != null)
-        Some(
-          if (ctx.setQuantifier.DISTINCT != null) DISTINCT else ALL
-        )
-      else None
+    val sq = maybeSetQuantifier(ctx.setQuantifier)
     val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
       visit(g).asInstanceOf[GroupingElement[Info, RawName]]
     })
-    GroupBy(nextId(), s, ges)
+    GroupBy(nextId(), sq, ges)
   }
 
   override def visitSingleGroupingSet(
