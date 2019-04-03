@@ -1,5 +1,7 @@
-lazy val ScalaTestVersion = "3.0.5"
-lazy val AntlrVersion     = "4.7.1"
+lazy val ScalaTestVersion  = "3.0.5"
+lazy val AntlrVersion      = "4.7.1"
+lazy val CatsVersion       = "1.5.0"
+lazy val ScalaCheckVersion = "1.13.5"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
@@ -43,7 +45,8 @@ lazy val ScalacOptions = Seq(
     "-Ywarn-unused:params", // Warn if a value parameter is unused.
     "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
     "-Ywarn-unused:privates", // Warn if a private member is unused.
-    "-Ywarn-value-discard" // Warn when non-Unit expression results are unused.
+    "-Ywarn-value-discard", // Warn when non-Unit expression results are unused.
+    "-Ypartial-unification" // allow the compiler to unify type constructors of different arities
   )
 )
 
@@ -54,16 +57,22 @@ lazy val root = (project in file("."))
     inThisBuild(
       List(
         organization := "ca.valencik",
-        scalaVersion := "2.12.7",
+        scalaVersion := "2.12.8",
         version := "0.1.0-SNAPSHOT",
       )),
-    name := "Big SQL Parse",
+    name := "Sequoia",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest"     % ScalaTestVersion % Test,
-      "org.antlr"     % "antlr4-runtime" % AntlrVersion
+      "org.antlr"      % "antlr4-runtime" % AntlrVersion,
+      "org.typelevel"  %% "cats-core"     % CatsVersion,
+      "com.lihaoyi"    %% "pprint"        % "0.5.3",
+      "org.typelevel"  %% "cats-testkit"  % CatsVersion % Test,
+      "org.scalatest"  %% "scalatest"     % ScalaTestVersion % Test,
+      "org.scalacheck" %% "scalacheck"    % ScalaCheckVersion % Test
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia"),
-    scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
+    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+    scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
+    scalacOptions in (Test) --= Seq("-Ywarn-unused:imports")
   )
