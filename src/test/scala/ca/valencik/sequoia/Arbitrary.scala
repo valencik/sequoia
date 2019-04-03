@@ -310,6 +310,15 @@ object arbitrary {
   implicit def arbSubQueryExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield SubQueryExpr(i, v))
 
+  implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
+    Arbitrary(
+      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NullPredicate(i, v))
+
+  implicit def arbNotNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotNullPredicate[I, R]] =
+    Arbitrary(
+      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield
+        NotNullPredicate(i, v))
+
   implicit def arbOperator: Arbitrary[Operator] =
     Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))
 
