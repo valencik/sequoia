@@ -53,6 +53,23 @@ object ParseBuddy {
     }
   }
 
+  def nullIndices(p: Product): Iterator[Int] =
+    p.productIterator.zipWithIndex
+      .filter { case (e, _) => e == null }
+      .map { case (_, i) => i }
+
+  def spotTheNulls(p: Product): Unit = {
+    p.productIterator.foreach {
+      case pp: Product => {
+        nullIndices(pp).foreach { i =>
+          println(f"Null at position ${i} in ${pp} which is inside ${p}")
+        }
+        spotTheNulls(pp)
+      }
+      case _ => Unit
+    }
+  }
+
   def noNulls(p: Product): Boolean = {
     p.productIterator.forall {
       case pp: Product => noNulls(pp)
@@ -77,6 +94,7 @@ object ParseBuddyApp extends App {
     if (!exitCommand(inputQuery)) {
       val pq = parse(inputQuery)
       pprintln(pq, height = 10000)
+      spotTheNulls(pq)
       inputLoop()
     }
   }
