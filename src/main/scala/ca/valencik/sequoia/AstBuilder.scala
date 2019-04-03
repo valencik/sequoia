@@ -156,7 +156,6 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem[Info, RawName] = {
     if (verbose) println(s"-------visitSortItem called: ${ctx.getText}-------------")
-    // TODO
     val exp = visitExpression(ctx.expression).asInstanceOf[Expression[Info, RawName]]
     val o =
       if (ctx.ordering != null)
@@ -176,13 +175,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitQuerySpecification(
       ctx: SqlBaseParser.QuerySpecificationContext): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
-    // TODO use maybeSetQuantifier
     val sq = maybeSetQuantifier(ctx.setQuantifier)
     val sis = toUnsafeNEL(
       ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]))
     val f = NonEmptyList.fromList(
       ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList)
-    // TODO SetQuantifier
     val w = if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[RawExpression]) else None
     val g =
       if (ctx.groupBy != null) Some(visit(ctx.groupBy).asInstanceOf[GroupBy[Info, RawName]])
