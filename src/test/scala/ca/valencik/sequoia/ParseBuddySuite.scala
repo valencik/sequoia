@@ -91,4 +91,20 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     parse("select x from").isLeft shouldBe true
     parse("select a aa b bb from foo").isLeft shouldBe true
   }
+
+  it should "parse expression with null predicate" in {
+    val queries = Table(
+      "SELECT 1 IS NULL FROM bar",
+      "SELECT 'a' IS NULL FROM bar"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse expression with not null predicate" in {
+    val queries = Table(
+      "SELECT 1 IS NOT NULL FROM bar",
+      "SELECT 'a' IS NOT NULL FROM bar"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }
