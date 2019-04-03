@@ -2,6 +2,7 @@ lazy val ScalaTestVersion  = "3.0.5"
 lazy val AntlrVersion      = "4.7.1"
 lazy val CatsVersion       = "1.5.0"
 lazy val ScalaCheckVersion = "1.13.5"
+lazy val PPrintVersion     = "0.5.3"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
@@ -64,7 +65,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime" % AntlrVersion,
       "org.typelevel"  %% "cats-core"     % CatsVersion,
-      "com.lihaoyi"    %% "pprint"        % "0.5.3",
+      "com.lihaoyi"    %% "pprint"        % PPrintVersion,
       "org.typelevel"  %% "cats-testkit"  % CatsVersion % Test,
       "org.scalatest"  %% "scalatest"     % ScalaTestVersion % Test,
       "org.scalacheck" %% "scalacheck"    % ScalaCheckVersion % Test
