@@ -560,6 +560,7 @@ object Expression {
       case e: DereferenceExpr[I, _] => e.map(f)
       case e: FunctionCall[I, _]    => e.map(f)
       case e: Predicate[I, _]       => e.map(f)
+      case e: IntervalLiteral[I, _] => e.map(f)
     }
   }
 }
@@ -785,6 +786,33 @@ final case object FOLLOWING extends BoundType
 sealed trait FrameType
 final case object RANGE extends FrameType
 final case object ROWS  extends FrameType
+
+final case class IntervalLiteral[I, R](info: I,
+                                       sign: Sign,
+                                       value: StringLiteral[I, R],
+                                       from: IntervalField,
+                                       to: Option[IntervalField])
+    extends Expression[I, R]
+object IntervalLiteral {
+  implicit def eqIntervalLiteral[I: Eq, R: Eq]: Eq[IntervalLiteral[I, R]] = Eq.fromUniversalEquals
+  implicit def intervalLiteralInstances[I]: Functor[IntervalLiteral[I, ?]] =
+    new Functor[IntervalLiteral[I, ?]] {
+      def map[A, B](fa: IntervalLiteral[I, A])(f: A => B): IntervalLiteral[I, B] =
+        fa.asInstanceOf[IntervalLiteral[I, B]]
+    }
+}
+
+sealed trait IntervalField extends Node
+final case object YEAR     extends IntervalField
+final case object MONTH    extends IntervalField
+final case object DAY      extends IntervalField
+final case object HOUR     extends IntervalField
+final case object MINUTE   extends IntervalField
+final case object SECOND   extends IntervalField
+
+sealed trait Sign
+final case object PLUS  extends Sign
+final case object MINUS extends Sign
 
 sealed trait Operator
 final case object AND extends Operator

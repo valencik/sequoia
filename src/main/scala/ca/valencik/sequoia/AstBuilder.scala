@@ -424,6 +424,38 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     CurrentRowBound(nextId())
   }
 
+  override def visitIntervalField(ctx: SqlBaseParser.IntervalFieldContext): IntervalField = {
+    if (verbose) println(s"-------visitIntervalField called: ${ctx.getText}-------------")
+    if (ctx.YEAR != null)
+      YEAR
+    else if (ctx.MONTH != null)
+      MONTH
+    else if (ctx.DAY != null)
+      DAY
+    else if (ctx.HOUR != null)
+      HOUR
+    else if (ctx.MINUTE != null)
+      MINUTE
+    else if (ctx.SECOND != null)
+      SECOND
+    else
+      ???
+  }
+
+  override def visitInterval(ctx: SqlBaseParser.IntervalContext): IntervalLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitInterval called: ${ctx.getText}-------------")
+    val sign =
+      if (ctx.sign != null)
+        ctx.sign.getType match {
+          case SqlBaseLexer.PLUS  => PLUS
+          case SqlBaseLexer.MINUS => MINUS
+        } else PLUS
+    val value = visit(ctx.string).asInstanceOf[StringLiteral[Info, RawName]]
+    val from  = visitIntervalField(ctx.from)
+    val to    = if (ctx.to != null) Some(visitIntervalField(ctx.to)) else None
+    IntervalLiteral(nextId(), sign, value, from, to)
+  }
+
   override def visitBasicStringLiteral(
       ctx: SqlBaseParser.BasicStringLiteralContext): StringLiteral[Info, RawName] = {
     if (verbose) println(s"-------visitStringLiteral called: ${ctx.getText}-------------")

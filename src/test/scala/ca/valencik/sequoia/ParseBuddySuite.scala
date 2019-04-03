@@ -107,4 +107,19 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse interval expression" in {
+    val queries = Table(
+      "select INTERVAL '2019' YEAR",
+      "select INTERVAL '12' MONTH",
+      "select INTERVAL '1' DAY",
+      "select INTERVAL +'10' HOUR",
+      "select INTERVAL -'10' HOUR",
+      "select INTERVAL '10' HOUR",
+      "select INTERVAL '42:00' MINUTE TO SECOND",
+      "select INTERVAL '42' SECOND",
+      "select interval '1:01:30' hour to second - interval '1:01:29' hour to second"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }
