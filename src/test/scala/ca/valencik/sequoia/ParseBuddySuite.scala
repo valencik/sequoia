@@ -23,7 +23,7 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT name FROM bar WHERE bar.age >= 18",
       "SELECT name FROM bar WHERE bar.age >= 18 AND bar.other = something",
       "SELECT name FROM bar WHERE bar.age >= 18 ORDER BY age LIMIT 2",
-      "SELECT name FROM bar ORDER BY age LIMIT 2",
+      "SELECT name FROM bar ORDER BY age LIMIT 2"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
