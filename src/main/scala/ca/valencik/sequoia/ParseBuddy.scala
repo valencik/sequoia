@@ -53,7 +53,17 @@ object ParseBuddy {
     }
   }
 
-  val catalog = Resolver(Map("DB.FOO" -> Set("A", "B")))
+  def noNulls(p: Product): Boolean = {
+    p.productIterator.forall {
+      case pp: Product => noNulls(pp)
+      case x           => x != null
+    }
+  }
+
+  def shouldParseWithNoNulls(q: String): Unit = {
+    val pq = parse(q)
+    assert(pq.map(noNulls).getOrElse(false))
+  }
 }
 
 object ParseBuddyApp extends App {

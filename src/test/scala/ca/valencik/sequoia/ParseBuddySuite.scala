@@ -6,18 +6,6 @@ import ca.valencik.sequoia.ParseBuddy._
 
 class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
 
-  def noNulls(p: Product): Boolean = {
-    p.productIterator.forall {
-      case pp: Product => noNulls(pp)
-      case x           => x != null
-    }
-  }
-
-  def shouldParseWithNoNulls(q: String) = {
-    val pq = parse(q)
-    assert(pq.isRight && pq.map(noNulls).getOrElse(false))
-  }
-
   "ParseBuddy" should "parse simple SQL queries" in {
     val queries = Table(
       "SELECT 1",
