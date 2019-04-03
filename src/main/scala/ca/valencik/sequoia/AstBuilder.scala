@@ -305,6 +305,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.predicate != null) visit(ctx.predicate) else visit(ctx.valueExpression)
   }
 
+  override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext): Node = {
+    if (verbose) println(s"-------visitNullPredicate called: ${ctx.getText}-------------")
+    val expr = visit(ctx.value).asInstanceOf[RawExpression]
+    if (ctx.NOT != null) NotNullPredicate(nextId(), expr) else NullPredicate(nextId(), expr)
+  }
+
   override def visitDereference(ctx: SqlBaseParser.DereferenceContext): Node = {
     if (verbose) println(s"-------visitDereference called: ${ctx.getText}-------------")
     val base      = visit(ctx.base).asInstanceOf[RawExpression]
