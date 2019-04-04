@@ -579,9 +579,9 @@ object Predicate {
   implicit def eqPredicate[I: Eq, R: Eq]: Eq[Predicate[I, R]] = Eq.fromUniversalEquals
   implicit def predicateInstances[I]: Functor[Predicate[I, ?]] = new Functor[Predicate[I, ?]] {
     def map[A, B](fa: Predicate[I, A])(f: A => B): Predicate[I, B] = fa match {
-      case p: NullPredicate[I, _]    => p.map(f)
-      case p: NotNullPredicate[I, _] => p.map(f)
-      case p: ComparisonExpr[I, _]   => p.map(f)
+      case p: NullPredicate[I, _]  => p.map(f)
+      case p: NotPredicate[I, _]   => p.map(f)
+      case p: ComparisonExpr[I, _] => p.map(f)
     }
   }
 }
@@ -594,13 +594,12 @@ object NullPredicate {
         fa.copy(value = fa.value.map(f))
     }
 }
-final case class NotNullPredicate[I, R](info: I, value: ValueExpression[I, R])
-    extends Predicate[I, R]
-object NotNullPredicate {
-  implicit def eqNotNullPredicate[I: Eq, R: Eq]: Eq[NotNullPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NotNullPredicate[I, ?]] =
-    new Functor[NotNullPredicate[I, ?]] {
-      def map[A, B](fa: NotNullPredicate[I, A])(f: A => B): NotNullPredicate[I, B] =
+final case class NotPredicate[I, R](info: I, value: Expression[I, R]) extends Predicate[I, R]
+object NotPredicate {
+  implicit def eqNotPredicate[I: Eq, R: Eq]: Eq[NotPredicate[I, R]] = Eq.fromUniversalEquals
+  implicit def nullPredicateInstances[I]: Functor[NotPredicate[I, ?]] =
+    new Functor[NotPredicate[I, ?]] {
+      def map[A, B](fa: NotPredicate[I, A])(f: A => B): NotPredicate[I, B] =
         fa.copy(value = fa.value.map(f))
     }
 }

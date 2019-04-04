@@ -311,7 +311,7 @@ object arbitrary {
     Arbitrary(
       Gen.frequency(
         (1, getArbitrary[NullPredicate[I, R]]),
-        (1, getArbitrary[NotNullPredicate[I, R]]),
+        (1, getArbitrary[NotPredicate[I, R]]),
         (1, getArbitrary[ComparisonExpr[I, R]])
       ))
 
@@ -398,10 +398,9 @@ object arbitrary {
       for { i <- getArbitrary[I]; v <- getArbitrary[ValueExpression[I, R]] } yield
         NullPredicate(i, v))
 
-  implicit def arbNotNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotNullPredicate[I, R]] =
+  implicit def arbNotPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotPredicate[I, R]] =
     Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[ValueExpression[I, R]] } yield
-        NotNullPredicate(i, v))
+      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NotPredicate(i, v))
 
   implicit def arbBooleanOperator: Arbitrary[BooleanOperator] =
     Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))

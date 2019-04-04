@@ -180,10 +180,9 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[NullPredicate[Int, ?]]",
            SerializableTests.serializable(Functor[NullPredicate[Int, ?]]))
 
-  checkAll("NotNullPredicate[Int, ?]",
-           FunctorTests[NotNullPredicate[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[NotNullPredicate[Int, ?]]",
-           SerializableTests.serializable(Functor[NotNullPredicate[Int, ?]]))
+  checkAll("NotPredicate[Int, ?]", FunctorTests[NotPredicate[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[NotPredicate[Int, ?]]",
+           SerializableTests.serializable(Functor[NotPredicate[Int, ?]]))
 
   checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[ComparisonExpr[Int, ?]]",
