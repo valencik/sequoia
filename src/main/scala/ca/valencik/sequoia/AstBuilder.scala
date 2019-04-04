@@ -345,7 +345,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.NullPredicateContext): Predicate[Info, RawName] = {
     if (verbose) println(s"-------visitNullPredicate called: ${ctx.getText}-------------")
     val expr = visit(ctx.value).asInstanceOf[RawValueExpression]
-    if (ctx.NOT != null) NotNullPredicate(nextId(), expr) else NullPredicate(nextId(), expr)
+    if (ctx.NOT != null) NotPredicate(nextId(), NullPredicate(nextId(), expr))
+    else NullPredicate(nextId(), expr)
   }
 
   override def visitDereference(
