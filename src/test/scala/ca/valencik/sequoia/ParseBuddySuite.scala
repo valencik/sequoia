@@ -122,4 +122,31 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse exists expression" in {
+    val queries = Table(
+      "select EXISTS (select 1)",
+      "select col from db.foo where EXISTS (select 1)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse case expressions" in {
+    val queries = Table(
+      "select CASE x WHEN 'a' THEN 'aa' WHEN 'b' THEN 'bb' ELSE 'cc' END from db.foo",
+      "select CASE WHEN x = 'a' THEN 'aa' WHEN x = 'b' THEN 'bb' ELSE 'cc' END from db.foo"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse arithmetic and concatenation value expressions" in {
+    val queries = Table(
+      "select +42",
+      "select -1",
+      "select 1 + 2 * 3 / 3 % 2",
+      "select 'a' || 'b' as ab",
+      "select '1' || '2' || '3'"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }
