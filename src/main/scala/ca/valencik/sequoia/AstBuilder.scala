@@ -7,8 +7,10 @@ import cats.data.NonEmptyList
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
-  type Info          = Int
-  type RawExpression = Expression[Info, RawName]
+  type Info                 = Int
+  type RawExpression        = Expression[Info, RawName]
+  type RawValueExpression   = ValueExpression[Info, RawName]
+  type RawPrimaryExpression = PrimaryExpression[Info, RawName]
 
   val verbose: Boolean = false
 
@@ -156,7 +158,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitSortItem(ctx: SqlBaseParser.SortItemContext): SortItem[Info, RawName] = {
     if (verbose) println(s"-------visitSortItem called: ${ctx.getText}-------------")
-    val exp = visitExpression(ctx.expression).asInstanceOf[Expression[Info, RawName]]
+    val exp = visitExpression(ctx.expression).asInstanceOf[RawExpression]
     val o =
       if (ctx.ordering != null)
         Some(
@@ -225,7 +227,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val alias: Option[ColumnAlias[Info]] = ident.map { a =>
       ColumnAlias(nextId(), a)
     }
-    val expr = visit(ctx.expression).asInstanceOf[ValueExpression[Info, RawName]]
+    val expr = visit(ctx.expression).asInstanceOf[RawExpression]
     SelectSingle(nextId(), expr, alias)
   }
 
@@ -307,7 +309,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       case SqlBaseLexer.PLUS  => PLUS
       case SqlBaseLexer.MINUS => MINUS
     }
-    val value = visit(ctx.valueExpression).asInstanceOf[ValueExpression[Info, RawName]]
+    val value = visit(ctx.valueExpression).asInstanceOf[RawValueExpression]
     ArithmeticUnary(nextId(), op, value)
   }
 
@@ -339,15 +341,17 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.predicate != null) visit(ctx.predicate) else visit(ctx.valueExpression)
   }
 
-  override def visitNullPredicate(ctx: SqlBaseParser.NullPredicateContext): Node = {
+  override def visitNullPredicate(
+      ctx: SqlBaseParser.NullPredicateContext): Predicate[Info, RawName] = {
     if (verbose) println(s"-------visitNullPredicate called: ${ctx.getText}-------------")
-    val expr = visit(ctx.value).asInstanceOf[RawExpression]
+    val expr = visit(ctx.value).asInstanceOf[RawValueExpression]
     if (ctx.NOT != null) NotNullPredicate(nextId(), expr) else NullPredicate(nextId(), expr)
   }
 
-  override def visitDereference(ctx: SqlBaseParser.DereferenceContext): Node = {
+  override def visitDereference(
+      ctx: SqlBaseParser.DereferenceContext): PrimaryExpression[Info, RawName] = {
     if (verbose) println(s"-------visitDereference called: ${ctx.getText}-------------")
-    val base      = visit(ctx.base).asInstanceOf[RawExpression]
+    val base      = visit(ctx.base).asInstanceOf[RawPrimaryExpression]
     val fieldName = visit(ctx.fieldName).asInstanceOf[Identifier]
     DereferenceExpr(nextId(), base, fieldName.value)
   }
@@ -394,17 +398,17 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
     if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")
     val op    = getComparisonOperator(ctx.comparisonOperator)
-    val left  = visit(ctx.value).asInstanceOf[RawExpression]
-    val right = visit(ctx.right).asInstanceOf[RawExpression]
+    val left  = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val right = visit(ctx.right).asInstanceOf[RawValueExpression]
     ComparisonExpr(nextId(), left, op, right)
   }
 
   override def visitLogicalBinary(
-      ctx: SqlBaseParser.LogicalBinaryContext): BooleanExpr[Info, RawName] = {
+      ctx: SqlBaseParser.LogicalBinaryContext): LogicalBinary[Info, RawName] = {
     val op    = if (ctx.AND != null) AND else OR
     val left  = visit(ctx.left).asInstanceOf[RawExpression]
     val right = visit(ctx.right).asInstanceOf[RawExpression]
-    BooleanExpr(nextId(), left, op, right)
+    LogicalBinary(nextId(), left, op, right)
   }
 
   override def visitColumnReference(
@@ -433,7 +437,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitFilter(ctx: SqlBaseParser.FilterContext): FunctionFilter[Info, RawName] = {
     if (verbose) println(s"-------visitFunctionFilter called: ${ctx.getText}-------------")
-    val exp = visit(ctx.booleanExpression).asInstanceOf[BooleanExpr[Info, RawName]]
+    val exp = visit(ctx.booleanExpression).asInstanceOf[Expression[Info, RawName]]
     FunctionFilter(nextId(), exp)
   }
 

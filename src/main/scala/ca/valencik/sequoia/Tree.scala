@@ -360,9 +360,7 @@ object SelectAll {
   }
 }
 
-final case class SelectSingle[I, R](info: I,
-                                    expr: ValueExpression[I, R],
-                                    alias: Option[ColumnAlias[I]])
+final case class SelectSingle[I, R](info: I, expr: Expression[I, R], alias: Option[ColumnAlias[I]])
     extends SelectItem[I, R]
 object SelectSingle {
   implicit def eqSelectSingle[I: Eq, R: Eq]: Eq[SelectSingle[I, R]] = Eq.fromUniversalEquals
@@ -549,15 +547,87 @@ object ParenthesizedRelation {
     }
 }
 
-sealed trait ValueExpression[I, R] extends Node
+sealed trait Expression[I, R] extends Node
+object Expression {
+  implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
+  implicit def expressionInstances[I]: Functor[Expression[I, ?]] =
+    new Functor[Expression[I, ?]] {
+      def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
+        case e: LogicalBinary[I, _]   => e.map(f)
+        case e: Predicate[I, _]       => e.map(f)
+        case e: ValueExpression[I, _] => e.map(f)
+      }
+    }
+}
+
+final case class LogicalBinary[I, R](info: I,
+                                     left: Expression[I, R],
+                                     op: BooleanOperator,
+                                     right: Expression[I, R])
+    extends Expression[I, R]
+object LogicalBinary {
+  implicit def eqLogicalBinary[I: Eq, R: Eq]: Eq[LogicalBinary[I, R]] = Eq.fromUniversalEquals
+  implicit def LogicalBinaryInstances[I]: Functor[LogicalBinary[I, ?]] =
+    new Functor[LogicalBinary[I, ?]] {
+      def map[A, B](fa: LogicalBinary[I, A])(f: A => B): LogicalBinary[I, B] =
+        fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+    }
+}
+
+sealed trait Predicate[I, R] extends Expression[I, R]
+object Predicate {
+  implicit def eqPredicate[I: Eq, R: Eq]: Eq[Predicate[I, R]] = Eq.fromUniversalEquals
+  implicit def predicateInstances[I]: Functor[Predicate[I, ?]] = new Functor[Predicate[I, ?]] {
+    def map[A, B](fa: Predicate[I, A])(f: A => B): Predicate[I, B] = fa match {
+      case p: NullPredicate[I, _]    => p.map(f)
+      case p: NotNullPredicate[I, _] => p.map(f)
+      case p: ComparisonExpr[I, _]   => p.map(f)
+    }
+  }
+}
+final case class NullPredicate[I, R](info: I, value: ValueExpression[I, R]) extends Predicate[I, R]
+object NullPredicate {
+  implicit def eqNullPredicate[I: Eq, R: Eq]: Eq[NullPredicate[I, R]] = Eq.fromUniversalEquals
+  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, ?]] =
+    new Functor[NullPredicate[I, ?]] {
+      def map[A, B](fa: NullPredicate[I, A])(f: A => B): NullPredicate[I, B] =
+        fa.copy(value = fa.value.map(f))
+    }
+}
+final case class NotNullPredicate[I, R](info: I, value: ValueExpression[I, R])
+    extends Predicate[I, R]
+object NotNullPredicate {
+  implicit def eqNotNullPredicate[I: Eq, R: Eq]: Eq[NotNullPredicate[I, R]] = Eq.fromUniversalEquals
+  implicit def nullPredicateInstances[I]: Functor[NotNullPredicate[I, ?]] =
+    new Functor[NotNullPredicate[I, ?]] {
+      def map[A, B](fa: NotNullPredicate[I, A])(f: A => B): NotNullPredicate[I, B] =
+        fa.copy(value = fa.value.map(f))
+    }
+}
+
+final case class ComparisonExpr[I, R](info: I,
+                                      left: ValueExpression[I, R],
+                                      op: Comparison,
+                                      right: ValueExpression[I, R])
+    extends Predicate[I, R]
+object ComparisonExpr {
+  implicit def eqComparisonExpr[I: Eq, R: Eq]: Eq[ComparisonExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def comparisonExprInstances[I]: Functor[ComparisonExpr[I, ?]] =
+    new Functor[ComparisonExpr[I, ?]] {
+      def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
+        fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+    }
+}
+
+sealed trait ValueExpression[I, R] extends Expression[I, R]
 object ValueExpression {
   implicit def eqValueExpression[I: Eq, R: Eq]: Eq[ValueExpression[I, R]] = Eq.fromUniversalEquals
   implicit def valueExpressionInstances[I]: Functor[ValueExpression[I, ?]] =
     new Functor[ValueExpression[I, ?]] {
       def map[A, B](fa: ValueExpression[I, A])(f: A => B): ValueExpression[I, B] = fa match {
-        case e: Expression[I, _]       => e.map(f)
-        case e: ArithmeticUnary[I, _]  => e.map(f)
-        case e: ArithmeticBinary[I, _] => e.map(f)
+        case e: PrimaryExpression[I, _] => e.map(f)
+        case e: ArithmeticUnary[I, _]   => e.map(f)
+        case e: ArithmeticBinary[I, _]  => e.map(f)
       }
     }
 }
@@ -587,59 +657,29 @@ object ArithmeticBinary {
     }
 }
 
-sealed trait Expression[I, R] extends ValueExpression[I, R]
-object Expression {
-  implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
+sealed trait PrimaryExpression[I, R] extends ValueExpression[I, R]
+object PrimaryExpression {
+  implicit def eqPrimaryExpression[I: Eq, R: Eq]: Eq[PrimaryExpression[I, R]] =
+    Eq.fromUniversalEquals
   // scalastyle:off cyclomatic.complexity
-  implicit def expressionInstances[I]: Functor[Expression[I, ?]] = new Functor[Expression[I, ?]] {
-    def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
-      case e: LiteralExpr[I, _]     => e.map(f)
-      case e: ColumnExpr[I, _]      => e.map(f)
-      case e: SubQueryExpr[I, _]    => e.map(f)
-      case e: ExistsExpr[I, _]      => e.map(f)
-      case e: SimpleCase[I, _]      => e.map(f)
-      case e: SearchedCase[I, _]    => e.map(f)
-      case e: BooleanExpr[I, _]     => e.map(f)
-      case e: ComparisonExpr[I, _]  => e.map(f)
-      case e: DereferenceExpr[I, _] => e.map(f)
-      case e: FunctionCall[I, _]    => e.map(f)
-      case e: Predicate[I, _]       => e.map(f)
-      case e: IntervalLiteral[I, _] => e.map(f)
+  implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, ?]] =
+    new Functor[PrimaryExpression[I, ?]] {
+      def map[A, B](fa: PrimaryExpression[I, A])(f: A => B): PrimaryExpression[I, B] = fa match {
+        case e: LiteralExpr[I, _]     => e.map(f)
+        case e: ColumnExpr[I, _]      => e.map(f)
+        case e: SubQueryExpr[I, _]    => e.map(f)
+        case e: ExistsExpr[I, _]      => e.map(f)
+        case e: SimpleCase[I, _]      => e.map(f)
+        case e: SearchedCase[I, _]    => e.map(f)
+        case e: DereferenceExpr[I, _] => e.map(f)
+        case e: FunctionCall[I, _]    => e.map(f)
+        case e: IntervalLiteral[I, _] => e.map(f)
+      }
     }
-  }
   // scalastyle:on cyclomatic.complexity
 }
 
-sealed trait Predicate[I, R] extends Expression[I, R]
-object Predicate {
-  implicit def eqPredicate[I: Eq, R: Eq]: Eq[Predicate[I, R]] = Eq.fromUniversalEquals
-  implicit def predicateInstances[I]: Functor[Predicate[I, ?]] = new Functor[Predicate[I, ?]] {
-    def map[A, B](fa: Predicate[I, A])(f: A => B): Predicate[I, B] = fa match {
-      case p: NullPredicate[I, _]    => p.map(f)
-      case p: NotNullPredicate[I, _] => p.map(f)
-    }
-  }
-}
-final case class NullPredicate[I, R](info: I, value: Expression[I, R]) extends Predicate[I, R]
-object NullPredicate {
-  implicit def eqNullPredicate[I: Eq, R: Eq]: Eq[NullPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, ?]] =
-    new Functor[NullPredicate[I, ?]] {
-      def map[A, B](fa: NullPredicate[I, A])(f: A => B): NullPredicate[I, B] =
-        fa.copy(value = fa.value.map(f))
-    }
-}
-final case class NotNullPredicate[I, R](info: I, value: Expression[I, R]) extends Predicate[I, R]
-object NotNullPredicate {
-  implicit def eqNotNullPredicate[I: Eq, R: Eq]: Eq[NotNullPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NotNullPredicate[I, ?]] =
-    new Functor[NotNullPredicate[I, ?]] {
-      def map[A, B](fa: NotNullPredicate[I, A])(f: A => B): NotNullPredicate[I, B] =
-        fa.copy(value = fa.value.map(f))
-    }
-}
-
-sealed trait LiteralExpr[I, R] extends Expression[I, R]
+sealed trait LiteralExpr[I, R] extends PrimaryExpression[I, R]
 object LiteralExpr {
   implicit def eqLiteralExpr[I: Eq, R: Eq]: Eq[LiteralExpr[I, R]] = Eq.fromUniversalEquals
   implicit def literalExprInstances[I]: Functor[LiteralExpr[I, ?]] =
@@ -653,7 +693,7 @@ final case class IntLiteral[I, R](info: I, value: Long)        extends LiteralEx
 final case class StringLiteral[I, R](info: I, value: String)   extends LiteralExpr[I, R]
 final case class BooleanLiteral[I, R](info: I, value: Boolean) extends LiteralExpr[I, R]
 
-final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends Expression[I, R]
+final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends PrimaryExpression[I, R]
 object ColumnExpr {
   implicit def eqColumnExpr[I: Eq, R: Eq]: Eq[ColumnExpr[I, R]] = Eq.fromUniversalEquals
   implicit def columnExprInstances[I]: Traverse[ColumnExpr[I, ?]] = new Traverse[ColumnExpr[I, ?]] {
@@ -670,7 +710,7 @@ object ColumnExpr {
   }
 }
 
-final case class SubQueryExpr[I, R](info: I, q: Query[I, R]) extends Expression[I, R]
+final case class SubQueryExpr[I, R](info: I, q: Query[I, R]) extends PrimaryExpression[I, R]
 object SubQueryExpr {
   implicit def eqSubQueryExpr[I: Eq, R: Eq]: Eq[SubQueryExpr[I, R]] = Eq.fromUniversalEquals
   implicit def subQueryExprInstances[I]: Functor[SubQueryExpr[I, ?]] =
@@ -680,7 +720,7 @@ object SubQueryExpr {
     }
 }
 
-final case class ExistsExpr[I, R](info: I, q: Query[I, R]) extends Expression[I, R]
+final case class ExistsExpr[I, R](info: I, q: Query[I, R]) extends PrimaryExpression[I, R]
 object ExistsExpr {
   implicit def eqExistsExpr[I: Eq, R: Eq]: Eq[ExistsExpr[I, R]] = Eq.fromUniversalEquals
   implicit def existsExprInstances[I]: Functor[ExistsExpr[I, ?]] =
@@ -694,7 +734,7 @@ final case class SimpleCase[I, R](info: I,
                                   exp: ValueExpression[I, R],
                                   whenClauses: NonEmptyList[WhenClause[I, R]],
                                   elseExpression: Option[Expression[I, R]])
-    extends Expression[I, R]
+    extends PrimaryExpression[I, R]
 object SimpleCase {
   implicit def eqSimpleCase[I: Eq, R: Eq]: Eq[SimpleCase[I, R]] = Eq.fromUniversalEquals
   implicit def simpleCaseInstances[I]: Functor[SimpleCase[I, ?]] =
@@ -709,7 +749,7 @@ object SimpleCase {
 final case class SearchedCase[I, R](info: I,
                                     whenClauses: NonEmptyList[WhenClause[I, R]],
                                     elseExpression: Option[Expression[I, R]])
-    extends Expression[I, R]
+    extends PrimaryExpression[I, R]
 object SearchedCase {
   implicit def eqSearchedCase[I: Eq, R: Eq]: Eq[SearchedCase[I, R]] = Eq.fromUniversalEquals
   implicit def searchedCaseInstances[I]: Functor[SearchedCase[I, ?]] =
@@ -731,36 +771,8 @@ object WhenClause {
     }
 }
 
-final case class BooleanExpr[I, R](info: I,
-                                   left: Expression[I, R],
-                                   op: BooleanOperator,
-                                   right: Expression[I, R])
-    extends Expression[I, R]
-object BooleanExpr {
-  implicit def eqBooleanExpr[I: Eq, R: Eq]: Eq[BooleanExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def booleanExprInstances[I]: Functor[BooleanExpr[I, ?]] =
-    new Functor[BooleanExpr[I, ?]] {
-      def map[A, B](fa: BooleanExpr[I, A])(f: A => B): BooleanExpr[I, B] =
-        fa.copy(left = fa.left.map(f), right = fa.right.map(f))
-    }
-}
-
-final case class ComparisonExpr[I, R](info: I,
-                                      left: Expression[I, R],
-                                      op: Comparison,
-                                      right: Expression[I, R])
-    extends Expression[I, R]
-object ComparisonExpr {
-  implicit def eqComparisonExpr[I: Eq, R: Eq]: Eq[ComparisonExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def comparisonExprInstances[I]: Functor[ComparisonExpr[I, ?]] =
-    new Functor[ComparisonExpr[I, ?]] {
-      def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
-        fa.copy(left = fa.left.map(f), right = fa.right.map(f))
-    }
-}
-
-final case class DereferenceExpr[I, R](info: I, base: Expression[I, R], fieldName: String)
-    extends Expression[I, R]
+final case class DereferenceExpr[I, R](info: I, base: PrimaryExpression[I, R], fieldName: String)
+    extends PrimaryExpression[I, R]
 object DereferenceExpr {
   implicit def eqDereferenceExpr[I: Eq, R: Eq]: Eq[DereferenceExpr[I, R]] = Eq.fromUniversalEquals
   implicit def dereferenceExprInstances[I]: Functor[DereferenceExpr[I, ?]] =
@@ -778,7 +790,7 @@ final case class FunctionCall[I, R](info: I,
                                     order: Option[OrderBy[I, R]],
                                     filter: Option[FunctionFilter[I, R]],
                                     over: Option[FunctionOver[I, R]])
-    extends Expression[I, R]
+    extends PrimaryExpression[I, R]
 object FunctionCall {
   implicit def eqFunctionCall[I: Eq, R: Eq]: Eq[FunctionCall[I, R]] = Eq.fromUniversalEquals
   implicit def functionCallInstances[I]: Functor[FunctionCall[I, ?]] =
@@ -791,7 +803,7 @@ object FunctionCall {
     }
 }
 
-final case class FunctionFilter[I, R](info: I, exp: BooleanExpr[I, R]) extends Node
+final case class FunctionFilter[I, R](info: I, exp: Expression[I, R]) extends Node
 object FunctionFilter {
   implicit def eqFunctionFilter[I: Eq, R: Eq]: Eq[FunctionFilter[I, R]] = Eq.fromUniversalEquals
   implicit def functionFilterInstances[I]: Functor[FunctionFilter[I, ?]] =
@@ -864,7 +876,7 @@ object CurrentRowBound {
 }
 
 // TODO maybe it's fine to use a numeric literal here instead?
-final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: ValueExpression[I, R])
+final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: Expression[I, R])
     extends FrameBound[I, R]
 object BoundedFrame {
   implicit def eqBoundedFrame[I: Eq, R: Eq]: Eq[BoundedFrame[I, R]] = Eq.fromUniversalEquals
@@ -888,7 +900,7 @@ final case class IntervalLiteral[I, R](info: I,
                                        value: StringLiteral[I, R],
                                        from: IntervalField,
                                        to: Option[IntervalField])
-    extends Expression[I, R]
+    extends PrimaryExpression[I, R]
 object IntervalLiteral {
   implicit def eqIntervalLiteral[I: Eq, R: Eq]: Eq[IntervalLiteral[I, R]] = Eq.fromUniversalEquals
   implicit def intervalLiteralInstances[I]: Functor[IntervalLiteral[I, ?]] =

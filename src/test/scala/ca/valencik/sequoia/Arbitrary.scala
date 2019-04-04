@@ -122,9 +122,9 @@ object arbitrary {
       q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
       s <- Gen.resize(5, getArbitrary[NonEmptyList[SelectItem[I, R]]])
       f <- Gen.option(getArbitrary[NonEmptyList[Relation[I, R]]])
-      w <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[BooleanExpr[I, R]])))
+      w <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
       g <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[GroupBy[I, R]])))
-      h <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[BooleanExpr[I, R]])))
+      h <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
     } yield QuerySpecification(i, q, s, f, w, g, h))
 
   implicit def arbGroupBy[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupBy[I, R]] =
@@ -194,7 +194,7 @@ object arbitrary {
   implicit def arbSelectSingle[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectSingle[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      e <- getArbitrary[ValueExpression[I, R]]
+      e <- getArbitrary[Expression[I, R]]
       c <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[ColumnAlias[I]])))
     } yield SelectSingle(i, e, c))
 
@@ -291,10 +291,34 @@ object arbitrary {
       r <- getArbitrary[Relation[I, R]]
     } yield ParenthesizedRelation(i, r))
 
+  implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
+    Arbitrary(
+      Gen.frequency(
+        (1, getArbitrary[LogicalBinary[I, R]]),
+        (5, getArbitrary[Predicate[I, R]]),
+        (5, getArbitrary[ValueExpression[I, R]])
+      ))
+
+  implicit def arbLogicalBinary[I: Arbitrary, R: Arbitrary]: Arbitrary[LogicalBinary[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      l  <- getArbitrary[Expression[I, R]]
+      op <- getArbitrary[BooleanOperator]
+      r  <- getArbitrary[Expression[I, R]]
+    } yield LogicalBinary(i, l, op, r))
+
+  implicit def arbPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[Predicate[I, R]] =
+    Arbitrary(
+      Gen.frequency(
+        (1, getArbitrary[NullPredicate[I, R]]),
+        (1, getArbitrary[NotNullPredicate[I, R]]),
+        (1, getArbitrary[ComparisonExpr[I, R]])
+      ))
+
   implicit def arbValueExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[ValueExpression[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (5, getArbitrary[Expression[I, R]]),
+        (5, getArbitrary[PrimaryExpression[I, R]]),
         (5, getArbitrary[ArithmeticUnary[I, R]]),
         (1, getArbitrary[ArithmeticBinary[I, R]])
       ))
@@ -322,19 +346,19 @@ object arbitrary {
                 Gen.const(DIVIDE),
                 Gen.const(MODULUS)))
 
-  implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
+  implicit def arbPrimaryExpression[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[PrimaryExpression[I, R]] =
     Arbitrary(
       Gen.frequency(
         (30, getArbitrary[LiteralExpr[I, R]]),
         (30, getArbitrary[ColumnExpr[I, R]]),
-        (3, getArbitrary[ComparisonExpr[I, R]]),
-        (3, getArbitrary[BooleanExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]]),
         (1, getArbitrary[ExistsExpr[I, R]]),
         (2, getArbitrary[SimpleCase[I, R]]),
         (2, getArbitrary[SearchedCase[I, R]]),
         (3, getArbitrary[DereferenceExpr[I, R]]),
-        (2, getArbitrary[FunctionCall[I, R]])
+        (2, getArbitrary[FunctionCall[I, R]]),
+        (2, getArbitrary[IntervalLiteral[I, R]])
       ))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
@@ -371,11 +395,12 @@ object arbitrary {
 
   implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
     Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NullPredicate(i, v))
+      for { i <- getArbitrary[I]; v <- getArbitrary[ValueExpression[I, R]] } yield
+        NullPredicate(i, v))
 
   implicit def arbNotNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotNullPredicate[I, R]] =
     Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield
+      for { i <- getArbitrary[I]; v <- getArbitrary[ValueExpression[I, R]] } yield
         NotNullPredicate(i, v))
 
   implicit def arbBooleanOperator: Arbitrary[BooleanOperator] =
@@ -390,26 +415,18 @@ object arbitrary {
                 Gen.const(GT),
                 Gen.const(GTE)))
 
-  implicit def arbBooleanExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[BooleanExpr[I, R]] =
-    Arbitrary(for {
-      i  <- getArbitrary[I]
-      l  <- getArbitrary[Expression[I, R]]
-      op <- getArbitrary[BooleanOperator]
-      r  <- getArbitrary[Expression[I, R]]
-    } yield BooleanExpr(i, l, op, r))
-
   implicit def arbComparisonExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ComparisonExpr[I, R]] =
     Arbitrary(for {
       i  <- getArbitrary[I]
-      l  <- getArbitrary[Expression[I, R]]
+      l  <- getArbitrary[ValueExpression[I, R]]
       op <- getArbitrary[Comparison]
-      r  <- getArbitrary[Expression[I, R]]
+      r  <- getArbitrary[ValueExpression[I, R]]
     } yield ComparisonExpr(i, l, op, r))
 
   implicit def arbDereferenceExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[DereferenceExpr[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      b <- getArbitrary[Expression[I, R]]
+      b <- getArbitrary[PrimaryExpression[I, R]]
       f <- getArbitrary[String]
     } yield DereferenceExpr(i, b, f))
 
@@ -443,7 +460,7 @@ object arbitrary {
   implicit def arbFunctionFilter[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionFilter[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      e <- getArbitrary[BooleanExpr[I, R]]
+      e <- getArbitrary[LogicalBinary[I, R]]
     } yield FunctionFilter(i, e))
 
   implicit def arbFunctionOver[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionOver[I, R]] =
@@ -483,7 +500,7 @@ object arbitrary {
     Arbitrary(for {
       i <- getArbitrary[I]
       b <- getArbitrary[BoundType]
-      e <- getArbitrary[ValueExpression[I, R]]
+      e <- getArbitrary[Expression[I, R]]
     } yield BoundedFrame(i, b, e))
 
   implicit def arbBoundType: Arbitrary[BoundType] =
