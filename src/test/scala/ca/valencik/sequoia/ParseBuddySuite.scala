@@ -122,4 +122,12 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse exists expression" in {
+    val queries = Table(
+      "select EXISTS (select 1)",
+      "select col from db.foo where EXISTS (select 1)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }

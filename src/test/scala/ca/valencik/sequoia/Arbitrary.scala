@@ -294,13 +294,14 @@ object arbitrary {
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (9, getArbitrary[LiteralExpr[I, R]]),
-        (9, getArbitrary[ColumnExpr[I, R]]),
+        (25, getArbitrary[LiteralExpr[I, R]]),
+        (25, getArbitrary[ColumnExpr[I, R]]),
         (3, getArbitrary[ComparisonExpr[I, R]]),
         (3, getArbitrary[BooleanExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]]),
-        (2, getArbitrary[DereferenceExpr[I, R]]),
-        (2, getArbitrary[FunctionCall[I, R]])
+        (1, getArbitrary[ExistsExpr[I, R]]),
+        (5, getArbitrary[DereferenceExpr[I, R]]),
+        (5, getArbitrary[FunctionCall[I, R]])
       ))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
@@ -309,6 +310,9 @@ object arbitrary {
 
   implicit def arbSubQueryExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield SubQueryExpr(i, v))
+
+  implicit def arbExistsExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ExistsExpr[I, R]] =
+    Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield ExistsExpr(i, v))
 
   implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
     Arbitrary(

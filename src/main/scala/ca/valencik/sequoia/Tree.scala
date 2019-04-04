@@ -550,11 +550,13 @@ object ParenthesizedRelation {
 sealed trait Expression[I, R] extends Node
 object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
+  // scalastyle:off cyclomatic.complexity
   implicit def expressionInstances[I]: Functor[Expression[I, ?]] = new Functor[Expression[I, ?]] {
     def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] = fa match {
       case e: LiteralExpr[I, _]     => e.map(f)
       case e: ColumnExpr[I, _]      => e.map(f)
       case e: SubQueryExpr[I, _]    => e.map(f)
+      case e: ExistsExpr[I, _]      => e.map(f)
       case e: BooleanExpr[I, _]     => e.map(f)
       case e: ComparisonExpr[I, _]  => e.map(f)
       case e: DereferenceExpr[I, _] => e.map(f)
@@ -563,6 +565,7 @@ object Expression {
       case e: IntervalLiteral[I, _] => e.map(f)
     }
   }
+  // scalastyle:on cyclomatic.complexity
 }
 
 sealed trait Predicate[I, R] extends Expression[I, R]
@@ -631,6 +634,16 @@ object SubQueryExpr {
   implicit def subQueryExprInstances[I]: Functor[SubQueryExpr[I, ?]] =
     new Functor[SubQueryExpr[I, ?]] {
       def map[A, B](fa: SubQueryExpr[I, A])(f: A => B): SubQueryExpr[I, B] =
+        fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class ExistsExpr[I, R](info: I, q: Query[I, R]) extends Expression[I, R]
+object ExistsExpr {
+  implicit def eqExistsExpr[I: Eq, R: Eq]: Eq[ExistsExpr[I, R]] = Eq.fromUniversalEquals
+  implicit def existsExprInstances[I]: Functor[ExistsExpr[I, ?]] =
+    new Functor[ExistsExpr[I, ?]] {
+      def map[A, B](fa: ExistsExpr[I, A])(f: A => B): ExistsExpr[I, B] =
         fa.copy(q = fa.q.map(f))
     }
 }

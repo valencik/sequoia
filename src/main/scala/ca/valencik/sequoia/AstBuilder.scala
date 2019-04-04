@@ -324,6 +324,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SubQueryExpr(nextId(), visitQuery(ctx.query))
   }
 
+  override def visitExists(ctx: SqlBaseParser.ExistsContext): ExistsExpr[Info, RawName] = {
+    if (verbose) println(s"-------visitExists called: ${ctx.getText}-------------")
+    ExistsExpr(nextId(), visitQuery(ctx.query))
+  }
+
   override def visitComparison(
       ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
     if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")
