@@ -360,7 +360,9 @@ object SelectAll {
   }
 }
 
-final case class SelectSingle[I, R](info: I, expr: Expression[I, R], alias: Option[ColumnAlias[I]])
+final case class SelectSingle[I, R](info: I,
+                                    expr: ValueExpression[I, R],
+                                    alias: Option[ColumnAlias[I]])
     extends SelectItem[I, R]
 object SelectSingle {
   implicit def eqSelectSingle[I: Eq, R: Eq]: Eq[SelectSingle[I, R]] = Eq.fromUniversalEquals
@@ -553,8 +555,35 @@ object ValueExpression {
   implicit def valueExpressionInstances[I]: Functor[ValueExpression[I, ?]] =
     new Functor[ValueExpression[I, ?]] {
       def map[A, B](fa: ValueExpression[I, A])(f: A => B): ValueExpression[I, B] = fa match {
-        case e: Expression[I, _] => e.map(f)
+        case e: Expression[I, _]       => e.map(f)
+        case e: ArithmeticUnary[I, _]  => e.map(f)
+        case e: ArithmeticBinary[I, _] => e.map(f)
       }
+    }
+}
+
+final case class ArithmeticUnary[I, R](info: I, sign: Sign, value: ValueExpression[I, R])
+    extends ValueExpression[I, R]
+object ArithmeticUnary {
+  implicit def eqArithmeticUnary[I: Eq, R: Eq]: Eq[ArithmeticUnary[I, R]] = Eq.fromUniversalEquals
+  implicit def arithmeticUnaryInstances[I]: Functor[ArithmeticUnary[I, ?]] =
+    new Functor[ArithmeticUnary[I, ?]] {
+      def map[A, B](fa: ArithmeticUnary[I, A])(f: A => B): ArithmeticUnary[I, B] =
+        fa.copy(value = fa.value.map(f))
+    }
+}
+
+final case class ArithmeticBinary[I, R](info: I,
+                                        left: ValueExpression[I, R],
+                                        op: ArithmeticOperator,
+                                        right: ValueExpression[I, R])
+    extends ValueExpression[I, R]
+object ArithmeticBinary {
+  implicit def eqArithmeticBinary[I: Eq, R: Eq]: Eq[ArithmeticBinary[I, R]] = Eq.fromUniversalEquals
+  implicit def arithmeticBinaryInstances[I]: Functor[ArithmeticBinary[I, ?]] =
+    new Functor[ArithmeticBinary[I, ?]] {
+      def map[A, B](fa: ArithmeticBinary[I, A])(f: A => B): ArithmeticBinary[I, B] =
+        fa.copy(left = fa.left.map(f), right = fa.right.map(f))
     }
 }
 
@@ -704,7 +733,7 @@ object WhenClause {
 
 final case class BooleanExpr[I, R](info: I,
                                    left: Expression[I, R],
-                                   op: Operator,
+                                   op: BooleanOperator,
                                    right: Expression[I, R])
     extends Expression[I, R]
 object BooleanExpr {
@@ -835,7 +864,7 @@ object CurrentRowBound {
 }
 
 // TODO maybe it's fine to use a numeric literal here instead?
-final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: Expression[I, R])
+final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: ValueExpression[I, R])
     extends FrameBound[I, R]
 object BoundedFrame {
   implicit def eqBoundedFrame[I: Eq, R: Eq]: Eq[BoundedFrame[I, R]] = Eq.fromUniversalEquals
@@ -881,9 +910,16 @@ sealed trait Sign
 final case object PLUS  extends Sign
 final case object MINUS extends Sign
 
-sealed trait Operator
-final case object AND extends Operator
-final case object OR  extends Operator
+sealed trait ArithmeticOperator
+final case object ADD      extends ArithmeticOperator
+final case object SUBTRACT extends ArithmeticOperator
+final case object MULTIPLY extends ArithmeticOperator
+final case object DIVIDE   extends ArithmeticOperator
+final case object MODULUS  extends ArithmeticOperator
+
+sealed trait BooleanOperator
+final case object AND extends BooleanOperator
+final case object OR  extends BooleanOperator
 
 sealed trait Comparison
 final case object EQ  extends Comparison

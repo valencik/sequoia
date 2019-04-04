@@ -170,6 +170,16 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[ValueExpression[Int, ?]]",
            SerializableTests.serializable(Functor[ValueExpression[Int, ?]]))
 
+  checkAll("ArithmeticUnary[Int, ?]",
+           FunctorTests[ArithmeticUnary[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ArithmeticUnary[Int, ?]]",
+           SerializableTests.serializable(Functor[ArithmeticUnary[Int, ?]]))
+
+  checkAll("ArithmeticBinary[Int, ?]",
+           FunctorTests[ArithmeticBinary[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ArithmeticBinary[Int, ?]]",
+           SerializableTests.serializable(Functor[ArithmeticBinary[Int, ?]]))
+
   checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Expression[Int, ?]]",
            SerializableTests.serializable(Functor[Expression[Int, ?]]))

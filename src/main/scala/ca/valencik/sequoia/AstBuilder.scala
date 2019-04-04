@@ -225,7 +225,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val alias: Option[ColumnAlias[Info]] = ident.map { a =>
       ColumnAlias(nextId(), a)
     }
-    val expr = visit(ctx.expression).asInstanceOf[RawExpression]
+    val expr = visit(ctx.expression).asInstanceOf[ValueExpression[Info, RawName]]
     SelectSingle(nextId(), expr, alias)
   }
 
@@ -298,6 +298,40 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.ParenthesizedRelationContext): RelationPrimary[Info, RawName] = {
     val r = visit(ctx.relation).asInstanceOf[Relation[Info, RawName]]
     ParenthesizedRelation(nextId(), r)
+  }
+
+  override def visitArithmeticUnary(
+      ctx: SqlBaseParser.ArithmeticUnaryContext): ArithmeticUnary[Info, RawName] = {
+    if (verbose) println(s"-------visitArithmeticUnary called: ${ctx.getText}-------------")
+    val op: Sign = ctx.operator.getType match {
+      case SqlBaseLexer.PLUS  => PLUS
+      case SqlBaseLexer.MINUS => MINUS
+    }
+    val value = visit(ctx.valueExpression).asInstanceOf[ValueExpression[Info, RawName]]
+    ArithmeticUnary(nextId(), op, value)
+  }
+
+  override def visitArithmeticBinary(
+      ctx: SqlBaseParser.ArithmeticBinaryContext): ArithmeticBinary[Info, RawName] = {
+    if (verbose) println(s"-------visitArithmeticBinary called: ${ctx.getText}-------------")
+    val left  = visit(ctx.left).asInstanceOf[ValueExpression[Info, RawName]]
+    val right = visit(ctx.right).asInstanceOf[ValueExpression[Info, RawName]]
+    val op = ctx.operator.getType match {
+      case SqlBaseLexer.PLUS     => ADD
+      case SqlBaseLexer.MINUS    => SUBTRACT
+      case SqlBaseLexer.ASTERISK => MULTIPLY
+      case SqlBaseLexer.SLASH    => DIVIDE
+      case SqlBaseLexer.PERCENT  => MODULUS
+    }
+    ArithmeticBinary(nextId(), left, op, right)
+  }
+
+  override def visitConcatenation(
+      ctx: SqlBaseParser.ConcatenationContext): FunctionCall[Info, RawName] = {
+    if (verbose) println(s"-------visitConcatenation called: ${ctx.getText}-------------")
+    val left  = visit(ctx.left).asInstanceOf[RawExpression]
+    val right = visit(ctx.right).asInstanceOf[RawExpression]
+    FunctionCall(nextId(), "concat", None, List(left, right), None, None, None)
   }
 
   override def visitPredicated(ctx: SqlBaseParser.PredicatedContext): Node = {

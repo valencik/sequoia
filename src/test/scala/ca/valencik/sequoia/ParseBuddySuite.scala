@@ -138,4 +138,15 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse arithmetic and concatenation value expressions" in {
+    val queries = Table(
+      "select +42",
+      "select -1",
+      "select 1 + 2 * 3 / 3 % 2",
+      "select 'a' || 'b' as ab",
+      "select '1' || '2' || '3'"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }
