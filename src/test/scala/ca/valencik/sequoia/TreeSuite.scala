@@ -165,6 +165,30 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[ParenthesizedRelation[Int, ?]]",
            SerializableTests.serializable(Functor[ParenthesizedRelation[Int, ?]]))
 
+  checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Expression[Int, ?]]",
+           SerializableTests.serializable(Functor[Expression[Int, ?]]))
+
+  checkAll("LogicalBinary[Int, ?]", FunctorTests[LogicalBinary[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[LogicalBinary[Int, ?]]",
+           SerializableTests.serializable(Functor[LogicalBinary[Int, ?]]))
+
+  checkAll("Predicate[Int, ?]", FunctorTests[Predicate[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Predicate[Int, ?]]", SerializableTests.serializable(Functor[Predicate[Int, ?]]))
+
+  checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[NullPredicate[Int, ?]]",
+           SerializableTests.serializable(Functor[NullPredicate[Int, ?]]))
+
+  checkAll("NotNullPredicate[Int, ?]",
+           FunctorTests[NotNullPredicate[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[NotNullPredicate[Int, ?]]",
+           SerializableTests.serializable(Functor[NotNullPredicate[Int, ?]]))
+
+  checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ComparisonExpr[Int, ?]]",
+           SerializableTests.serializable(Functor[ComparisonExpr[Int, ?]]))
+
   checkAll("ValueExpression[Int, ?]",
            FunctorTests[ValueExpression[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[ValueExpression[Int, ?]]",
@@ -180,9 +204,10 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[ArithmeticBinary[Int, ?]]",
            SerializableTests.serializable(Functor[ArithmeticBinary[Int, ?]]))
 
-  checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[Expression[Int, ?]]",
-           SerializableTests.serializable(Functor[Expression[Int, ?]]))
+  checkAll("PrimaryExpression[Int, ?]",
+           FunctorTests[PrimaryExpression[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[PrimaryExpression[Int, ?]]",
+           SerializableTests.serializable(Functor[PrimaryExpression[Int, ?]]))
 
   checkAll("LiteralExpr[Int, ?]", FunctorTests[LiteralExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[LiteralExpr[Int, ?]]",
@@ -212,23 +237,6 @@ class TreeLawTests extends CatsSuite {
   checkAll("WhenClause[Int, ?]", FunctorTests[WhenClause[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[WhenClause[Int, ?]]",
            SerializableTests.serializable(Functor[WhenClause[Int, ?]]))
-
-  checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[NullPredicate[Int, ?]]",
-           SerializableTests.serializable(Functor[NullPredicate[Int, ?]]))
-
-  checkAll("NotNullPredicate[Int, ?]",
-           FunctorTests[NotNullPredicate[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[NotNullPredicate[Int, ?]]",
-           SerializableTests.serializable(Functor[NotNullPredicate[Int, ?]]))
-
-  checkAll("BooleanExpr[Int, ?]", FunctorTests[BooleanExpr[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[BooleanExpr[Int, ?]]",
-           SerializableTests.serializable(Functor[BooleanExpr[Int, ?]]))
-
-  checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[ComparisonExpr[Int, ?]]",
-           SerializableTests.serializable(Functor[ComparisonExpr[Int, ?]]))
 
   checkAll("DereferenceExpr[Int, ?]",
            FunctorTests[DereferenceExpr[Int, ?]].functor[Int, Int, String])
