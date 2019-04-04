@@ -433,4 +433,29 @@ object arbitrary {
   implicit def arbFrameType: Arbitrary[FrameType] =
     Arbitrary(Gen.oneOf(Gen.const(RANGE), Gen.const(ROWS)))
 
+  implicit def arbIntervalLiteral[I: Arbitrary, R: Arbitrary]: Arbitrary[IntervalLiteral[I, R]] = {
+    def stringLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield
+        StringLiteral(i, v).asInstanceOf[StringLiteral[I, R]]
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      s <- getArbitrary[Sign]
+      v <- stringLiteral
+      f <- getArbitrary[IntervalField]
+      t <- Gen.option(getArbitrary[IntervalField])
+    } yield IntervalLiteral(i, s, v, f, t))
+  }
+
+  implicit def arbSign: Arbitrary[Sign] =
+    Arbitrary(Gen.oneOf(Gen.const(PLUS), Gen.const(MINUS)))
+
+  implicit def arbIntervalField: Arbitrary[IntervalField] =
+    Arbitrary(
+      Gen.oneOf(Gen.const(YEAR),
+                Gen.const(MONTH),
+                Gen.const(DAY),
+                Gen.const(HOUR),
+                Gen.const(MINUTE),
+                Gen.const(SECOND)))
+
 }

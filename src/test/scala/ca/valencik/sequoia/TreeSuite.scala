@@ -236,4 +236,9 @@ class TreeLawTests extends CatsSuite {
   checkAll("BoundedFrame[Int, ?]", FunctorTests[BoundedFrame[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[BoundedFrame[Int, ?]]",
            SerializableTests.serializable(Functor[BoundedFrame[Int, ?]]))
+
+  checkAll("IntervalLiteral[Int, ?]",
+           FunctorTests[IntervalLiteral[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[IntervalLiteral[Int, ?]]",
+           SerializableTests.serializable(Functor[IntervalLiteral[Int, ?]]))
 }
