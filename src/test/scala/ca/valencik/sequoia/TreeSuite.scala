@@ -165,6 +165,11 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[ParenthesizedRelation[Int, ?]]",
            SerializableTests.serializable(Functor[ParenthesizedRelation[Int, ?]]))
 
+  checkAll("ValueExpression[Int, ?]",
+           FunctorTests[ValueExpression[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[ValueExpression[Int, ?]]",
+           SerializableTests.serializable(Functor[ValueExpression[Int, ?]]))
+
   checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Expression[Int, ?]]",
            SerializableTests.serializable(Functor[Expression[Int, ?]]))
@@ -185,6 +190,18 @@ class TreeLawTests extends CatsSuite {
   checkAll("ExistsExpr[Int, ?]", FunctorTests[ExistsExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[ExistsExpr[Int, ?]]",
            SerializableTests.serializable(Functor[ExistsExpr[Int, ?]]))
+
+  checkAll("SimpleCase[Int, ?]", FunctorTests[SimpleCase[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[SimpleCase[Int, ?]]",
+           SerializableTests.serializable(Functor[SimpleCase[Int, ?]]))
+
+  checkAll("SearchedCase[Int, ?]", FunctorTests[SearchedCase[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[SearchedCase[Int, ?]]",
+           SerializableTests.serializable(Functor[SearchedCase[Int, ?]]))
+
+  checkAll("WhenClause[Int, ?]", FunctorTests[WhenClause[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[WhenClause[Int, ?]]",
+           SerializableTests.serializable(Functor[WhenClause[Int, ?]]))
 
   checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[NullPredicate[Int, ?]]",

@@ -329,6 +329,33 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ExistsExpr(nextId(), visitQuery(ctx.query))
   }
 
+  override def visitSimpleCase(ctx: SqlBaseParser.SimpleCaseContext): SimpleCase[Info, RawName] = {
+    if (verbose) println(s"-------visitSimpleCase called: ${ctx.getText}-------------")
+    val exp         = visit(ctx.valueExpression).asInstanceOf[ValueExpression[Info, RawName]]
+    val whenClauses = toUnsafeNEL(ctx.whenClause.asScala.map(visitWhenClause))
+    val elseExpression =
+      if (ctx.elseExpression != null) Some(visit(ctx.elseExpression).asInstanceOf[RawExpression])
+      else None
+    SimpleCase(nextId(), exp, whenClauses, elseExpression)
+  }
+
+  override def visitSearchedCase(
+      ctx: SqlBaseParser.SearchedCaseContext): SearchedCase[Info, RawName] = {
+    if (verbose) println(s"-------visitSearchedCase called: ${ctx.getText}-------------")
+    val whenClauses = toUnsafeNEL(ctx.whenClause.asScala.map(visitWhenClause))
+    val elseExpression =
+      if (ctx.elseExpression != null) Some(visit(ctx.elseExpression).asInstanceOf[RawExpression])
+      else None
+    SearchedCase(nextId(), whenClauses, elseExpression)
+  }
+
+  override def visitWhenClause(ctx: SqlBaseParser.WhenClauseContext): WhenClause[Info, RawName] = {
+    if (verbose) println(s"-------visitWhenClause called: ${ctx.getText}-------------")
+    val cond = visit(ctx.condition).asInstanceOf[RawExpression]
+    val res  = visit(ctx.result).asInstanceOf[RawExpression]
+    WhenClause(nextId(), cond, res)
+  }
+
   override def visitComparison(
       ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
     if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")

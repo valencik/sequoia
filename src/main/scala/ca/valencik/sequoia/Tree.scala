@@ -547,7 +547,18 @@ object ParenthesizedRelation {
     }
 }
 
-sealed trait Expression[I, R] extends Node
+sealed trait ValueExpression[I, R] extends Node
+object ValueExpression {
+  implicit def eqValueExpression[I: Eq, R: Eq]: Eq[ValueExpression[I, R]] = Eq.fromUniversalEquals
+  implicit def valueExpressionInstances[I]: Functor[ValueExpression[I, ?]] =
+    new Functor[ValueExpression[I, ?]] {
+      def map[A, B](fa: ValueExpression[I, A])(f: A => B): ValueExpression[I, B] = fa match {
+        case e: Expression[I, _] => e.map(f)
+      }
+    }
+}
+
+sealed trait Expression[I, R] extends ValueExpression[I, R]
 object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
   // scalastyle:off cyclomatic.complexity
@@ -557,6 +568,8 @@ object Expression {
       case e: ColumnExpr[I, _]      => e.map(f)
       case e: SubQueryExpr[I, _]    => e.map(f)
       case e: ExistsExpr[I, _]      => e.map(f)
+      case e: SimpleCase[I, _]      => e.map(f)
+      case e: SearchedCase[I, _]    => e.map(f)
       case e: BooleanExpr[I, _]     => e.map(f)
       case e: ComparisonExpr[I, _]  => e.map(f)
       case e: DereferenceExpr[I, _] => e.map(f)
@@ -645,6 +658,47 @@ object ExistsExpr {
     new Functor[ExistsExpr[I, ?]] {
       def map[A, B](fa: ExistsExpr[I, A])(f: A => B): ExistsExpr[I, B] =
         fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class SimpleCase[I, R](info: I,
+                                  exp: ValueExpression[I, R],
+                                  whenClauses: NonEmptyList[WhenClause[I, R]],
+                                  elseExpression: Option[Expression[I, R]])
+    extends Expression[I, R]
+object SimpleCase {
+  implicit def eqSimpleCase[I: Eq, R: Eq]: Eq[SimpleCase[I, R]] = Eq.fromUniversalEquals
+  implicit def simpleCaseInstances[I]: Functor[SimpleCase[I, ?]] =
+    new Functor[SimpleCase[I, ?]] {
+      def map[A, B](fa: SimpleCase[I, A])(f: A => B): SimpleCase[I, B] =
+        fa.copy(exp = fa.exp.map(f),
+                whenClauses = fa.whenClauses.map(_.map(f)),
+                elseExpression = fa.elseExpression.map(_.map(f)))
+    }
+}
+
+final case class SearchedCase[I, R](info: I,
+                                    whenClauses: NonEmptyList[WhenClause[I, R]],
+                                    elseExpression: Option[Expression[I, R]])
+    extends Expression[I, R]
+object SearchedCase {
+  implicit def eqSearchedCase[I: Eq, R: Eq]: Eq[SearchedCase[I, R]] = Eq.fromUniversalEquals
+  implicit def searchedCaseInstances[I]: Functor[SearchedCase[I, ?]] =
+    new Functor[SearchedCase[I, ?]] {
+      def map[A, B](fa: SearchedCase[I, A])(f: A => B): SearchedCase[I, B] =
+        fa.copy(whenClauses = fa.whenClauses.map(_.map(f)),
+                elseExpression = fa.elseExpression.map(_.map(f)))
+    }
+}
+
+final case class WhenClause[I, R](info: I, condition: Expression[I, R], result: Expression[I, R])
+    extends Node
+object WhenClause {
+  implicit def eqWhenClause[I: Eq, R: Eq]: Eq[WhenClause[I, R]] = Eq.fromUniversalEquals
+  implicit def whenClauseInstances[I]: Functor[WhenClause[I, ?]] =
+    new Functor[WhenClause[I, ?]] {
+      def map[A, B](fa: WhenClause[I, A])(f: A => B): WhenClause[I, B] =
+        fa.copy(condition = fa.condition.map(f), result = fa.result.map(f))
     }
 }
 

@@ -291,6 +291,12 @@ object arbitrary {
       r <- getArbitrary[Relation[I, R]]
     } yield ParenthesizedRelation(i, r))
 
+  implicit def arbValueExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[ValueExpression[I, R]] =
+    Arbitrary(
+      Gen.frequency(
+        (1, getArbitrary[Expression[I, R]])
+      ))
+
   implicit def arbExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[Expression[I, R]] =
     Arbitrary(
       Gen.frequency(
@@ -300,6 +306,8 @@ object arbitrary {
         (3, getArbitrary[BooleanExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]]),
         (1, getArbitrary[ExistsExpr[I, R]]),
+        (2, getArbitrary[SimpleCase[I, R]]),
+        (2, getArbitrary[SearchedCase[I, R]]),
         (5, getArbitrary[DereferenceExpr[I, R]]),
         (5, getArbitrary[FunctionCall[I, R]])
       ))
@@ -313,6 +321,28 @@ object arbitrary {
 
   implicit def arbExistsExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ExistsExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield ExistsExpr(i, v))
+
+  implicit def arbSimpleCase[I: Arbitrary, R: Arbitrary]: Arbitrary[SimpleCase[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      e  <- getArbitrary[ValueExpression[I, R]]
+      w  <- Gen.resize(2, getArbitrary[NonEmptyList[WhenClause[I, R]]])
+      el <- Gen.some(getArbitrary[Expression[I, R]])
+    } yield SimpleCase(i, e, w, el))
+
+  implicit def arbSearchedCase[I: Arbitrary, R: Arbitrary]: Arbitrary[SearchedCase[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      w  <- Gen.resize(2, getArbitrary[NonEmptyList[WhenClause[I, R]]])
+      el <- Gen.some(getArbitrary[Expression[I, R]])
+    } yield SearchedCase(i, w, el))
+
+  implicit def arbWhenClause[I: Arbitrary, R: Arbitrary]: Arbitrary[WhenClause[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      c <- getArbitrary[Expression[I, R]]
+      r <- getArbitrary[Expression[I, R]]
+    } yield WhenClause(i, c, r))
 
   implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
     Arbitrary(

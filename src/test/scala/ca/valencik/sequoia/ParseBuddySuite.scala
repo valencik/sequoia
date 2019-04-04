@@ -130,4 +130,12 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse case expressions" in {
+    val queries = Table(
+      "select CASE x WHEN 'a' THEN 'aa' WHEN 'b' THEN 'bb' ELSE 'cc' END from db.foo",
+      "select CASE WHEN x = 'a' THEN 'aa' WHEN x = 'b' THEN 'bb' ELSE 'cc' END from db.foo"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }
