@@ -295,8 +295,8 @@ object arbitrary {
     Arbitrary(
       Gen.frequency(
         (1, getArbitrary[LogicalBinary[I, R]]),
-        (5, getArbitrary[Predicate[I, R]]),
-        (5, getArbitrary[ValueExpression[I, R]])
+        (25, getArbitrary[Predicate[I, R]]),
+        (25, getArbitrary[ValueExpression[I, R]])
       ))
 
   implicit def arbLogicalBinary[I: Arbitrary, R: Arbitrary]: Arbitrary[LogicalBinary[I, R]] =
@@ -310,10 +310,83 @@ object arbitrary {
   implicit def arbPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[Predicate[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (1, getArbitrary[NullPredicate[I, R]]),
-        (1, getArbitrary[NotPredicate[I, R]]),
-        (1, getArbitrary[ComparisonExpr[I, R]])
+        (5, getArbitrary[NotPredicate[I, R]]),
+        (5, getArbitrary[ComparisonExpr[I, R]]),
+        (1, getArbitrary[QuantifiedComparison[I, R]]),
+        (1, getArbitrary[Between[I, R]]),
+        (1, getArbitrary[InList[I, R]]),
+        (1, getArbitrary[InSubQuery[I, R]]),
+        (3, getArbitrary[Like[I, R]]),
+        (25, getArbitrary[NullPredicate[I, R]]),
+        (5, getArbitrary[DistinctFrom[I, R]])
       ))
+
+  implicit def arbNotPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotPredicate[I, R]] =
+    Arbitrary(
+      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NotPredicate(i, v))
+
+  implicit def arbComparisonExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ComparisonExpr[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      l  <- getArbitrary[ValueExpression[I, R]]
+      op <- getArbitrary[Comparison]
+      r  <- getArbitrary[ValueExpression[I, R]]
+    } yield ComparisonExpr(i, l, op, r))
+
+  implicit def arbQComparison[I: Arbitrary, R: Arbitrary]: Arbitrary[QuantifiedComparison[I, R]] =
+    Arbitrary(for {
+      i  <- getArbitrary[I]
+      v  <- getArbitrary[ValueExpression[I, R]]
+      c  <- getArbitrary[Comparison]
+      qt <- getArbitrary[Quantifier]
+      qr <- getArbitrary[Query[I, R]]
+    } yield QuantifiedComparison(i, v, c, qt, qr))
+
+  implicit def arbQuantifier: Arbitrary[Quantifier] =
+    Arbitrary(Gen.oneOf(Gen.const(ALLQ), Gen.const(SOME), Gen.const(ANY)))
+
+  implicit def arbBetween[I: Arbitrary, R: Arbitrary]: Arbitrary[Between[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+      l <- getArbitrary[ValueExpression[I, R]]
+      u <- getArbitrary[ValueExpression[I, R]]
+    } yield Between(i, v, l, u))
+
+  implicit def arbInList[I: Arbitrary, R: Arbitrary]: Arbitrary[InList[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+      l <- Gen.resize(1, getArbitrary[NonEmptyList[Expression[I, R]]])
+    } yield InList(i, v, l))
+
+  implicit def arbInSubQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[InSubQuery[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+      q <- getArbitrary[Query[I, R]]
+    } yield InSubQuery(i, v, q))
+
+  implicit def arbLike[I: Arbitrary, R: Arbitrary]: Arbitrary[Like[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+      p <- getArbitrary[ValueExpression[I, R]]
+      e <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[ValueExpression[I, R]])))
+    } yield Like(i, v, p, e))
+
+  implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+    } yield NullPredicate(i, v))
+
+  implicit def arbDistinctFrom[I: Arbitrary, R: Arbitrary]: Arbitrary[DistinctFrom[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      v <- getArbitrary[ValueExpression[I, R]]
+      r <- getArbitrary[ValueExpression[I, R]]
+    } yield DistinctFrom(i, v, r))
 
   implicit def arbValueExpression[I: Arbitrary, R: Arbitrary]: Arbitrary[ValueExpression[I, R]] =
     Arbitrary(
@@ -350,8 +423,8 @@ object arbitrary {
     : Arbitrary[PrimaryExpression[I, R]] =
     Arbitrary(
       Gen.frequency(
-        (30, getArbitrary[LiteralExpr[I, R]]),
-        (30, getArbitrary[ColumnExpr[I, R]]),
+        (50, getArbitrary[LiteralExpr[I, R]]),
+        (50, getArbitrary[ColumnExpr[I, R]]),
         (1, getArbitrary[SubQueryExpr[I, R]]),
         (1, getArbitrary[ExistsExpr[I, R]]),
         (2, getArbitrary[SimpleCase[I, R]]),
@@ -393,15 +466,6 @@ object arbitrary {
       r <- getArbitrary[Expression[I, R]]
     } yield WhenClause(i, c, r))
 
-  implicit def arbNullPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NullPredicate[I, R]] =
-    Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[ValueExpression[I, R]] } yield
-        NullPredicate(i, v))
-
-  implicit def arbNotPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotPredicate[I, R]] =
-    Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NotPredicate(i, v))
-
   implicit def arbBooleanOperator: Arbitrary[BooleanOperator] =
     Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))
 
@@ -413,14 +477,6 @@ object arbitrary {
                 Gen.const(LTE),
                 Gen.const(GT),
                 Gen.const(GTE)))
-
-  implicit def arbComparisonExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ComparisonExpr[I, R]] =
-    Arbitrary(for {
-      i  <- getArbitrary[I]
-      l  <- getArbitrary[ValueExpression[I, R]]
-      op <- getArbitrary[Comparison]
-      r  <- getArbitrary[ValueExpression[I, R]]
-    } yield ComparisonExpr(i, l, op, r))
 
   implicit def arbDereferenceExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[DereferenceExpr[I, R]] =
     Arbitrary(for {
@@ -450,7 +506,7 @@ object arbitrary {
       i  <- getArbitrary[I]
       n  <- getArbitrary[String]
       s  <- Gen.option(getArbitrary[SetQuantifier])
-      e  <- Gen.resize(2, getArbitrary[List[Expression[I, R]]])
+      e  <- Gen.resize(1, getArbitrary[List[Expression[I, R]]])
       or <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[OrderBy[I, R]])))
       f  <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[FunctionFilter[I, R]])))
       ov <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[FunctionOver[I, R]])))
@@ -465,7 +521,7 @@ object arbitrary {
   implicit def arbFunctionOver[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionOver[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      e <- Gen.resize(2, getArbitrary[List[Expression[I, R]]])
+      e <- Gen.resize(1, getArbitrary[List[Expression[I, R]]])
       o <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[OrderBy[I, R]])))
       w <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[WindowFrame[I, R]])))
     } yield FunctionOver(i, e, o, w))

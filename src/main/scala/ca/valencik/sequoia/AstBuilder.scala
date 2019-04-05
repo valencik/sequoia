@@ -112,6 +112,17 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ???
   }
 
+  def getQuantifier(ctx: SqlBaseParser.ComparisonQuantifierContext): Quantifier = {
+    if (ctx.ALL != null)
+      ALLQ
+    else if (ctx.SOME != null)
+      SOME
+    else if (ctx.ANY != null)
+      ANY
+    else
+      ???
+  }
+
   // -- Overrides
   override def visitSingleStatement(ctx: SqlBaseParser.SingleStatementContext): Node = {
     visit(ctx.statement)
@@ -341,12 +352,75 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.predicate != null) visit(ctx.predicate) else visit(ctx.valueExpression)
   }
 
+  override def visitComparison(
+      ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
+    if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")
+    val op    = getComparisonOperator(ctx.comparisonOperator)
+    val left  = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val right = visit(ctx.right).asInstanceOf[RawValueExpression]
+    ComparisonExpr(nextId(), left, op, right)
+  }
+
+  override def visitQuantifiedComparison(
+      ctx: SqlBaseParser.QuantifiedComparisonContext): QuantifiedComparison[Info, RawName] = {
+    if (verbose) println(s"-------visitQuantifiedComparison called: ${ctx.getText}-------------")
+    val op    = getComparisonOperator(ctx.comparisonOperator)
+    val quant = getQuantifier(ctx.comparisonQuantifier)
+    val value = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val query = visitQuery(ctx.query)
+    QuantifiedComparison(nextId(), value, op, quant, query)
+  }
+
+  override def visitBetween(ctx: SqlBaseParser.BetweenContext): Predicate[Info, RawName] = {
+    if (verbose) println(s"-------visitBetween called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val lower = visit(ctx.lower).asInstanceOf[RawValueExpression]
+    val upper = visit(ctx.upper).asInstanceOf[RawValueExpression]
+    val res   = Between(nextId(), value, lower, upper)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
+  }
+
+  override def visitInList(ctx: SqlBaseParser.InListContext): Predicate[Info, RawName] = {
+    if (verbose) println(s"-------visitInList called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val exps  = toUnsafeNEL(ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]))
+    val res   = InList(nextId(), value, exps)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
+  }
+
+  override def visitInSubquery(ctx: SqlBaseParser.InSubqueryContext): Predicate[Info, RawName] = {
+    if (verbose) println(s"-------visitInSubquery called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val query = visitQuery(ctx.query)
+    val res   = InSubQuery(nextId(), value, query)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
+  }
+
+  override def visitLike(ctx: SqlBaseParser.LikeContext): Predicate[Info, RawName] = {
+    if (verbose) println(s"-------visitLike called: ${ctx.getText}-------------")
+    val value   = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val pattern = visit(ctx.pattern).asInstanceOf[RawValueExpression]
+    val escape =
+      if (ctx.escape != null) Some(visit(ctx.escape).asInstanceOf[RawValueExpression]) else None
+    val res = Like(nextId(), value, pattern, escape)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
+  }
+
   override def visitNullPredicate(
       ctx: SqlBaseParser.NullPredicateContext): Predicate[Info, RawName] = {
     if (verbose) println(s"-------visitNullPredicate called: ${ctx.getText}-------------")
     val expr = visit(ctx.value).asInstanceOf[RawValueExpression]
-    if (ctx.NOT != null) NotPredicate(nextId(), NullPredicate(nextId(), expr))
-    else NullPredicate(nextId(), expr)
+    val res  = NullPredicate(nextId(), expr)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
+  }
+
+  override def visitDistinctFrom(
+      ctx: SqlBaseParser.DistinctFromContext): Predicate[Info, RawName] = {
+    if (verbose) println(s"-------visitDistinctFrom called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawValueExpression]
+    val right = visit(ctx.right).asInstanceOf[RawValueExpression]
+    val res   = DistinctFrom(nextId(), value, right)
+    if (ctx.NOT != null) NotPredicate(nextId(), res) else res
   }
 
   override def visitDereference(
@@ -393,15 +467,6 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val cond = visit(ctx.condition).asInstanceOf[RawExpression]
     val res  = visit(ctx.result).asInstanceOf[RawExpression]
     WhenClause(nextId(), cond, res)
-  }
-
-  override def visitComparison(
-      ctx: SqlBaseParser.ComparisonContext): ComparisonExpr[Info, RawName] = {
-    if (verbose) println(s"-------visitComparison called: ${ctx.getText}-------------")
-    val op    = getComparisonOperator(ctx.comparisonOperator)
-    val left  = visit(ctx.value).asInstanceOf[RawValueExpression]
-    val right = visit(ctx.right).asInstanceOf[RawValueExpression]
-    ComparisonExpr(nextId(), left, op, right)
   }
 
   override def visitLogicalBinary(

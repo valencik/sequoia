@@ -579,21 +579,19 @@ object Predicate {
   implicit def eqPredicate[I: Eq, R: Eq]: Eq[Predicate[I, R]] = Eq.fromUniversalEquals
   implicit def predicateInstances[I]: Functor[Predicate[I, ?]] = new Functor[Predicate[I, ?]] {
     def map[A, B](fa: Predicate[I, A])(f: A => B): Predicate[I, B] = fa match {
-      case p: NullPredicate[I, _]  => p.map(f)
-      case p: NotPredicate[I, _]   => p.map(f)
-      case p: ComparisonExpr[I, _] => p.map(f)
+      case p: NotPredicate[I, _]         => p.map(f)
+      case p: ComparisonExpr[I, _]       => p.map(f)
+      case p: QuantifiedComparison[I, _] => p.map(f)
+      case p: Between[I, _]              => p.map(f)
+      case p: InList[I, _]               => p.map(f)
+      case p: InSubQuery[I, _]           => p.map(f)
+      case p: Like[I, _]                 => p.map(f)
+      case p: NullPredicate[I, _]        => p.map(f)
+      case p: DistinctFrom[I, _]         => p.map(f)
     }
   }
 }
-final case class NullPredicate[I, R](info: I, value: ValueExpression[I, R]) extends Predicate[I, R]
-object NullPredicate {
-  implicit def eqNullPredicate[I: Eq, R: Eq]: Eq[NullPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, ?]] =
-    new Functor[NullPredicate[I, ?]] {
-      def map[A, B](fa: NullPredicate[I, A])(f: A => B): NullPredicate[I, B] =
-        fa.copy(value = fa.value.map(f))
-    }
-}
+
 final case class NotPredicate[I, R](info: I, value: Expression[I, R]) extends Predicate[I, R]
 object NotPredicate {
   implicit def eqNotPredicate[I: Eq, R: Eq]: Eq[NotPredicate[I, R]] = Eq.fromUniversalEquals
@@ -615,6 +613,104 @@ object ComparisonExpr {
     new Functor[ComparisonExpr[I, ?]] {
       def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
+    }
+}
+
+final case class QuantifiedComparison[I, R](info: I,
+                                            value: ValueExpression[I, R],
+                                            op: Comparison,
+                                            quantifier: Quantifier,
+                                            query: Query[I, R])
+    extends Predicate[I, R]
+object QuantifiedComparison {
+  implicit def eqQuantifiedComparison[I: Eq, R: Eq]: Eq[QuantifiedComparison[I, R]] =
+    Eq.fromUniversalEquals
+  implicit def quantifiedComparisonInstances[I]: Functor[QuantifiedComparison[I, ?]] =
+    new Functor[QuantifiedComparison[I, ?]] {
+      def map[A, B](fa: QuantifiedComparison[I, A])(f: A => B): QuantifiedComparison[I, B] =
+        fa.copy(value = fa.value.map(f), query = fa.query.map(f))
+    }
+}
+
+sealed trait Quantifier
+final case object ALLQ extends Quantifier
+final case object SOME extends Quantifier
+final case object ANY  extends Quantifier
+
+final case class Between[I, R](info: I,
+                               value: ValueExpression[I, R],
+                               lower: ValueExpression[I, R],
+                               upper: ValueExpression[I, R])
+    extends Predicate[I, R]
+object Between {
+  implicit def eqBetween[I: Eq, R: Eq]: Eq[Between[I, R]] = Eq.fromUniversalEquals
+  implicit def betweenInstances[I]: Functor[Between[I, ?]] =
+    new Functor[Between[I, ?]] {
+      def map[A, B](fa: Between[I, A])(f: A => B): Between[I, B] =
+        fa.copy(value = fa.value.map(f), lower = fa.lower.map(f), upper = fa.upper.map(f))
+    }
+}
+
+final case class InList[I, R](info: I,
+                              value: ValueExpression[I, R],
+                              exps: NonEmptyList[Expression[I, R]])
+    extends Predicate[I, R]
+object InList {
+  implicit def eqInList[I: Eq, R: Eq]: Eq[InList[I, R]] = Eq.fromUniversalEquals
+  implicit def inListInstances[I]: Functor[InList[I, ?]] =
+    new Functor[InList[I, ?]] {
+      def map[A, B](fa: InList[I, A])(f: A => B): InList[I, B] =
+        fa.copy(value = fa.value.map(f), exps = fa.exps.map(_.map(f)))
+    }
+}
+
+final case class InSubQuery[I, R](info: I, value: ValueExpression[I, R], query: Query[I, R])
+    extends Predicate[I, R]
+object InSubQuery {
+  implicit def eqInSubQuery[I: Eq, R: Eq]: Eq[InSubQuery[I, R]] = Eq.fromUniversalEquals
+  implicit def inSubQueryInstances[I]: Functor[InSubQuery[I, ?]] =
+    new Functor[InSubQuery[I, ?]] {
+      def map[A, B](fa: InSubQuery[I, A])(f: A => B): InSubQuery[I, B] =
+        fa.copy(value = fa.value.map(f), query = fa.query.map(f))
+    }
+}
+
+final case class Like[I, R](info: I,
+                            value: ValueExpression[I, R],
+                            pattern: ValueExpression[I, R],
+                            escape: Option[ValueExpression[I, R]])
+    extends Predicate[I, R]
+object Like {
+  implicit def eqLike[I: Eq, R: Eq]: Eq[Like[I, R]] = Eq.fromUniversalEquals
+  implicit def likeInstances[I]: Functor[Like[I, ?]] =
+    new Functor[Like[I, ?]] {
+      def map[A, B](fa: Like[I, A])(f: A => B): Like[I, B] =
+        fa.copy(value = fa.value.map(f),
+                pattern = fa.pattern.map(f),
+                escape = fa.escape.map(_.map(f)))
+    }
+}
+
+final case class NullPredicate[I, R](info: I, value: ValueExpression[I, R]) extends Predicate[I, R]
+object NullPredicate {
+  implicit def eqNullPredicate[I: Eq, R: Eq]: Eq[NullPredicate[I, R]] = Eq.fromUniversalEquals
+  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, ?]] =
+    new Functor[NullPredicate[I, ?]] {
+      def map[A, B](fa: NullPredicate[I, A])(f: A => B): NullPredicate[I, B] =
+        fa.copy(value = fa.value.map(f))
+    }
+}
+
+final case class DistinctFrom[I, R](info: I,
+                                    value: ValueExpression[I, R],
+                                    right: ValueExpression[I, R])
+    extends Predicate[I, R]
+object DistinctFrom {
+  implicit def eqDistinctFrom[I: Eq, R: Eq]: Eq[DistinctFrom[I, R]] = Eq.fromUniversalEquals
+  implicit def distinctFromInstances[I]: Functor[DistinctFrom[I, ?]] =
+    new Functor[DistinctFrom[I, ?]] {
+      def map[A, B](fa: DistinctFrom[I, A])(f: A => B): DistinctFrom[I, B] =
+        fa.copy(value = fa.value.map(f), right = fa.right.map(f))
     }
 }
 
