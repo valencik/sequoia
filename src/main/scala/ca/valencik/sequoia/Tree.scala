@@ -784,6 +784,7 @@ object LiteralExpr {
         fa.asInstanceOf[LiteralExpr[I, B]]
     }
 }
+final case class DecimalLiteral[I, R](info: I, value: Double)  extends LiteralExpr[I, R]
 final case class DoubleLiteral[I, R](info: I, value: Double)   extends LiteralExpr[I, R]
 final case class IntLiteral[I, R](info: I, value: Long)        extends LiteralExpr[I, R]
 final case class StringLiteral[I, R](info: I, value: String)   extends LiteralExpr[I, R]

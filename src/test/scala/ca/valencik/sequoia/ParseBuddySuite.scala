@@ -9,6 +9,7 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
   "ParseBuddy" should "parse simple SQL queries" in {
     val queries = Table(
       "SELECT 1",
+      "SELECT 3.14",
       "SELECT 1.2E4",
       "SELECT true",
       "SELECT 'hello'",
