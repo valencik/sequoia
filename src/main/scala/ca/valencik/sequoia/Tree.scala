@@ -766,6 +766,7 @@ object PrimaryExpression {
         case e: ExistsExpr[I, _]      => e.map(f)
         case e: SimpleCase[I, _]      => e.map(f)
         case e: SearchedCase[I, _]    => e.map(f)
+        case e: Cast[I, _]            => e.map(f)
         case e: DereferenceExpr[I, _] => e.map(f)
         case e: FunctionCall[I, _]    => e.map(f)
         case e: IntervalLiteral[I, _] => e.map(f)
@@ -1016,6 +1017,17 @@ final case object SECOND   extends IntervalField
 sealed trait Sign
 final case object PLUS  extends Sign
 final case object MINUS extends Sign
+
+final case class Cast[I, R](info: I, exp: Expression[I, R], `type`: String, isTry: Boolean)
+    extends PrimaryExpression[I, R]
+object Cast {
+  implicit def eqCast[I: Eq, R: Eq]: Eq[Cast[I, R]] = Eq.fromUniversalEquals
+  implicit def castInstances[I]: Functor[Cast[I, ?]] =
+    new Functor[Cast[I, ?]] {
+      def map[A, B](fa: Cast[I, A])(f: A => B): Cast[I, B] =
+        fa.copy(exp = fa.exp.map(f))
+    }
+}
 
 sealed trait ArithmeticOperator
 final case object ADD      extends ArithmeticOperator

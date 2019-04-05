@@ -207,6 +207,14 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     forAll(queries)(shouldParseWithNoNulls)
   }
 
+  it should "parse cast expressions" in {
+    val queries = Table(
+      "select CAST (42 AS VARCHAR)",
+      "select TRY_CAST ('42x' AS INT)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
   it should "parse parenthesized expressions" in {
     val queries = Table(
       "select (1 + 2)",
