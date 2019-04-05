@@ -468,6 +468,15 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SearchedCase(nextId(), whenClauses, elseExpression)
   }
 
+  override def visitCast(ctx: SqlBaseParser.CastContext): Cast[Info, RawName] = {
+    if (verbose) println(s"-------visitCast called: ${ctx.getText}-------------")
+    val exp = visit(ctx.expression).asInstanceOf[RawExpression]
+    // TODO We could handle this better
+    val `type`: String = ctx.`type`.getText
+    val isTry          = ctx.TRY_CAST != null
+    Cast(nextId(), exp, `type`, isTry)
+  }
+
   override def visitWhenClause(ctx: SqlBaseParser.WhenClauseContext): WhenClause[Info, RawName] = {
     if (verbose) println(s"-------visitWhenClause called: ${ctx.getText}-------------")
     val cond = visit(ctx.condition).asInstanceOf[RawExpression]

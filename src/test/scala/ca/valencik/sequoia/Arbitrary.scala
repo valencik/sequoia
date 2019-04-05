@@ -429,6 +429,7 @@ object arbitrary {
         (1, getArbitrary[ExistsExpr[I, R]]),
         (2, getArbitrary[SimpleCase[I, R]]),
         (2, getArbitrary[SearchedCase[I, R]]),
+        (3, getArbitrary[Cast[I, R]]),
         (3, getArbitrary[DereferenceExpr[I, R]]),
         (2, getArbitrary[FunctionCall[I, R]]),
         (2, getArbitrary[IntervalLiteral[I, R]])
@@ -465,6 +466,14 @@ object arbitrary {
       c <- getArbitrary[Expression[I, R]]
       r <- getArbitrary[Expression[I, R]]
     } yield WhenClause(i, c, r))
+
+  implicit def arbCast[I: Arbitrary, R: Arbitrary]: Arbitrary[Cast[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- getArbitrary[Expression[I, R]]
+      ty <- getArbitrary[String]
+      tr <- getArbitrary[Boolean]
+    } yield Cast(i, e, ty, tr))
 
   implicit def arbBooleanOperator: Arbitrary[BooleanOperator] =
     Arbitrary(Gen.oneOf(Gen.const(AND), Gen.const(OR)))
