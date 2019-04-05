@@ -431,6 +431,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     DereferenceExpr(nextId(), base, fieldName.value)
   }
 
+  override def visitParenthesizedExpression(
+      ctx: SqlBaseParser.ParenthesizedExpressionContext): Expression[Info, RawName] = {
+    if (verbose) println(s"-------visitParenthesizedExpression called: ${ctx.getText}-------------")
+    visit(ctx.expression).asInstanceOf[RawExpression]
+  }
+
   override def visitSubqueryExpression(
       ctx: SqlBaseParser.SubqueryExpressionContext): SubQueryExpr[Info, RawName] = {
     if (verbose) println(s"-------visitSubqueryExpression called: ${ctx.getText}-------------")
