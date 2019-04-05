@@ -469,8 +469,8 @@ object arbitrary {
 
   implicit def arbCast[I: Arbitrary, R: Arbitrary]: Arbitrary[Cast[I, R]] =
     Arbitrary(for {
-      i <- getArbitrary[I]
-      e <- getArbitrary[Expression[I, R]]
+      i  <- getArbitrary[I]
+      e  <- getArbitrary[Expression[I, R]]
       ty <- getArbitrary[String]
       tr <- getArbitrary[Boolean]
     } yield Cast(i, e, ty, tr))
@@ -498,6 +498,9 @@ object arbitrary {
     def intLiteral =
       for { i <- getArbitrary[I]; v <- getArbitrary[Long] } yield
         IntLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+    def decimalLiteral =
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield
+        DecimalLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
     def doubleLiteral =
       for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield
         DoubleLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
@@ -507,7 +510,7 @@ object arbitrary {
     def booleanLiteral =
       for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield
         BooleanLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
-    Arbitrary(Gen.oneOf(intLiteral, doubleLiteral, stringLiteral, booleanLiteral))
+    Arbitrary(Gen.oneOf(intLiteral, decimalLiteral, doubleLiteral, stringLiteral, booleanLiteral))
   }
 
   implicit def arbFunctionCall[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionCall[I, R]] =

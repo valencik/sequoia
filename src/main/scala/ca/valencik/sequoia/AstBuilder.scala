@@ -621,6 +621,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     BooleanLiteral(nextId(), ctx.getText.toBoolean)
   }
 
+  override def visitDecimalLiteral(
+      ctx: SqlBaseParser.DecimalLiteralContext): DecimalLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitDecimalLiteral called: ${ctx.getText}-------------")
+    DecimalLiteral(nextId(), ctx.getText.toDouble)
+  }
+
   override def visitDoubleLiteral(
       ctx: SqlBaseParser.DoubleLiteralContext): DoubleLiteral[Info, RawName] = {
     if (verbose) println(s"-------visitDoubleLiteral called: ${ctx.getText}-------------")
