@@ -92,18 +92,75 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     parse("select a aa b bb from foo").isLeft shouldBe true
   }
 
-  it should "parse expression with null predicate" in {
+  it should "parse comparison expressions" in {
     val queries = Table(
-      "SELECT 1 IS NULL FROM bar",
-      "SELECT 'a' IS NULL FROM bar"
+      "select 1 < 2",
+      "select 1 <= 2",
+      "select 1 > 2",
+      "select 1 >= 2",
+      "select 1 <> 2",
+      "select 1 = 2"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
 
-  it should "parse expression with not null predicate" in {
+  it should "parse quantified comparison expressions" in {
     val queries = Table(
+      "select a from foo where x > ALL (select b from bar)",
+      "select a from foo where x >= ANY (select b from bar)",
+      "select a from foo where x < SOME (select b from bar)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse between expressions" in {
+    val queries = Table(
+      "select a from foo where b BETWEEN 1 and 10",
+      "select a from foo where b NOT BETWEEN 1 and 10"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse in list expressions" in {
+    val queries = Table(
+      "select a from foo where b IN (1, 2, 3)",
+      "select a from foo where b NOT IN (1, 2, 3)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse in subquery expressions" in {
+    val queries = Table(
+      "select a from foo where b IN (select x from bar)",
+      "select a from foo where b NOT IN (select x from bar)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse like expressions" in {
+    val queries = Table(
+      "select a from foo where b LIKE 'a%'",
+      "select a from foo where b NOT LIKE 'a%'",
+      """select a from foo where b LIKE 'array\[%]' ESCAPE '\'""",
+      """select a from foo where b NOT LIKE 'array\[%]' ESCAPE '\'"""
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse expressions with null predicates" in {
+    val queries = Table(
+      "SELECT 1 IS NULL FROM bar",
+      "SELECT 'a' IS NULL FROM bar",
       "SELECT 1 IS NOT NULL FROM bar",
       "SELECT 'a' IS NOT NULL FROM bar"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse distinct from expressions" in {
+    val queries = Table(
+      "SELECT a from foo where b IS DISTINCT FROM c",
+      "SELECT a from foo where b IS NOT DISTINCT FROM c"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }

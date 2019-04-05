@@ -176,10 +176,6 @@ class TreeLawTests extends CatsSuite {
   checkAll("Predicate[Int, ?]", FunctorTests[Predicate[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Predicate[Int, ?]]", SerializableTests.serializable(Functor[Predicate[Int, ?]]))
 
-  checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
-  checkAll("Functor[NullPredicate[Int, ?]]",
-           SerializableTests.serializable(Functor[NullPredicate[Int, ?]]))
-
   checkAll("NotPredicate[Int, ?]", FunctorTests[NotPredicate[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[NotPredicate[Int, ?]]",
            SerializableTests.serializable(Functor[NotPredicate[Int, ?]]))
@@ -187,6 +183,32 @@ class TreeLawTests extends CatsSuite {
   checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[ComparisonExpr[Int, ?]]",
            SerializableTests.serializable(Functor[ComparisonExpr[Int, ?]]))
+
+  checkAll("QuantifiedComparison[Int, ?]",
+           FunctorTests[QuantifiedComparison[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[QuantifiedComparison[Int, ?]]",
+           SerializableTests.serializable(Functor[QuantifiedComparison[Int, ?]]))
+
+  checkAll("Between[Int, ?]", FunctorTests[Between[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Between[Int, ?]]", SerializableTests.serializable(Functor[Between[Int, ?]]))
+
+  checkAll("InList[Int, ?]", FunctorTests[InList[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[InList[Int, ?]]", SerializableTests.serializable(Functor[InList[Int, ?]]))
+
+  checkAll("InSubQuery[Int, ?]", FunctorTests[InSubQuery[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[InSubQuery[Int, ?]]",
+           SerializableTests.serializable(Functor[InSubQuery[Int, ?]]))
+
+  checkAll("Like[Int, ?]", FunctorTests[Like[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Like[Int, ?]]", SerializableTests.serializable(Functor[Like[Int, ?]]))
+
+  checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[NullPredicate[Int, ?]]",
+           SerializableTests.serializable(Functor[NullPredicate[Int, ?]]))
+
+  checkAll("DistinctFrom[Int, ?]", FunctorTests[DistinctFrom[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[DistinctFrom[Int, ?]]",
+           SerializableTests.serializable(Functor[DistinctFrom[Int, ?]]))
 
   checkAll("ValueExpression[Int, ?]",
            FunctorTests[ValueExpression[Int, ?]].functor[Int, Int, String])
