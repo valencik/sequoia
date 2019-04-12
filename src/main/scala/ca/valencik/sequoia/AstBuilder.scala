@@ -607,6 +607,20 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     IntervalLiteral(nextId(), sign, value, from, to)
   }
 
+  override def visitSpecialDateTimeFunction(
+      ctx: SqlBaseParser.SpecialDateTimeFunctionContext): SpecialDateTimeFunc[Info, RawName] = {
+    if (verbose) println(s"-------visitSpecialDateTimeFunction called: ${ctx.getText}-------------")
+    val name = ctx.name.getType match {
+      case SqlBaseLexer.CURRENT_DATE      => CURRENT_DATE
+      case SqlBaseLexer.CURRENT_TIME      => CURRENT_TIME
+      case SqlBaseLexer.CURRENT_TIMESTAMP => CURRENT_TIMESTAMP
+      case SqlBaseLexer.LOCALTIME         => LOCALTIME
+      case SqlBaseLexer.LOCALTIMESTAMP    => LOCALTIMESTAMP
+    }
+    val precision = if (ctx.precision != null) Some(ctx.precision.getText.toInt) else None
+    SpecialDateTimeFunc(nextId(), name, precision)
+  }
+
   override def visitBasicStringLiteral(
       ctx: SqlBaseParser.BasicStringLiteralContext): StringLiteral[Info, RawName] = {
     if (verbose) println(s"-------visitStringLiteral called: ${ctx.getText}-------------")
