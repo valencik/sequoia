@@ -12,6 +12,7 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT 3.14",
       "SELECT 1.2E4",
       "SELECT true",
+      "SELECT null",
       "SELECT 'hello'",
       "SELECT name FROM bar",
       "SELECT ALL name FROM bar",
@@ -221,6 +222,20 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     val queries = Table(
       "select CAST (42 AS VARCHAR)",
       "select TRY_CAST ('42x' AS INT)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse subscript expressions" in {
+    val queries = Table(
+      "select split(email,'@')[2] AS email_domain from foo"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse extract expressions" in {
+    val queries = Table(
+      "select EXTRACT(DAY from finished - started) from foo"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }

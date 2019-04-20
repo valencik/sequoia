@@ -429,12 +429,27 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.NOT != null) NotPredicate(nextId(), res) else res
   }
 
+  override def visitSubscript(
+      ctx: SqlBaseParser.SubscriptContext): PrimaryExpression[Info, RawName] = {
+    if (verbose) println(s"-------visitSubscript called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawPrimaryExpression]
+    val index = visit(ctx.index).asInstanceOf[RawValueExpression]
+    Subscript(nextId(), value, index)
+  }
+
   override def visitDereference(
       ctx: SqlBaseParser.DereferenceContext): PrimaryExpression[Info, RawName] = {
     if (verbose) println(s"-------visitDereference called: ${ctx.getText}-------------")
     val base      = visit(ctx.base).asInstanceOf[RawPrimaryExpression]
     val fieldName = visit(ctx.fieldName).asInstanceOf[Identifier]
     DereferenceExpr(nextId(), base, fieldName.value)
+  }
+
+  override def visitExtract(ctx: SqlBaseParser.ExtractContext): Extract[Info, RawName] = {
+    if (verbose) println(s"-------visitExtract called: ${ctx.getText}-------------")
+    val field = ctx.identifier.getText
+    val exp   = visit(ctx.valueExpression).asInstanceOf[RawValueExpression]
+    Extract(nextId(), field, exp)
   }
 
   override def visitParenthesizedExpression(
@@ -645,6 +660,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.BooleanValueContext): BooleanLiteral[Info, RawName] = {
     if (verbose) println(s"-------visitBooleanLiteral called: ${ctx.getText}-------------")
     BooleanLiteral(nextId(), ctx.getText.toBoolean)
+  }
+
+  override def visitNullLiteral(
+      ctx: SqlBaseParser.NullLiteralContext): NullLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitNullLiteral called: ${ctx.getText}-------------")
+    NullLiteral(nextId())
   }
 
   override def visitDecimalLiteral(

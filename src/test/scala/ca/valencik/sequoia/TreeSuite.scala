@@ -262,6 +262,9 @@ class TreeLawTests extends CatsSuite {
   checkAll("Cast[Int, ?]", FunctorTests[Cast[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Cast[Int, ?]]", SerializableTests.serializable(Functor[Cast[Int, ?]]))
 
+  checkAll("Subscript[Int, ?]", FunctorTests[Subscript[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Subscript[Int, ?]]", SerializableTests.serializable(Functor[Subscript[Int, ?]]))
+
   checkAll("DereferenceExpr[Int, ?]",
            FunctorTests[DereferenceExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[DereferenceExpr[Int, ?]]",
@@ -307,6 +310,9 @@ class TreeLawTests extends CatsSuite {
            FunctorTests[IntervalLiteral[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[IntervalLiteral[Int, ?]]",
            SerializableTests.serializable(Functor[IntervalLiteral[Int, ?]]))
+
+  checkAll("Extract[Int, ?]", FunctorTests[Extract[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Extract[Int, ?]]", SerializableTests.serializable(Functor[Extract[Int, ?]]))
 
   checkAll("SpecialDateTimeFunc[Int, ?]",
            FunctorTests[SpecialDateTimeFunc[Int, ?]].functor[Int, Int, String])

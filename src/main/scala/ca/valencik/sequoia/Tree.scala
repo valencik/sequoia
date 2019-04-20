@@ -767,11 +767,13 @@ object PrimaryExpression {
         case e: SimpleCase[I, _]          => e.map(f)
         case e: SearchedCase[I, _]        => e.map(f)
         case e: Cast[I, _]                => e.map(f)
+        case e: Subscript[I, _]           => e.map(f)
         case e: DereferenceExpr[I, _]     => e.map(f)
         case e: Row[I, _]                 => e.map(f)
         case e: FunctionCall[I, _]        => e.map(f)
         case e: IntervalLiteral[I, _]     => e.map(f)
         case e: SpecialDateTimeFunc[I, _] => e.map(f)
+        case e: Extract[I, _]             => e.map(f)
       }
     }
   // scalastyle:on cyclomatic.complexity
@@ -786,6 +788,7 @@ object LiteralExpr {
         fa.asInstanceOf[LiteralExpr[I, B]]
     }
 }
+final case class NullLiteral[I, R](info: I)                    extends LiteralExpr[I, R]
 final case class DecimalLiteral[I, R](info: I, value: Double)  extends LiteralExpr[I, R]
 final case class DoubleLiteral[I, R](info: I, value: Double)   extends LiteralExpr[I, R]
 final case class IntLiteral[I, R](info: I, value: Long)        extends LiteralExpr[I, R]
@@ -867,6 +870,19 @@ object WhenClause {
     new Functor[WhenClause[I, ?]] {
       def map[A, B](fa: WhenClause[I, A])(f: A => B): WhenClause[I, B] =
         fa.copy(condition = fa.condition.map(f), result = fa.result.map(f))
+    }
+}
+
+final case class Subscript[I, R](info: I,
+                                 value: PrimaryExpression[I, R],
+                                 index: ValueExpression[I, R])
+    extends PrimaryExpression[I, R]
+object Subscript {
+  implicit def eqSubscript[I: Eq, R: Eq]: Eq[Subscript[I, R]] = Eq.fromUniversalEquals
+  implicit def subscriptInstances[I]: Functor[Subscript[I, ?]] =
+    new Functor[Subscript[I, ?]] {
+      def map[A, B](fa: Subscript[I, A])(f: A => B): Subscript[I, B] =
+        fa.copy(value = fa.value.map(f), index = fa.index.map(f))
     }
 }
 
@@ -1052,6 +1068,17 @@ object SpecialDateTimeFunc {
     new Functor[SpecialDateTimeFunc[I, ?]] {
       def map[A, B](fa: SpecialDateTimeFunc[I, A])(f: A => B): SpecialDateTimeFunc[I, B] =
         fa.asInstanceOf[SpecialDateTimeFunc[I, B]]
+    }
+}
+
+final case class Extract[I, R](info: I, field: String, exp: ValueExpression[I, R])
+    extends PrimaryExpression[I, R]
+object Extract {
+  implicit def eqExtract[I: Eq, R: Eq]: Eq[Extract[I, R]] = Eq.fromUniversalEquals
+  implicit def extractInstances[I]: Functor[Extract[I, ?]] =
+    new Functor[Extract[I, ?]] {
+      def map[A, B](fa: Extract[I, A])(f: A => B): Extract[I, B] =
+        fa.copy(exp = fa.exp.map(f))
     }
 }
 
