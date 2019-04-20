@@ -267,6 +267,9 @@ class TreeLawTests extends CatsSuite {
   checkAll("Functor[DereferenceExpr[Int, ?]]",
            SerializableTests.serializable(Functor[DereferenceExpr[Int, ?]]))
 
+  checkAll("Row[Int, ?]", FunctorTests[Row[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Row[Int, ?]]", SerializableTests.serializable(Functor[Row[Int, ?]]))
+
   checkAll("FunctionCall[Int, ?]", FunctorTests[FunctionCall[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[FunctionCall[Int, ?]]",
            SerializableTests.serializable(Functor[FunctionCall[Int, ?]]))

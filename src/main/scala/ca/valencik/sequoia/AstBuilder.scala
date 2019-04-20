@@ -202,6 +202,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QuerySpecification(nextId(), sq, sis, f, w, g, h)
   }
 
+  override def visitInlineTable(
+      ctx: SqlBaseParser.InlineTableContext): InlineTable[Info, RawName] = {
+    val vs = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    InlineTable(nextId(), vs)
+  }
+
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
     val sq = maybeSetQuantifier(ctx.setQuantifier)
     val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
@@ -496,6 +502,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.ColumnReferenceContext): ColumnExpr[Info, RawName] = {
     if (verbose) println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
+  }
+
+  override def visitRowConstructor(ctx: SqlBaseParser.RowConstructorContext): Row[Info, RawName] = {
+    if (verbose) println(s"-------visitRowConstructor called: ${ctx.getText}-------------")
+    val exps = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    Row(nextId(), exps)
   }
 
   override def visitFunctionCall(

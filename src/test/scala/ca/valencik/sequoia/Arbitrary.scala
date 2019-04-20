@@ -431,6 +431,7 @@ object arbitrary {
         (2, getArbitrary[SearchedCase[I, R]]),
         (3, getArbitrary[Cast[I, R]]),
         (3, getArbitrary[DereferenceExpr[I, R]]),
+        (2, getArbitrary[Row[I, R]]),
         (2, getArbitrary[FunctionCall[I, R]]),
         (2, getArbitrary[IntervalLiteral[I, R]]),
         (20, getArbitrary[SpecialDateTimeFunc[I, R]])
@@ -513,6 +514,12 @@ object arbitrary {
         BooleanLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
     Arbitrary(Gen.oneOf(intLiteral, decimalLiteral, doubleLiteral, stringLiteral, booleanLiteral))
   }
+
+  implicit def arbRow[I: Arbitrary, R: Arbitrary]: Arbitrary[Row[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- Gen.resize(3, getArbitrary[NonEmptyList[Expression[I, R]]])
+    } yield Row(i, e))
 
   implicit def arbFunctionCall[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionCall[I, R]] =
     Arbitrary(for {

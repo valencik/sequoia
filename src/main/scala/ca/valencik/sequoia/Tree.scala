@@ -768,6 +768,7 @@ object PrimaryExpression {
         case e: SearchedCase[I, _]        => e.map(f)
         case e: Cast[I, _]                => e.map(f)
         case e: DereferenceExpr[I, _]     => e.map(f)
+        case e: Row[I, _]                 => e.map(f)
         case e: FunctionCall[I, _]        => e.map(f)
         case e: IntervalLiteral[I, _]     => e.map(f)
         case e: SpecialDateTimeFunc[I, _] => e.map(f)
@@ -877,6 +878,17 @@ object DereferenceExpr {
     new Functor[DereferenceExpr[I, ?]] {
       def map[A, B](fa: DereferenceExpr[I, A])(f: A => B): DereferenceExpr[I, B] =
         fa.copy(base = fa.base.map(f))
+    }
+}
+
+final case class Row[I, R](info: I, exps: NonEmptyList[Expression[I, R]])
+    extends PrimaryExpression[I, R]
+object Row {
+  implicit def eqRow[I: Eq, R: Eq]: Eq[Row[I, R]] = Eq.fromUniversalEquals
+  implicit def rowInstances[I]: Functor[Row[I, ?]] =
+    new Functor[Row[I, ?]] {
+      def map[A, B](fa: Row[I, A])(f: A => B): Row[I, B] =
+        fa.copy(exps = fa.exps.map(_.map(f)))
     }
 }
 
