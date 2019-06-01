@@ -208,6 +208,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     InlineTable(nextId(), vs)
   }
 
+  override def visitSubquery(ctx: SqlBaseParser.SubqueryContext): SubQuery[Info, RawName] = {
+    SubQuery(nextId(), visitQueryNoWith(ctx.queryNoWith))
+  }
+
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
     val sq = maybeSetQuantifier(ctx.setQuantifier)
     val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
