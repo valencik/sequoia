@@ -492,6 +492,7 @@ object RelationPrimary {
       def map[A, B](fa: RelationPrimary[I, A])(f: A => B): RelationPrimary[I, B] = fa match {
         case r: TableName[I, _]             => r.map(f)
         case r: SubQueryRelation[I, _]      => r.map(f)
+        case r: Unnest[I, _]                => r.map(f)
         case r: LateralRelation[I, _]       => r.map(f)
         case r: ParenthesizedRelation[I, _] => r.map(f)
       }
@@ -522,6 +523,17 @@ object SubQueryRelation {
     new Functor[SubQueryRelation[I, ?]] {
       def map[A, B](fa: SubQueryRelation[I, A])(f: A => B): SubQueryRelation[I, B] =
         fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class Unnest[I, R](info: I, exps: NonEmptyList[Expression[I, R]], ordinality: Boolean)
+    extends RelationPrimary[I, R]
+object Unnest {
+  implicit def eqUnnest[I: Eq, R: Eq]: Eq[Unnest[I, R]] = Eq.fromUniversalEquals
+  implicit def unnestInstances[I]: Functor[Unnest[I, ?]] =
+    new Functor[Unnest[I, ?]] {
+      def map[A, B](fa: Unnest[I, A])(f: A => B): Unnest[I, B] =
+        fa.copy(exps = fa.exps.map(_.map(f)))
     }
 }
 

@@ -306,7 +306,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SubQueryRelation(nextId(), visit(ctx.query).asInstanceOf[Query[Info, RawName]])
   }
 
-  override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = ???
+  override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = {
+    val exps    = toUnsafeNEL(ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]))
+    val ordinal = ctx.ORDINALITY != null
+    Unnest(nextId(), exps, ordinal)
+  }
 
   override def visitLateral(ctx: SqlBaseParser.LateralContext): RelationPrimary[Info, RawName] = {
     val q = visitQuery(ctx.query)

@@ -82,6 +82,14 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     forAll(queries)(shouldParseWithNoNulls)
   }
 
+  it should "parse SQL queries with unnest relations" in {
+    val queries = Table(
+      "select x from db.foo cross join UNNEST(a) as bar",
+      "select x, y from db.foo cross join UNNEST(a, b) as bar (aa, bb)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
   it should "parse SQL queries with function calls" in {
     val queries = Table(
       "SELECT COUNT(1)",

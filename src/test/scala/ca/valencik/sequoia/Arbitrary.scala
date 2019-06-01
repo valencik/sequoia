@@ -264,13 +264,22 @@ object arbitrary {
 
   implicit def arbRelationPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[RelationPrimary[I, R]] =
     Arbitrary(
-      Gen.frequency((5, getArbitrary[TableName[I, R]]), (1, getArbitrary[SubQueryRelation[I, R]])))
+      Gen.frequency((5, getArbitrary[TableName[I, R]]),
+                    (1, getArbitrary[Unnest[I, R]]),
+                    (1, getArbitrary[SubQueryRelation[I, R]])))
 
   implicit def arbTableName[I: Arbitrary, R: Arbitrary]: Arbitrary[TableName[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       r <- getArbitrary[TableRef[I, R]]
     } yield TableName(i, r))
+
+  implicit def arbUnnest[I: Arbitrary, R: Arbitrary]: Arbitrary[Unnest[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      e <- Gen.resize(1, getArbitrary[NonEmptyList[Expression[I, R]]])
+      o <- getArbitrary[Boolean]
+    } yield Unnest(i, e, o))
 
   implicit def arbSubQueryRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryRelation[I, R]] =
     Arbitrary(for {
