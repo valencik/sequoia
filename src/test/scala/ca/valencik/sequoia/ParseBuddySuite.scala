@@ -95,7 +95,8 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT COUNT(1)",
       "select count(DISTINCT name) from db.friends",
       """select count("Full name") over (partition by f."ID number") number_of_friends from db.friends f""",
-      """select sum(f."Canadian") over (order by f.day rows 90 preceding) as "Canadian" from db.friends f"""
+      """select sum(f."Canadian") over (order by f.day rows 90 preceding) as "Canadian" from db.friends f""",
+      """select POSITION('.com' IN url) from web"""
     )
     forAll(queries)(shouldParseWithNoNulls)
   }

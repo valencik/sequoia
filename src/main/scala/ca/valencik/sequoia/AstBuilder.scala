@@ -527,6 +527,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
   }
 
+  override def visitPosition(ctx: SqlBaseParser.PositionContext): FunctionCall[Info, RawName] = {
+    if (verbose) println(s"-------visitPosition called: ${ctx.getText}-------------")
+    val args = ctx.valueExpression.asScala.map(visit(_).asInstanceOf[RawValueExpression]).toList
+    FunctionCall(nextId(), "strpos", None, args, None, None, None)
+  }
+
   override def visitRowConstructor(ctx: SqlBaseParser.RowConstructorContext): Row[Info, RawName] = {
     if (verbose) println(s"-------visitRowConstructor called: ${ctx.getText}-------------")
     val exps = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
