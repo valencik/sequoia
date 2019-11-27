@@ -1,12 +1,10 @@
-image: hseeberger/scala-sbt
-
-stages:
-  - test
+image: openjdk:12
 
 before_script:
-  - sbt sbtVersion
+  - curl https://bintray.com/sbt/rpm/rpm | tee /etc/yum.repos.d/bintray-sbt-rpm.repo
+  - yum install --assumeyes sbt
+  - sbt update
 
 test:
-  stage: test
   script:
     - sbt clean scalastyle test:scalastyle scalafmtCheck scalafmtSbtCheck coverage test coverageReport
