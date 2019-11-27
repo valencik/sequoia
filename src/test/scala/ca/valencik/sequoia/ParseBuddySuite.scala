@@ -12,6 +12,7 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
       "SELECT 3.14",
       "SELECT 1.2E4",
       "SELECT true",
+      "SELECT null",
       "SELECT 'hello'",
       "SELECT name FROM bar",
       "SELECT ALL name FROM bar",
@@ -72,12 +73,38 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     forAll(queries)(shouldParseWithNoNulls)
   }
 
+  it should "parse SQL queries with row constructors" in {
+    val queries = Table(
+      "select CAST(ROW(1, 2.0) AS ROW(x BIGINT, y DOUBLE))",
+      "select CAST(ROW(1) AS ROW(A BIGINT)).A"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse SQL queries with inline tables" in {
+    val queries = Table(
+      "select * from (VALUES 3.14)",
+      "select * from (VALUES (1, 2, 3), (4, 8, 12))",
+      "select x, y from (VALUES (1, 'a', 3.0), (4, 'b', 12.0)) AS foo (num, let, flt)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse SQL queries with unnest relations" in {
+    val queries = Table(
+      "select x from db.foo cross join UNNEST(a) as bar",
+      "select x, y from db.foo cross join UNNEST(a, b) as bar (aa, bb)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
   it should "parse SQL queries with function calls" in {
     val queries = Table(
       "SELECT COUNT(1)",
       "select count(DISTINCT name) from db.friends",
       """select count("Full name") over (partition by f."ID number") number_of_friends from db.friends f""",
-      """select sum(f."Canadian") over (order by f.day rows 90 preceding) as "Canadian" from db.friends f"""
+      """select sum(f."Canadian") over (order by f.day rows 90 preceding) as "Canadian" from db.friends f""",
+      """select POSITION('.com' IN url) from web"""
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
@@ -212,6 +239,20 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     val queries = Table(
       "select CAST (42 AS VARCHAR)",
       "select TRY_CAST ('42x' AS INT)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse subscript expressions" in {
+    val queries = Table(
+      "select split(email,'@')[2] AS email_domain from foo"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
+  it should "parse extract expressions" in {
+    val queries = Table(
+      "select EXTRACT(DAY from finished - started) from foo"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }

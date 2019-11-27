@@ -492,6 +492,7 @@ object RelationPrimary {
       def map[A, B](fa: RelationPrimary[I, A])(f: A => B): RelationPrimary[I, B] = fa match {
         case r: TableName[I, _]             => r.map(f)
         case r: SubQueryRelation[I, _]      => r.map(f)
+        case r: Unnest[I, _]                => r.map(f)
         case r: LateralRelation[I, _]       => r.map(f)
         case r: ParenthesizedRelation[I, _] => r.map(f)
       }
@@ -522,6 +523,17 @@ object SubQueryRelation {
     new Functor[SubQueryRelation[I, ?]] {
       def map[A, B](fa: SubQueryRelation[I, A])(f: A => B): SubQueryRelation[I, B] =
         fa.copy(q = fa.q.map(f))
+    }
+}
+
+final case class Unnest[I, R](info: I, exps: NonEmptyList[Expression[I, R]], ordinality: Boolean)
+    extends RelationPrimary[I, R]
+object Unnest {
+  implicit def eqUnnest[I: Eq, R: Eq]: Eq[Unnest[I, R]] = Eq.fromUniversalEquals
+  implicit def unnestInstances[I]: Functor[Unnest[I, ?]] =
+    new Functor[Unnest[I, ?]] {
+      def map[A, B](fa: Unnest[I, A])(f: A => B): Unnest[I, B] =
+        fa.copy(exps = fa.exps.map(_.map(f)))
     }
 }
 
@@ -767,10 +779,13 @@ object PrimaryExpression {
         case e: SimpleCase[I, _]          => e.map(f)
         case e: SearchedCase[I, _]        => e.map(f)
         case e: Cast[I, _]                => e.map(f)
+        case e: Subscript[I, _]           => e.map(f)
         case e: DereferenceExpr[I, _]     => e.map(f)
+        case e: Row[I, _]                 => e.map(f)
         case e: FunctionCall[I, _]        => e.map(f)
         case e: IntervalLiteral[I, _]     => e.map(f)
         case e: SpecialDateTimeFunc[I, _] => e.map(f)
+        case e: Extract[I, _]             => e.map(f)
       }
     }
   // scalastyle:on cyclomatic.complexity
@@ -785,6 +800,7 @@ object LiteralExpr {
         fa.asInstanceOf[LiteralExpr[I, B]]
     }
 }
+final case class NullLiteral[I, R](info: I)                    extends LiteralExpr[I, R]
 final case class DecimalLiteral[I, R](info: I, value: Double)  extends LiteralExpr[I, R]
 final case class DoubleLiteral[I, R](info: I, value: Double)   extends LiteralExpr[I, R]
 final case class IntLiteral[I, R](info: I, value: Long)        extends LiteralExpr[I, R]
@@ -869,6 +885,19 @@ object WhenClause {
     }
 }
 
+final case class Subscript[I, R](info: I,
+                                 value: PrimaryExpression[I, R],
+                                 index: ValueExpression[I, R])
+    extends PrimaryExpression[I, R]
+object Subscript {
+  implicit def eqSubscript[I: Eq, R: Eq]: Eq[Subscript[I, R]] = Eq.fromUniversalEquals
+  implicit def subscriptInstances[I]: Functor[Subscript[I, ?]] =
+    new Functor[Subscript[I, ?]] {
+      def map[A, B](fa: Subscript[I, A])(f: A => B): Subscript[I, B] =
+        fa.copy(value = fa.value.map(f), index = fa.index.map(f))
+    }
+}
+
 final case class DereferenceExpr[I, R](info: I, base: PrimaryExpression[I, R], fieldName: String)
     extends PrimaryExpression[I, R]
 object DereferenceExpr {
@@ -877,6 +906,17 @@ object DereferenceExpr {
     new Functor[DereferenceExpr[I, ?]] {
       def map[A, B](fa: DereferenceExpr[I, A])(f: A => B): DereferenceExpr[I, B] =
         fa.copy(base = fa.base.map(f))
+    }
+}
+
+final case class Row[I, R](info: I, exps: NonEmptyList[Expression[I, R]])
+    extends PrimaryExpression[I, R]
+object Row {
+  implicit def eqRow[I: Eq, R: Eq]: Eq[Row[I, R]] = Eq.fromUniversalEquals
+  implicit def rowInstances[I]: Functor[Row[I, ?]] =
+    new Functor[Row[I, ?]] {
+      def map[A, B](fa: Row[I, A])(f: A => B): Row[I, B] =
+        fa.copy(exps = fa.exps.map(_.map(f)))
     }
 }
 
@@ -1040,6 +1080,17 @@ object SpecialDateTimeFunc {
     new Functor[SpecialDateTimeFunc[I, ?]] {
       def map[A, B](fa: SpecialDateTimeFunc[I, A])(f: A => B): SpecialDateTimeFunc[I, B] =
         fa.asInstanceOf[SpecialDateTimeFunc[I, B]]
+    }
+}
+
+final case class Extract[I, R](info: I, field: String, exp: ValueExpression[I, R])
+    extends PrimaryExpression[I, R]
+object Extract {
+  implicit def eqExtract[I: Eq, R: Eq]: Eq[Extract[I, R]] = Eq.fromUniversalEquals
+  implicit def extractInstances[I]: Functor[Extract[I, ?]] =
+    new Functor[Extract[I, ?]] {
+      def map[A, B](fa: Extract[I, A])(f: A => B): Extract[I, B] =
+        fa.copy(exp = fa.exp.map(f))
     }
 }
 

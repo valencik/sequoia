@@ -202,6 +202,16 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     QuerySpecification(nextId(), sq, sis, f, w, g, h)
   }
 
+  override def visitInlineTable(
+      ctx: SqlBaseParser.InlineTableContext): InlineTable[Info, RawName] = {
+    val vs = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    InlineTable(nextId(), vs)
+  }
+
+  override def visitSubquery(ctx: SqlBaseParser.SubqueryContext): SubQuery[Info, RawName] = {
+    SubQuery(nextId(), visitQueryNoWith(ctx.queryNoWith))
+  }
+
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
     val sq = maybeSetQuantifier(ctx.setQuantifier)
     val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
@@ -300,7 +310,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     SubQueryRelation(nextId(), visit(ctx.query).asInstanceOf[Query[Info, RawName]])
   }
 
-  override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = ???
+  override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = {
+    val exps    = toUnsafeNEL(ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]))
+    val ordinal = ctx.ORDINALITY != null
+    Unnest(nextId(), exps, ordinal)
+  }
 
   override def visitLateral(ctx: SqlBaseParser.LateralContext): RelationPrimary[Info, RawName] = {
     val q = visitQuery(ctx.query)
@@ -423,12 +437,27 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     if (ctx.NOT != null) NotPredicate(nextId(), res) else res
   }
 
+  override def visitSubscript(
+      ctx: SqlBaseParser.SubscriptContext): PrimaryExpression[Info, RawName] = {
+    if (verbose) println(s"-------visitSubscript called: ${ctx.getText}-------------")
+    val value = visit(ctx.value).asInstanceOf[RawPrimaryExpression]
+    val index = visit(ctx.index).asInstanceOf[RawValueExpression]
+    Subscript(nextId(), value, index)
+  }
+
   override def visitDereference(
       ctx: SqlBaseParser.DereferenceContext): PrimaryExpression[Info, RawName] = {
     if (verbose) println(s"-------visitDereference called: ${ctx.getText}-------------")
     val base      = visit(ctx.base).asInstanceOf[RawPrimaryExpression]
     val fieldName = visit(ctx.fieldName).asInstanceOf[Identifier]
     DereferenceExpr(nextId(), base, fieldName.value)
+  }
+
+  override def visitExtract(ctx: SqlBaseParser.ExtractContext): Extract[Info, RawName] = {
+    if (verbose) println(s"-------visitExtract called: ${ctx.getText}-------------")
+    val field = ctx.identifier.getText
+    val exp   = visit(ctx.valueExpression).asInstanceOf[RawValueExpression]
+    Extract(nextId(), field, exp)
   }
 
   override def visitParenthesizedExpression(
@@ -496,6 +525,18 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.ColumnReferenceContext): ColumnExpr[Info, RawName] = {
     if (verbose) println(s"-------visitColumnReference called: ${ctx.getText}-------------")
     ColumnExpr(nextId(), ColumnRef(nextId(), getColumnName(ctx.identifier)))
+  }
+
+  override def visitPosition(ctx: SqlBaseParser.PositionContext): FunctionCall[Info, RawName] = {
+    if (verbose) println(s"-------visitPosition called: ${ctx.getText}-------------")
+    val args = ctx.valueExpression.asScala.map(visit(_).asInstanceOf[RawValueExpression]).toList
+    FunctionCall(nextId(), "strpos", None, args, None, None, None)
+  }
+
+  override def visitRowConstructor(ctx: SqlBaseParser.RowConstructorContext): Row[Info, RawName] = {
+    if (verbose) println(s"-------visitRowConstructor called: ${ctx.getText}-------------")
+    val exps = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    Row(nextId(), exps)
   }
 
   override def visitFunctionCall(
@@ -633,6 +674,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.BooleanValueContext): BooleanLiteral[Info, RawName] = {
     if (verbose) println(s"-------visitBooleanLiteral called: ${ctx.getText}-------------")
     BooleanLiteral(nextId(), ctx.getText.toBoolean)
+  }
+
+  override def visitNullLiteral(
+      ctx: SqlBaseParser.NullLiteralContext): NullLiteral[Info, RawName] = {
+    if (verbose) println(s"-------visitNullLiteral called: ${ctx.getText}-------------")
+    NullLiteral(nextId())
   }
 
   override def visitDecimalLiteral(

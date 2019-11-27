@@ -150,6 +150,9 @@ class TreeLawTests extends CatsSuite {
   checkAll("Traverse[TableName[Int, ?]]",
            SerializableTests.serializable(Traverse[TableName[Int, ?]]))
 
+  checkAll("Unnest[Int, ?]", FunctorTests[Unnest[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Unnest[Int, ?]]", SerializableTests.serializable(Functor[Unnest[Int, ?]]))
+
   checkAll("SubQueryRelation[Int, ?]",
            FunctorTests[SubQueryRelation[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[SubQueryRelation[Int, ?]]",
@@ -262,10 +265,16 @@ class TreeLawTests extends CatsSuite {
   checkAll("Cast[Int, ?]", FunctorTests[Cast[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Cast[Int, ?]]", SerializableTests.serializable(Functor[Cast[Int, ?]]))
 
+  checkAll("Subscript[Int, ?]", FunctorTests[Subscript[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Subscript[Int, ?]]", SerializableTests.serializable(Functor[Subscript[Int, ?]]))
+
   checkAll("DereferenceExpr[Int, ?]",
            FunctorTests[DereferenceExpr[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[DereferenceExpr[Int, ?]]",
            SerializableTests.serializable(Functor[DereferenceExpr[Int, ?]]))
+
+  checkAll("Row[Int, ?]", FunctorTests[Row[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Row[Int, ?]]", SerializableTests.serializable(Functor[Row[Int, ?]]))
 
   checkAll("FunctionCall[Int, ?]", FunctorTests[FunctionCall[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[FunctionCall[Int, ?]]",
@@ -304,6 +313,9 @@ class TreeLawTests extends CatsSuite {
            FunctorTests[IntervalLiteral[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[IntervalLiteral[Int, ?]]",
            SerializableTests.serializable(Functor[IntervalLiteral[Int, ?]]))
+
+  checkAll("Extract[Int, ?]", FunctorTests[Extract[Int, ?]].functor[Int, Int, String])
+  checkAll("Functor[Extract[Int, ?]]", SerializableTests.serializable(Functor[Extract[Int, ?]]))
 
   checkAll("SpecialDateTimeFunc[Int, ?]",
            FunctorTests[SpecialDateTimeFunc[Int, ?]].functor[Int, Int, String])
