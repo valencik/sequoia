@@ -73,6 +73,14 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     forAll(queries)(shouldParseWithNoNulls)
   }
 
+  it should "parse SQL queries with row constructors" in {
+    val queries = Table(
+      "select CAST(ROW(1, 2.0) AS ROW(x BIGINT, y DOUBLE))",
+      "select CAST(ROW(1) AS ROW(A BIGINT)).A"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
   it should "parse SQL queries with inline tables" in {
     val queries = Table(
       "select * from (VALUES 3.14)",
