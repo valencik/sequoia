@@ -1,10 +1,11 @@
 package ca.valencik.sequoia
 
-import org.scalatest._
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatest.flatspec.AnyFlatSpec
 import ca.valencik.sequoia.ParseBuddy._
 
-class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
+class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
 
   "ParseBuddy" should "parse simple SQL queries" in {
     val queries = Table(

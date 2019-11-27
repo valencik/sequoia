@@ -1,7 +1,5 @@
 package ca.valencik.sequoia
 
-import org.scalatest._
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ResolverSpec extends FlatSpec {}
+class ResolverSpec extends AnyFlatSpec {}

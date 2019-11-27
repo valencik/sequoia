@@ -1,13 +1,15 @@
 package ca.valencik.sequoia
 
+import cats.implicits._
 import cats.{Functor, Traverse}
-import cats.tests.CatsSuite
-import ca.valencik.sequoia.arbitrary._
+import org.scalatest.funsuite.AnyFunSuite
+import org.typelevel.discipline.scalatest.Discipline
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
-
 import cats.laws.discipline.{FunctorTests, SerializableTests, TraverseTests}
 
-class TreeLawTests extends CatsSuite {
+import ca.valencik.sequoia.arbitrary._
+
+class TreeLawTests extends AnyFunSuite with Discipline {
   checkAll(
     "TableRef[Int, Int] with Option",
     TraverseTests[TableRef[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
