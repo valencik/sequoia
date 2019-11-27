@@ -432,7 +432,8 @@ object arbitrary {
         (3, getArbitrary[Cast[I, R]]),
         (3, getArbitrary[DereferenceExpr[I, R]]),
         (2, getArbitrary[FunctionCall[I, R]]),
-        (2, getArbitrary[IntervalLiteral[I, R]])
+        (2, getArbitrary[IntervalLiteral[I, R]]),
+        (20, getArbitrary[SpecialDateTimeFunc[I, R]])
       ))
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
@@ -600,5 +601,22 @@ object arbitrary {
                 Gen.const(HOUR),
                 Gen.const(MINUTE),
                 Gen.const(SECOND)))
+
+  implicit def arbSpecialDateTimeFunc[I: Arbitrary, R: Arbitrary]
+    : Arbitrary[SpecialDateTimeFunc[I, R]] = {
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      n <- getArbitrary[CurrentTime]
+      p <- Gen.option(getArbitrary[Int])
+    } yield SpecialDateTimeFunc(i, n, p))
+  }
+
+  implicit def arbCurrentTime: Arbitrary[CurrentTime] =
+    Arbitrary(
+      Gen.oneOf(Gen.const(CURRENT_DATE),
+                Gen.const(CURRENT_TIME),
+                Gen.const(CURRENT_TIMESTAMP),
+                Gen.const(LOCALTIME),
+                Gen.const(LOCALTIMESTAMP)))
 
 }

@@ -223,4 +223,15 @@ class ParseBuddySpec extends FlatSpec with Matchers with PropertyChecks {
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
+
+  it should "parse expressions with special datetime functions" in {
+    val queries = Table(
+      "select CURRENT_DATE",
+      "select CURRENT_TIME",
+      "select CURRENT_TIMESTAMP",
+      "select LOCALTIME",
+      "select LOCALTIMESTAMP"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
 }

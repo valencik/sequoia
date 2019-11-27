@@ -760,16 +760,17 @@ object PrimaryExpression {
   implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, ?]] =
     new Functor[PrimaryExpression[I, ?]] {
       def map[A, B](fa: PrimaryExpression[I, A])(f: A => B): PrimaryExpression[I, B] = fa match {
-        case e: LiteralExpr[I, _]     => e.map(f)
-        case e: ColumnExpr[I, _]      => e.map(f)
-        case e: SubQueryExpr[I, _]    => e.map(f)
-        case e: ExistsExpr[I, _]      => e.map(f)
-        case e: SimpleCase[I, _]      => e.map(f)
-        case e: SearchedCase[I, _]    => e.map(f)
-        case e: Cast[I, _]            => e.map(f)
-        case e: DereferenceExpr[I, _] => e.map(f)
-        case e: FunctionCall[I, _]    => e.map(f)
-        case e: IntervalLiteral[I, _] => e.map(f)
+        case e: LiteralExpr[I, _]         => e.map(f)
+        case e: ColumnExpr[I, _]          => e.map(f)
+        case e: SubQueryExpr[I, _]        => e.map(f)
+        case e: ExistsExpr[I, _]          => e.map(f)
+        case e: SimpleCase[I, _]          => e.map(f)
+        case e: SearchedCase[I, _]        => e.map(f)
+        case e: Cast[I, _]                => e.map(f)
+        case e: DereferenceExpr[I, _]     => e.map(f)
+        case e: FunctionCall[I, _]        => e.map(f)
+        case e: IntervalLiteral[I, _]     => e.map(f)
+        case e: SpecialDateTimeFunc[I, _] => e.map(f)
       }
     }
   // scalastyle:on cyclomatic.complexity
@@ -1029,6 +1030,25 @@ object Cast {
         fa.copy(exp = fa.exp.map(f))
     }
 }
+
+final case class SpecialDateTimeFunc[I, R](info: I, name: CurrentTime, precision: Option[Int])
+    extends PrimaryExpression[I, R]
+object SpecialDateTimeFunc {
+  implicit def eqSpecialDateTimeFunc[I: Eq, R: Eq]: Eq[SpecialDateTimeFunc[I, R]] =
+    Eq.fromUniversalEquals
+  implicit def specialDateTimeFuncInstances[I]: Functor[SpecialDateTimeFunc[I, ?]] =
+    new Functor[SpecialDateTimeFunc[I, ?]] {
+      def map[A, B](fa: SpecialDateTimeFunc[I, A])(f: A => B): SpecialDateTimeFunc[I, B] =
+        fa.asInstanceOf[SpecialDateTimeFunc[I, B]]
+    }
+}
+
+sealed trait CurrentTime
+final case object CURRENT_DATE      extends CurrentTime
+final case object CURRENT_TIME      extends CurrentTime
+final case object CURRENT_TIMESTAMP extends CurrentTime
+final case object LOCALTIME         extends CurrentTime
+final case object LOCALTIMESTAMP    extends CurrentTime
 
 sealed trait ArithmeticOperator
 final case object ADD      extends ArithmeticOperator
