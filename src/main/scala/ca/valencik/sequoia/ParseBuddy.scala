@@ -85,7 +85,7 @@ object ParseBuddy {
   }
 }
 
-object ParseBuddyApp extends App {
+object ParseBuddyApp {
   import ca.valencik.sequoia.ParseBuddy._
 
   private val exitCommands                  = Seq("exit", ":q", "q")
@@ -101,7 +101,7 @@ object ParseBuddyApp extends App {
     }
   }
 
-  inputLoop()
+  def main(args: Array[String]): Unit = inputLoop()
 }
 
 /**
