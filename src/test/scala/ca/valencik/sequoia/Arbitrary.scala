@@ -8,8 +8,10 @@ import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
 
 object arbitrary {
   implicit def arbNonEmptyList[A](implicit A: Arbitrary[A]): Arbitrary[NonEmptyList[A]] =
-    Arbitrary(implicitly[Arbitrary[List[A]]].arbitrary.flatMap(fa =>
-      A.arbitrary.map(a => NonEmptyList(a, fa))))
+    Arbitrary(
+      implicitly[Arbitrary[List[A]]].arbitrary
+        .flatMap(fa => A.arbitrary.map(a => NonEmptyList(a, fa)))
+    )
 
   implicit def arbTableRef[I: Arbitrary, R: Arbitrary]: Arbitrary[TableRef[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; r <- getArbitrary[R] } yield TableRef(i, r))
@@ -72,7 +74,8 @@ object arbitrary {
 
   implicit def arbQueryTerm[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryTerm[I, R]] =
     Arbitrary(
-      Gen.frequency((4, getArbitrary[QueryPrimary[I, R]]), (1, getArbitrary[SetOperation[I, R]])))
+      Gen.frequency((4, getArbitrary[QueryPrimary[I, R]]), (1, getArbitrary[SetOperation[I, R]]))
+    )
 
   implicit def arbSetOperation[I: Arbitrary, R: Arbitrary]: Arbitrary[SetOperation[I, R]] =
     Arbitrary(for {
@@ -91,13 +94,16 @@ object arbitrary {
 
   implicit def arbQueryPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryPrimary[I, R]] =
     Arbitrary(
-      Gen.frequency((8, getArbitrary[QuerySpecification[I, R]]),
-                    (2, getArbitrary[QueryPrimaryTable[I, R]]),
-                    (1, getArbitrary[InlineTable[I, R]]),
-                    (1, getArbitrary[SubQuery[I, R]])))
+      Gen.frequency(
+        (8, getArbitrary[QuerySpecification[I, R]]),
+        (2, getArbitrary[QueryPrimaryTable[I, R]]),
+        (1, getArbitrary[InlineTable[I, R]]),
+        (1, getArbitrary[SubQuery[I, R]])
+      )
+    )
 
   implicit def arbQueryPrimaryTable[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[QueryPrimaryTable[I, R]] =
+      : Arbitrary[QueryPrimaryTable[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       t <- getArbitrary[TableRef[I, R]]
@@ -116,7 +122,7 @@ object arbitrary {
     } yield SubQuery(i, q))
 
   implicit def arbQuerySpecification[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[QuerySpecification[I, R]] =
+      : Arbitrary[QuerySpecification[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
@@ -136,13 +142,16 @@ object arbitrary {
 
   implicit def arbGroupingElement[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupingElement[I, R]] =
     Arbitrary(
-      Gen.frequency((5, getArbitrary[SingleGroupingSet[I, R]]),
-                    (2, getArbitrary[Rollup[I, R]]),
-                    (2, getArbitrary[Cube[I, R]]),
-                    (1, getArbitrary[MultipleGroupingSets[I, R]])))
+      Gen.frequency(
+        (5, getArbitrary[SingleGroupingSet[I, R]]),
+        (2, getArbitrary[Rollup[I, R]]),
+        (2, getArbitrary[Cube[I, R]]),
+        (1, getArbitrary[MultipleGroupingSets[I, R]])
+      )
+    )
 
   implicit def arbSingleGroupingSet[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[SingleGroupingSet[I, R]] =
+      : Arbitrary[SingleGroupingSet[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       g <- getArbitrary[GroupingSet[I, R]]
@@ -161,7 +170,7 @@ object arbitrary {
     } yield Cube(i, e))
 
   implicit def arbMultipleGroupingSets[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[MultipleGroupingSets[I, R]] =
+      : Arbitrary[MultipleGroupingSets[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       g <- Gen.resize(2, getArbitrary[NonEmptyList[GroupingSet[I, R]]])
@@ -183,7 +192,8 @@ object arbitrary {
 
   implicit def arbSelectItem[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectItem[I, R]] =
     Arbitrary(
-      Gen.frequency((1, getArbitrary[SelectAll[I, R]]), (2, getArbitrary[SelectSingle[I, R]])))
+      Gen.frequency((1, getArbitrary[SelectAll[I, R]]), (2, getArbitrary[SelectSingle[I, R]]))
+    )
 
   implicit def arbSelectAll[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectAll[I, R]] =
     Arbitrary(for {
@@ -200,8 +210,8 @@ object arbitrary {
 
   implicit def arbRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[Relation[I, R]] =
     Arbitrary(
-      Gen.frequency((1, getArbitrary[JoinRelation[I, R]]),
-                    (9, getArbitrary[SampledRelation[I, R]])))
+      Gen.frequency((1, getArbitrary[JoinRelation[I, R]]), (9, getArbitrary[SampledRelation[I, R]]))
+    )
 
   implicit def arbJoinRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinRelation[I, R]] =
     Arbitrary(for {
@@ -214,11 +224,14 @@ object arbitrary {
 
   implicit def arbJoinType: Arbitrary[JoinType] =
     Arbitrary(
-      Gen.oneOf(Gen.const(InnerJoin),
-                Gen.const(LeftJoin),
-                Gen.const(RightJoin),
-                Gen.const(FullJoin),
-                Gen.const(CrossJoin)))
+      Gen.oneOf(
+        Gen.const(InnerJoin),
+        Gen.const(LeftJoin),
+        Gen.const(RightJoin),
+        Gen.const(FullJoin),
+        Gen.const(CrossJoin)
+      )
+    )
 
   implicit def arbJoinCriteria[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinCriteria[I, R]] =
     Arbitrary(Gen.frequency((8, getArbitrary[JoinOn[I, R]]), (2, getArbitrary[JoinUsing[I, R]])))
@@ -264,9 +277,12 @@ object arbitrary {
 
   implicit def arbRelationPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[RelationPrimary[I, R]] =
     Arbitrary(
-      Gen.frequency((5, getArbitrary[TableName[I, R]]),
-                    (1, getArbitrary[Unnest[I, R]]),
-                    (1, getArbitrary[SubQueryRelation[I, R]])))
+      Gen.frequency(
+        (5, getArbitrary[TableName[I, R]]),
+        (1, getArbitrary[Unnest[I, R]]),
+        (1, getArbitrary[SubQueryRelation[I, R]])
+      )
+    )
 
   implicit def arbTableName[I: Arbitrary, R: Arbitrary]: Arbitrary[TableName[I, R]] =
     Arbitrary(for {
@@ -294,7 +310,7 @@ object arbitrary {
     } yield LateralRelation(i, q))
 
   implicit def arbParenthesizedRelation[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[ParenthesizedRelation[I, R]] =
+      : Arbitrary[ParenthesizedRelation[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       r <- getArbitrary[Relation[I, R]]
@@ -306,7 +322,8 @@ object arbitrary {
         (1, getArbitrary[LogicalBinary[I, R]]),
         (25, getArbitrary[Predicate[I, R]]),
         (25, getArbitrary[ValueExpression[I, R]])
-      ))
+      )
+    )
 
   implicit def arbLogicalBinary[I: Arbitrary, R: Arbitrary]: Arbitrary[LogicalBinary[I, R]] =
     Arbitrary(for {
@@ -328,11 +345,13 @@ object arbitrary {
         (3, getArbitrary[Like[I, R]]),
         (25, getArbitrary[NullPredicate[I, R]]),
         (5, getArbitrary[DistinctFrom[I, R]])
-      ))
+      )
+    )
 
   implicit def arbNotPredicate[I: Arbitrary, R: Arbitrary]: Arbitrary[NotPredicate[I, R]] =
     Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NotPredicate(i, v))
+      for { i <- getArbitrary[I]; v <- getArbitrary[Expression[I, R]] } yield NotPredicate(i, v)
+    )
 
   implicit def arbComparisonExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ComparisonExpr[I, R]] =
     Arbitrary(for {
@@ -403,7 +422,8 @@ object arbitrary {
         (5, getArbitrary[PrimaryExpression[I, R]]),
         (5, getArbitrary[ArithmeticUnary[I, R]]),
         (1, getArbitrary[ArithmeticBinary[I, R]])
-      ))
+      )
+    )
 
   implicit def arbArithmeticUnary[I: Arbitrary, R: Arbitrary]: Arbitrary[ArithmeticUnary[I, R]] =
     Arbitrary(for {
@@ -422,14 +442,17 @@ object arbitrary {
 
   implicit def arbArithmeticOperator: Arbitrary[ArithmeticOperator] =
     Arbitrary(
-      Gen.oneOf(Gen.const(ADD),
-                Gen.const(SUBTRACT),
-                Gen.const(MULTIPLY),
-                Gen.const(DIVIDE),
-                Gen.const(MODULUS)))
+      Gen.oneOf(
+        Gen.const(ADD),
+        Gen.const(SUBTRACT),
+        Gen.const(MULTIPLY),
+        Gen.const(DIVIDE),
+        Gen.const(MODULUS)
+      )
+    )
 
   implicit def arbPrimaryExpression[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[PrimaryExpression[I, R]] =
+      : Arbitrary[PrimaryExpression[I, R]] =
     Arbitrary(
       Gen.frequency(
         (50, getArbitrary[LiteralExpr[I, R]]),
@@ -446,11 +469,13 @@ object arbitrary {
         (2, getArbitrary[IntervalLiteral[I, R]]),
         (2, getArbitrary[Extract[I, R]]),
         (20, getArbitrary[SpecialDateTimeFunc[I, R]])
-      ))
+      )
+    )
 
   implicit def arbColumnExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[ColumnExpr[I, R]] =
     Arbitrary(
-      for { i <- getArbitrary[I]; v <- getArbitrary[ColumnRef[I, R]] } yield ColumnExpr(i, v))
+      for { i <- getArbitrary[I]; v <- getArbitrary[ColumnRef[I, R]] } yield ColumnExpr(i, v)
+    )
 
   implicit def arbSubQueryExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQueryExpr[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; v <- getArbitrary[Query[I, R]] } yield SubQueryExpr(i, v))
@@ -493,12 +518,15 @@ object arbitrary {
 
   implicit def arbComparison: Arbitrary[Comparison] =
     Arbitrary(
-      Gen.oneOf(Gen.const(EQ),
-                Gen.const(NEQ),
-                Gen.const(LT),
-                Gen.const(LTE),
-                Gen.const(GT),
-                Gen.const(GTE)))
+      Gen.oneOf(
+        Gen.const(EQ),
+        Gen.const(NEQ),
+        Gen.const(LT),
+        Gen.const(LTE),
+        Gen.const(GT),
+        Gen.const(GTE)
+      )
+    )
 
   implicit def arbSubscript[I: Arbitrary, R: Arbitrary]: Arbitrary[Subscript[I, R]] =
     Arbitrary(for {
@@ -518,22 +546,31 @@ object arbitrary {
     def nullLiteral =
       for { i <- getArbitrary[I] } yield NullLiteral(i).asInstanceOf[LiteralExpr[I, R]]
     def intLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Long] } yield
-        IntLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+      for { i <- getArbitrary[I]; v <- getArbitrary[Long] } yield IntLiteral(i, v)
+        .asInstanceOf[LiteralExpr[I, R]]
     def decimalLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield
-        DecimalLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DecimalLiteral(i, v)
+        .asInstanceOf[LiteralExpr[I, R]]
     def doubleLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield
-        DoubleLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+      for { i <- getArbitrary[I]; v <- getArbitrary[Double] } yield DoubleLiteral(i, v)
+        .asInstanceOf[LiteralExpr[I, R]]
     def stringLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield
-        StringLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
+      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringLiteral(i, v)
+        .asInstanceOf[LiteralExpr[I, R]]
     def booleanLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield
-        BooleanLiteral(i, v).asInstanceOf[LiteralExpr[I, R]]
-    Arbitrary(Gen
-      .oneOf(nullLiteral, intLiteral, decimalLiteral, doubleLiteral, stringLiteral, booleanLiteral))
+      for { i <- getArbitrary[I]; v <- getArbitrary[Boolean] } yield BooleanLiteral(i, v)
+        .asInstanceOf[LiteralExpr[I, R]]
+    Arbitrary(
+      Gen
+        .oneOf(
+          nullLiteral,
+          intLiteral,
+          decimalLiteral,
+          doubleLiteral,
+          stringLiteral,
+          booleanLiteral
+        )
+    )
   }
 
   implicit def arbRow[I: Arbitrary, R: Arbitrary]: Arbitrary[Row[I, R]] =
@@ -577,9 +614,12 @@ object arbitrary {
 
   implicit def arbFrameBound[I: Arbitrary, R: Arbitrary]: Arbitrary[FrameBound[I, R]] =
     Arbitrary(
-      Gen.frequency((5, getArbitrary[UnboundedFrame[I, R]]),
-                    (2, getArbitrary[CurrentRowBound[I, R]]),
-                    (1, getArbitrary[BoundedFrame[I, R]])))
+      Gen.frequency(
+        (5, getArbitrary[UnboundedFrame[I, R]]),
+        (2, getArbitrary[CurrentRowBound[I, R]]),
+        (1, getArbitrary[BoundedFrame[I, R]])
+      )
+    )
 
   implicit def arbUnboundedFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[UnboundedFrame[I, R]] =
     Arbitrary(for {
@@ -607,8 +647,8 @@ object arbitrary {
 
   implicit def arbIntervalLiteral[I: Arbitrary, R: Arbitrary]: Arbitrary[IntervalLiteral[I, R]] = {
     def stringLiteral =
-      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield
-        StringLiteral(i, v).asInstanceOf[StringLiteral[I, R]]
+      for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringLiteral(i, v)
+        .asInstanceOf[StringLiteral[I, R]]
     Arbitrary(for {
       i <- getArbitrary[I]
       s <- getArbitrary[Sign]
@@ -623,12 +663,15 @@ object arbitrary {
 
   implicit def arbIntervalField: Arbitrary[IntervalField] =
     Arbitrary(
-      Gen.oneOf(Gen.const(YEAR),
-                Gen.const(MONTH),
-                Gen.const(DAY),
-                Gen.const(HOUR),
-                Gen.const(MINUTE),
-                Gen.const(SECOND)))
+      Gen.oneOf(
+        Gen.const(YEAR),
+        Gen.const(MONTH),
+        Gen.const(DAY),
+        Gen.const(HOUR),
+        Gen.const(MINUTE),
+        Gen.const(SECOND)
+      )
+    )
 
   implicit def arbExtract[I: Arbitrary, R: Arbitrary]: Arbitrary[Extract[I, R]] =
     Arbitrary(for {
@@ -638,7 +681,7 @@ object arbitrary {
     } yield Extract(i, f, e))
 
   implicit def arbSpecialDateTimeFunc[I: Arbitrary, R: Arbitrary]
-    : Arbitrary[SpecialDateTimeFunc[I, R]] = {
+      : Arbitrary[SpecialDateTimeFunc[I, R]] = {
     Arbitrary(for {
       i <- getArbitrary[I]
       n <- getArbitrary[CurrentTime]
@@ -648,10 +691,13 @@ object arbitrary {
 
   implicit def arbCurrentTime: Arbitrary[CurrentTime] =
     Arbitrary(
-      Gen.oneOf(Gen.const(CURRENT_DATE),
-                Gen.const(CURRENT_TIME),
-                Gen.const(CURRENT_TIMESTAMP),
-                Gen.const(LOCALTIME),
-                Gen.const(LOCALTIMESTAMP)))
+      Gen.oneOf(
+        Gen.const(CURRENT_DATE),
+        Gen.const(CURRENT_TIME),
+        Gen.const(CURRENT_TIMESTAMP),
+        Gen.const(LOCALTIME),
+        Gen.const(LOCALTIMESTAMP)
+      )
+    )
 
 }

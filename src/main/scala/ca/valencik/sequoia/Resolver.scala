@@ -1,10 +1,10 @@
 package ca.valencik.sequoia
 
 case class Resolver private (
-    c: Map[String, Set[String]], // immutable global database catalog
+    c: Map[String, Set[String]],    // immutable global database catalog
     ctes: Map[String, Set[String]], // ctes in scope
-    r: Set[String], // relations in scope
-    s: Set[String] // projection in current scope's SELECT clause
+    r: Set[String],                 // relations in scope
+    s: Set[String]                  // projection in current scope's SELECT clause
 ) {
   def relationIsInCatalog(rt: RawName): Boolean = c.contains(rt.value)
   def addRelationToScope(rt: RawName): Resolver = this.copy(r = r + rt.value)
