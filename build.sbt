@@ -2,7 +2,7 @@ lazy val ScalaTestVersion  = "3.0.5"
 lazy val AntlrVersion      = "4.7.1"
 lazy val CatsVersion       = "1.5.0"
 lazy val ScalaCheckVersion = "1.13.5"
-lazy val PPrintVersion     = "0.5.3"
+lazy val PPrintVersion     = "0.5.5"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
