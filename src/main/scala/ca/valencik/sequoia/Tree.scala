@@ -5,21 +5,6 @@ import cats.{Applicative, Eq, Eval, Functor, Traverse}
 import cats.data.NonEmptyList
 import cats.implicits._
 
-sealed trait RawName {
-  def value: String
-}
-final case class RawTableName(value: String)  extends RawName
-final case class RawColumnName(value: String) extends RawName
-
-sealed trait ResolvedName {
-  def value: String
-}
-final case class ResolvedTableName(value: String)    extends ResolvedName
-final case class ResolvedTableAlias(value: String)   extends ResolvedName
-final case class ResolvedColumnName(value: String)   extends ResolvedName
-final case class UnresolvedTableName(value: String)  extends ResolvedName
-final case class UnresolvedColumnName(value: String) extends ResolvedName
-
 final case class TableRef[I, R](info: I, value: R)
 object TableRef {
   implicit def eqTableRef[I: Eq, R: Eq]: Eq[TableRef[I, R]] = Eq.fromUniversalEquals
