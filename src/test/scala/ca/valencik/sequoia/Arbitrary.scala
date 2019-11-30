@@ -126,7 +126,7 @@ object arbitrary {
       i <- getArbitrary[I]
       q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
       s <- Gen.resize(5, getArbitrary[NonEmptyList[SelectItem[I, R]]])
-      f <- Gen.option(getArbitrary[NonEmptyList[Relation[I, R]]])
+      f <- Gen.option(Gen.resize(2, getArbitrary[NonEmptyList[Relation[I, R]]]))
       w <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
       g <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[GroupBy[I, R]])))
       h <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
