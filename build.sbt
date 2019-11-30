@@ -1,8 +1,9 @@
-lazy val ScalaTestVersion  = "3.0.5"
-lazy val AntlrVersion      = "4.7.1"
-lazy val CatsVersion       = "1.5.0"
-lazy val ScalaCheckVersion = "1.13.5"
-lazy val PPrintVersion     = "0.5.3"
+lazy val ScalaTestVersion  = "3.0.8"
+lazy val AntlrVersion      = "4.7.2"
+lazy val CatsVersion       = "2.0.0"
+lazy val ScalaCheckVersion = "1.14.2"
+lazy val PPrintVersion     = "0.5.5"
+lazy val DisciplineVersion = "1.0.0-RC1"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
@@ -58,7 +59,7 @@ lazy val root = (project in file("."))
     inThisBuild(
       List(
         organization := "ca.valencik",
-        scalaVersion := "2.12.8",
+        scalaVersion := "2.12.10",
         version := "0.1.0-SNAPSHOT",
       )),
     name := "Sequoia",
@@ -66,14 +67,15 @@ lazy val root = (project in file("."))
       "org.antlr"      % "antlr4-runtime" % AntlrVersion,
       "org.typelevel"  %% "cats-core"     % CatsVersion,
       "com.lihaoyi"    %% "pprint"        % PPrintVersion,
-      "org.typelevel"  %% "cats-testkit"  % CatsVersion % Test,
+      "org.typelevel"  %% "cats-laws"     % CatsVersion % Test,
+      "org.typelevel"  %% "discipline-scalatest"     % DisciplineVersion % Test,
       "org.scalatest"  %% "scalatest"     % ScalaTestVersion % Test,
       "org.scalacheck" %% "scalacheck"    % ScalaCheckVersion % Test
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia"),
-    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full),
     scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
     scalacOptions in (Test) --= Seq("-Ywarn-unused:imports")
   )

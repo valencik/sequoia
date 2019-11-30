@@ -22,12 +22,14 @@ object ParseBuddy {
   case class AntlrParseException(msg: String) extends Exception(msg)
 
   case object ParseErrorListener extends BaseErrorListener {
-    override def syntaxError(recognizer: Recognizer[_, _],
-                             offendingSymbol: scala.Any,
-                             line: Int,
-                             charPositionInLine: Int,
-                             msg: String,
-                             e: RecognitionException): Unit = {
+    override def syntaxError(
+        recognizer: Recognizer[_, _],
+        offendingSymbol: scala.Any,
+        line: Int,
+        charPositionInLine: Int,
+        msg: String,
+        e: RecognitionException
+    ): Unit = {
       throw new AntlrParseException(msg)
     }
   }
@@ -83,7 +85,7 @@ object ParseBuddy {
   }
 }
 
-object ParseBuddyApp extends App {
+object ParseBuddyApp {
   import ca.valencik.sequoia.ParseBuddy._
 
   private val exitCommands                  = Seq("exit", ":q", "q")
@@ -99,7 +101,7 @@ object ParseBuddyApp extends App {
     }
   }
 
-  inputLoop()
+  def main(args: Array[String]): Unit = inputLoop()
 }
 
 /**
