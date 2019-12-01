@@ -54,7 +54,7 @@ object MonadSqlState extends App {
   ): RState[Either[ResolutionError, TableRef[I, ResolvedName]]] = ReaderWriterState { (c, s) =>
     if (s.relationIsAlias(tr.value))
       (
-        Chain(s"Table ${tr.value.value} is an alias in scope"),
+        Chain(s"Table '${tr.value.value}' is an alias in scope"),
         s.addAliasToScope(tr.value),
         Right(TableRef(tr.info, ResolvedTableAlias(tr.value.value)))
       )
@@ -62,12 +62,12 @@ object MonadSqlState extends App {
       c.maybeGetRelation(tr.value) match {
         case Some((tn, cols)) =>
           (
-            Chain(s"Table ${tn} was in catalog"),
+            Chain(s"Table '${tn}' was in catalog"),
             s.addRelationToScope(tn, cols),
             Right(TableRef(tr.info, ResolvedTableName(tn)))
           )
         case None =>
-          (Chain(s"Unresolved table ${tr.value.value}"), s, Left(ResolutionError(tr.value)))
+          (Chain(s"Unresolved table '${tr.value.value}'"), s, Left(ResolutionError(tr.value)))
       }
   }
 
@@ -76,12 +76,12 @@ object MonadSqlState extends App {
   ): RState[Either[ResolutionError, ColumnRef[I, ResolvedName]]] = ReaderWriterState { (c, s) =>
     if (s.columnIsInScope(col.value))
       (
-        Chain(s"Resolved Column ${col.value.value}"),
+        Chain(s"Resolved Column '${col.value.value}'"),
         s.addColumnToProjection(col.value.value),
         Right(ColumnRef(col.info, ResolvedColumnName(col.value.value)))
       )
     else
-      (Chain(s"""Column ${col.value.value} was not resolvable with relations: ${s.r
+      (Chain(s"""Column '${col.value.value}' was not resolvable with relations: ${s.r
         .mkString(",")} in catalog ${c}"""), s, Left(ResolutionError(col.value)))
   }
 
