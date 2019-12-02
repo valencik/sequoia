@@ -31,4 +31,24 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     finalState shouldBe emptyState
     rq.isRight shouldBe false
   }
+
+  it should "not resolve simple queries with columns not in relation" in {
+    val parsedQuery = ParseBuddy.parse("select b from db")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    log.isEmpty shouldBe false
+    finalState shouldBe emptyState.addRelationToScope("db", List("a"))
+    rq.isRight shouldBe false
+  }
+
+  it should "not resolve simple queries with some columns not in relation" in {
+    val parsedQuery = ParseBuddy.parse("select a, b from db")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    log.isEmpty shouldBe false
+    finalState shouldBe emptyState.addRelationToScope("db", List("a")).addColumnToProjection("a")
+    rq.isRight shouldBe false
+  }
 }
