@@ -43,46 +43,56 @@ object Resolver {
 }
 
 object MonadSqlState extends App {
-  type Log       = Chain[String]
-  type RState[A] = ReaderWriterState[Catalog, Log, Resolver, A]
-  type RSER[X]   = EitherT[RState, ResolutionError, X]
+  type Log          = Chain[String]
+  type RState[A]    = ReaderWriterState[Catalog, Log, Resolver, A]
+  type EitherRes[X] = EitherT[RState, ResolutionError, X]
 
   case class ResolutionError(value: RawName)
 
+  def logUnresolvedColumn[I](
+      column: ColumnRef[I, RawName],
+      state: Resolver,
+      catalog: Catalog
+  ): String = {
+    val col = column.value.value
+    val rs  = state.r.mkString(",")
+    val c   = catalog.c.toString
+    s"Column '${col}' was not resolvable with relations: '${rs}' in catalog '${c}'"
+  }
+
   def resolveTableRef[I](
       tr: TableRef[I, RawName]
-  ): RState[Either[ResolutionError, TableRef[I, ResolvedName]]] = ReaderWriterState { (c, s) =>
-    if (s.relationIsAlias(tr.value))
+  ): RState[Either[ResolutionError, TableRef[I, ResolvedName]]] = ReaderWriterState { (cat, res) =>
+    if (res.relationIsAlias(tr.value))
       (
         Chain(s"Table '${tr.value.value}' is an alias in scope"),
-        s.addAliasToScope(tr.value),
+        res.addAliasToScope(tr.value),
         Right(TableRef(tr.info, ResolvedTableAlias(tr.value.value)))
       )
     else
-      c.maybeGetRelation(tr.value) match {
+      cat.maybeGetRelation(tr.value) match {
         case Some((tn, cols)) =>
           (
             Chain(s"Table '${tn}' was in catalog"),
-            s.addRelationToScope(tn, cols),
+            res.addRelationToScope(tn, cols),
             Right(TableRef(tr.info, ResolvedTableName(tn)))
           )
         case None =>
-          (Chain(s"Unresolved table '${tr.value.value}'"), s, Left(ResolutionError(tr.value)))
+          (Chain(s"Unresolved table '${tr.value.value}'"), res, Left(ResolutionError(tr.value)))
       }
   }
 
   def resolveColumnRef[I](
       col: ColumnRef[I, RawName]
-  ): RState[Either[ResolutionError, ColumnRef[I, ResolvedName]]] = ReaderWriterState { (c, s) =>
-    if (s.columnIsInScope(col.value))
+  ): RState[Either[ResolutionError, ColumnRef[I, ResolvedName]]] = ReaderWriterState { (cat, res) =>
+    if (res.columnIsInScope(col.value))
       (
         Chain(s"Resolved Column '${col.value.value}'"),
-        s.addColumnToProjection(col.value.value),
+        res.addColumnToProjection(col.value.value),
         Right(ColumnRef(col.info, ResolvedColumnName(col.value.value)))
       )
     else
-      (Chain(s"""Column '${col.value.value}' was not resolvable with relations: ${s.r
-        .mkString(",")} in catalog ${c}"""), s, Left(ResolutionError(col.value)))
+      (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
   }
 
 }
