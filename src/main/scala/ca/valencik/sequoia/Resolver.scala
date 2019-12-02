@@ -1,6 +1,7 @@
 package ca.valencik.sequoia
 
 import cats.data.{Chain, EitherT, ReaderWriterState}
+import cats.implicits._
 
 sealed trait RawName {
   def value: String
@@ -95,4 +96,117 @@ object MonadSqlState extends App {
       (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
   }
 
+  def resolveQuery[I](
+      q: Query[I, RawName]
+  ): EitherRes[Query[I, ResolvedName]] =
+    for {
+      qnw <- resolveQueryNoWith(q.qnw)
+      // TODO: With
+    } yield Query(q.info, None, qnw)
+
+  def resolveQueryNoWith[I](
+      qnw: QueryNoWith[I, RawName]
+  ): EitherRes[QueryNoWith[I, ResolvedName]] =
+    for {
+      qt <- resolveQueryTerm(qnw.qt)
+      // TODO: OrderBy
+    } yield QueryNoWith(qnw.info, qt, None, None)
+
+  def resolveQueryTerm[I](
+      qt: QueryTerm[I, RawName]
+  ): EitherRes[QueryTerm[I, ResolvedName]] = qt match {
+    case qp: QueryPrimary[I, RawName] => resolveQueryPrimary(qp).widen
+    case _                            => ???
+  }
+
+  def resolveQueryPrimary[I](
+      qp: QueryPrimary[I, RawName]
+  ): EitherRes[QueryPrimary[I, ResolvedName]] = qp match {
+    case qs: QuerySpecification[I, RawName] => resolveQuerySpecification(qs).widen
+    case _                                  => ???
+  }
+
+  def resolveQuerySpecification[I](
+      qs: QuerySpecification[I, RawName]
+  ): EitherRes[QuerySpecification[I, ResolvedName]] =
+    for {
+      sis <- qs.sis.traverse(resolveSelectItem)
+      // TODO: QuerySpec
+    } yield QuerySpecification(qs.info, None, sis, None, None, None, None)
+
+  def resolveSelectItem[I](
+      rel: SelectItem[I, RawName]
+  ): EitherRes[SelectItem[I, ResolvedName]] = rel match {
+    case ss: SelectSingle[I, RawName] => resolveSelectSingle(ss).widen
+    case _                            => ???
+  }
+
+  def resolveSelectSingle[I](
+      ss: SelectSingle[I, RawName]
+  ): EitherRes[SelectSingle[I, ResolvedName]] =
+    for {
+      e <- resolveExpression(ss.expr)
+      // TODO: ColumnAlias
+    } yield SelectSingle(ss.info, e, None)
+
+  def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
+    expr match {
+      case ve: ValueExpression[I, RawName] => resolveValueExpression(ve).widen
+      case _                               => ???
+    }
+
+  def resolveValueExpression[I](
+      expr: ValueExpression[I, RawName]
+  ): EitherRes[ValueExpression[I, ResolvedName]] =
+    expr match {
+      case pe: PrimaryExpression[I, RawName] => resolvePrimaryExpression(pe).widen
+      case _                                 => ???
+    }
+
+  def resolvePrimaryExpression[I](
+      expr: PrimaryExpression[I, RawName]
+  ): EitherRes[PrimaryExpression[I, ResolvedName]] =
+    expr match {
+      case ce: ColumnExpr[I, RawName] => resolveColumnExpr(ce).widen
+      case _                          => ???
+    }
+
+  def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
+    for {
+      cr <- EitherT(resolveColumnRef(ce.col))
+    } yield ColumnExpr(ce.info, cr)
+
+  def resolveRelation[I](rel: Relation[I, RawName]): EitherRes[Relation[I, ResolvedName]] =
+    rel match {
+      case sr: SampledRelation[I, RawName] => resolveSampledRelation(sr).widen
+      case _                               => ???
+    }
+
+  def resolveSampledRelation[I](
+      sr: SampledRelation[I, RawName]
+  ): EitherRes[SampledRelation[I, ResolvedName]] =
+    for {
+      ar <- resolveAliasedRelation(sr.ar)
+      // TODO: TableSample
+    } yield SampledRelation(sr.info, ar, None)
+
+  def resolveAliasedRelation[I](
+      ar: AliasedRelation[I, RawName]
+  ): EitherRes[AliasedRelation[I, ResolvedName]] =
+    for {
+      rp <- resolveRelationPrimary(ar.rp)
+      // TODO: TableAlias and ColumnAliases
+    } yield AliasedRelation(ar.info, rp, None, None)
+
+  def resolveRelationPrimary[I](
+      rel: RelationPrimary[I, RawName]
+  ): EitherRes[RelationPrimary[I, ResolvedName]] = rel match {
+    case tn: TableName[I, RawName] => resolveTableName(tn).widen
+    case _                         => ???
+  }
+
+  def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
+    for {
+      tr <- EitherT(resolveTableRef(tn.r))
+    } yield TableName(tn.info, tr)
 }
