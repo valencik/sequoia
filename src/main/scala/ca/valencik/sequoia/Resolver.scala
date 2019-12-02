@@ -130,9 +130,10 @@ object MonadSqlState extends App {
       qs: QuerySpecification[I, RawName]
   ): EitherRes[QuerySpecification[I, ResolvedName]] =
     for {
-      sis <- qs.sis.traverse(resolveSelectItem)
+      from <- qs.f.traverse(rs => rs.traverse(resolveRelation))
+      sis  <- qs.sis.traverse(resolveSelectItem)
       // TODO: QuerySpec
-    } yield QuerySpecification(qs.info, None, sis, None, None, None, None)
+    } yield QuerySpecification(qs.info, None, sis, from, None, None, None)
 
   def resolveSelectItem[I](
       rel: SelectItem[I, RawName]
