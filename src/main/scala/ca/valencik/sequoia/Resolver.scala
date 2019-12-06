@@ -100,9 +100,27 @@ object MonadSqlState extends App {
       q: Query[I, RawName]
   ): EitherRes[Query[I, ResolvedName]] =
     for {
+      w   <- q.w.traverse(resolveWith)
       qnw <- resolveQueryNoWith(q.qnw)
-      // TODO: With
-    } yield Query(q.info, None, qnw)
+    } yield Query(q.info, w, qnw)
+
+  def resolveWith[I](
+      w: With[I, RawName]
+  ): EitherRes[With[I, ResolvedName]] =
+    for {
+      nqs <- w.nqs.traverse(resolveNamedQuery)
+    } yield With(w.info, nqs)
+
+  def resolveNamedQuery[I](
+      nq: NamedQuery[I, RawName]
+  ): EitherRes[NamedQuery[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(nq.q)
+      _ <- EitherT.right(
+        // Update Resolver with CTE and reset so we have an empty scope for the next query
+        ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.n).resetRelationScope)
+      )
+    } yield NamedQuery(nq.info, nq.n, None, q)
 
   def resolveQueryNoWith[I](
       qnw: QueryNoWith[I, RawName]

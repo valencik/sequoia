@@ -51,4 +51,50 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     finalState shouldBe emptyState.addRelationToScope("db", List("a")).addColumnToProjection("a")
     rq.isRight shouldBe false
   }
+
+  it should "resolve queries with CTEs from catalog" in {
+    val parsedQuery = ParseBuddy.parse("with justA as (select a from db) select a from justA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .addCTE("justA")
+      .resetRelationScope
+      .addRelationToScope("justA", List("a"))
+      .addColumnToProjection("a")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "not resolve queries with CTEs not in catalog" in {
+    val parsedQuery = ParseBuddy.parse("with justA as (select a, b from db) select a from justA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe false
+  }
+
+  it should "not resolve queries with CTEs from catalog but with outer query out of scope" in {
+    val parsedQuery = ParseBuddy.parse("with justA as (select a from db) select b from justA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .addCTE("justA")
+      .resetRelationScope
+      .addRelationToScope("justA", List("a"))
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe false
+  }
 }
