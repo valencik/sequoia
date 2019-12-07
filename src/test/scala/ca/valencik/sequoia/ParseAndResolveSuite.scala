@@ -97,4 +97,41 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     finalState shouldBe expected
     rq.isRight shouldBe false
   }
+
+  it should "resolve queries with CTEs from catalog and column aliases" in {
+    val parsedQuery =
+      ParseBuddy.parse("with justA as (select a apple from db) select apple from justA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .aliasPreviousColumnInScope("apple")
+      .addCTE("justA")
+      .resetRelationScope
+      .addRelationToScope("justA", List("apple"))
+      .addColumnToProjection("apple")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "not resolve queries with CTEs where the outer query does not use the proper column alias" in {
+    val parsedQuery =
+      ParseBuddy.parse("with justA as (select a apple from db) select a from justA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .aliasPreviousColumnInScope("apple")
+      .addCTE("justA")
+      .resetRelationScope
+      .addRelationToScope("justA", List("apple"))
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe false
+  }
 }

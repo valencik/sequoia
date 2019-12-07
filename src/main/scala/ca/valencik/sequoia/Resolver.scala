@@ -32,7 +32,8 @@ case class Resolver private (
   def relationIsAlias(rt: RawName): Boolean  = t.contains(rt.value)
   def addAliasToScope(rt: RawName): Resolver = this.copy(r = rt.value :: r)
 
-  def addColumnToProjection(rc: String): Resolver = this.copy(s = rc :: s)
+  def addColumnToProjection(rc: String): Resolver         = this.copy(s = rc :: s)
+  def aliasPreviousColumnInScope(alias: String): Resolver = this.copy(s = alias :: s.tail)
   def columnIsInScope(rc: RawName): Boolean =
     r.exists(rr => t.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
 
@@ -165,8 +166,18 @@ object MonadSqlState extends App {
   ): EitherRes[SelectSingle[I, ResolvedName]] =
     for {
       e <- resolveExpression(ss.expr)
-      // TODO: ColumnAlias
-    } yield SelectSingle(ss.info, e, None)
+      _ <- EitherT.right(ss.alias.traverse(resolveColumnAlias))
+    } yield SelectSingle(ss.info, e, ss.alias)
+
+  def resolveColumnAlias[I](
+      colAlias: ColumnAlias[I]
+  ): RState[Either[ResolutionError, ColumnAlias[I]]] = ReaderWriterState { (_, res) =>
+    (
+      Chain(s"Added alias '${colAlias.value}' for column '${res.s.head}'"),
+      res.aliasPreviousColumnInScope(colAlias.value),
+      Right(ColumnAlias(colAlias.info, colAlias.value))
+    )
+  }
 
   def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
     expr match {
