@@ -32,7 +32,11 @@ case class Resolver private (
   def relationIsAlias(rt: RawName): Boolean  = t.contains(rt.value)
   def addAliasToScope(rt: RawName): Resolver = this.copy(r = rt.value :: r)
 
-  def addColumnToProjection(rc: String): Resolver         = this.copy(s = rc :: s)
+  def addColumnToProjection(rc: String): Resolver = this.copy(s = rc :: s)
+  // TODO this unsafe get feels wrong
+  def addAllColumnsFromRelationToProjection(rel: String): Resolver =
+    this.copy(s = t.get(rel).get ::: s)
+  def addAllColumnsToProjection: Resolver                 = this.copy(s = t.values.flatten.toList ::: s)
   def aliasPreviousColumnInScope(alias: String): Resolver = this.copy(s = alias :: s.tail)
   def columnIsInScope(rc: RawName): Boolean =
     r.exists(rr => t.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
@@ -64,38 +68,40 @@ object MonadSqlState extends App {
 
   def resolveTableRef[I](
       tr: TableRef[I, RawName]
-  ): RState[Either[ResolutionError, TableRef[I, ResolvedName]]] = ReaderWriterState { (cat, res) =>
-    if (res.relationIsAlias(tr.value))
-      (
-        Chain(s"Table '${tr.value.value}' is an alias in scope"),
-        res.addAliasToScope(tr.value),
-        Right(TableRef(tr.info, ResolvedTableAlias(tr.value.value)))
-      )
-    else
-      cat.maybeGetRelation(tr.value) match {
-        case Some((tn, cols)) =>
-          (
-            Chain(s"Table '${tn}' was in catalog"),
-            res.addRelationToScope(tn, cols),
-            Right(TableRef(tr.info, ResolvedTableName(tn)))
-          )
-        case None =>
-          (Chain(s"Unresolved table '${tr.value.value}'"), res, Left(ResolutionError(tr.value)))
-      }
-  }
+  ): EitherRes[TableRef[I, ResolvedName]] =
+    EitherT(ReaderWriterState { (cat, res) =>
+      if (res.relationIsAlias(tr.value))
+        (
+          Chain(s"Table '${tr.value.value}' is an alias in scope"),
+          res.addAliasToScope(tr.value),
+          Right(TableRef(tr.info, ResolvedTableAlias(tr.value.value)))
+        )
+      else
+        cat.maybeGetRelation(tr.value) match {
+          case Some((tn, cols)) =>
+            (
+              Chain(s"Table '${tn}' was in catalog"),
+              res.addRelationToScope(tn, cols),
+              Right(TableRef(tr.info, ResolvedTableName(tn)))
+            )
+          case None =>
+            (Chain(s"Unresolved table '${tr.value.value}'"), res, Left(ResolutionError(tr.value)))
+        }
+    })
 
   def resolveColumnRef[I](
       col: ColumnRef[I, RawName]
-  ): RState[Either[ResolutionError, ColumnRef[I, ResolvedName]]] = ReaderWriterState { (cat, res) =>
-    if (res.columnIsInScope(col.value))
-      (
-        Chain(s"Resolved Column '${col.value.value}'"),
-        res.addColumnToProjection(col.value.value),
-        Right(ColumnRef(col.info, ResolvedColumnName(col.value.value)))
-      )
-    else
-      (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
-  }
+  ): EitherRes[ColumnRef[I, ResolvedName]] =
+    EitherT(ReaderWriterState { (cat, res) =>
+      if (res.columnIsInScope(col.value))
+        (
+          Chain(s"Resolved Column '${col.value.value}'"),
+          res.addColumnToProjection(col.value.value),
+          Right(ColumnRef(col.info, ResolvedColumnName(col.value.value)))
+        )
+      else
+        (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
+    })
 
   def resolveQuery[I](
       q: Query[I, RawName]
@@ -157,9 +163,30 @@ object MonadSqlState extends App {
   def resolveSelectItem[I](
       rel: SelectItem[I, RawName]
   ): EitherRes[SelectItem[I, ResolvedName]] = rel match {
+    case sa: SelectAll[I, RawName]    => resolveSelectAll(sa).widen
     case ss: SelectSingle[I, RawName] => resolveSelectSingle(ss).widen
-    case _                            => ???
   }
+
+  def resolveSelectAll[I](
+      sa: SelectAll[I, RawName]
+  ): EitherRes[SelectAll[I, ResolvedName]] =
+    for {
+      // TODO This is hilariously complex
+      old <- EitherT.right(ReaderWriterState.get[Catalog, Log, Resolver])
+      ref <- sa.ref.traverse(resolveTableRef)
+      _   <- EitherT.right(ReaderWriterState.set[Catalog, Log, Resolver](old))
+      _ <- EitherT.right(
+        // Update Resolver with CTE and reset so we have an empty scope for the next query
+        ReaderWriterState.modify[Catalog, Log, Resolver] {
+          case res => {
+            ref match {
+              case None     => res.addAllColumnsToProjection
+              case Some(tr) => res.addAllColumnsFromRelationToProjection(tr.value.value)
+            }
+          }
+        }
+      )
+    } yield SelectAll(sa.info, ref)
 
   def resolveSelectSingle[I](
       ss: SelectSingle[I, RawName]
@@ -203,7 +230,7 @@ object MonadSqlState extends App {
 
   def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
     for {
-      cr <- EitherT(resolveColumnRef(ce.col))
+      cr <- resolveColumnRef(ce.col)
     } yield ColumnExpr(ce.info, cr)
 
   def resolveRelation[I](rel: Relation[I, RawName]): EitherRes[Relation[I, ResolvedName]] =
@@ -237,6 +264,6 @@ object MonadSqlState extends App {
 
   def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
     for {
-      tr <- EitherT(resolveTableRef(tn.r))
+      tr <- resolveTableRef(tn.r)
     } yield TableName(tn.info, tr)
 }

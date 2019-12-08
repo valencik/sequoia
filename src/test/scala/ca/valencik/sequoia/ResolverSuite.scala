@@ -14,7 +14,7 @@ class ResolverSpec extends AnyFlatSpec with Matchers {
   "Resolver" should "resolve ColumnRefs in scope" in {
     val initialState = emptyState.addRelationToScope("db", List("a"))
     val (log, finalState, rq) =
-      resolveColumnRef(ColumnRef((), RawColumnName("a"))).run(catalog, initialState).value
+      resolveColumnRef(ColumnRef((), RawColumnName("a"))).value.run(catalog, initialState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe initialState.copy(s = List("a"))
@@ -24,7 +24,7 @@ class ResolverSpec extends AnyFlatSpec with Matchers {
   it should "not resolve ColumnRefs not in scope" in {
     val initialState = emptyState
     val (log, finalState, rq) =
-      resolveColumnRef(ColumnRef((), RawColumnName("a"))).run(catalog, initialState).value
+      resolveColumnRef(ColumnRef((), RawColumnName("a"))).value.run(catalog, initialState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe initialState
@@ -34,7 +34,7 @@ class ResolverSpec extends AnyFlatSpec with Matchers {
   it should "resolve TableRefs in the catalog" in {
     val initialState = emptyState
     val (log, finalState, rq) =
-      resolveTableRef(TableRef((), RawTableName("db"))).run(catalog, initialState).value
+      resolveTableRef(TableRef((), RawTableName("db"))).value.run(catalog, initialState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe initialState.addRelationToScope("db", List("a"))
@@ -44,7 +44,7 @@ class ResolverSpec extends AnyFlatSpec with Matchers {
   it should "not resolve TableRefs not in the catalog" in {
     val emptyCat = Catalog(Map.empty)
     val (log, finalState, rq) =
-      resolveTableRef(TableRef((), RawTableName("db"))).run(emptyCat, emptyState).value
+      resolveTableRef(TableRef((), RawTableName("db"))).value.run(emptyCat, emptyState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe emptyState
