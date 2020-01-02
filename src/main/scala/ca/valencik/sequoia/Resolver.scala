@@ -66,6 +66,13 @@ object MonadSqlState extends App {
     s"Column '${col}' was not resolvable with relations: '${rs}' in catalog '${c}'"
   }
 
+  def preserveScope[A](modify: => EitherRes[A]): EitherRes[A] =
+    for {
+      old   <- EitherT.right(ReaderWriterState.get[Catalog, Log, Resolver])
+      value <- modify
+      _     <- EitherT.right(ReaderWriterState.set[Catalog, Log, Resolver](old))
+    } yield value
+
   def resolveTableRef[I](
       tr: TableRef[I, RawName]
   ): EitherRes[TableRef[I, ResolvedName]] =
@@ -171,12 +178,8 @@ object MonadSqlState extends App {
       sa: SelectAll[I, RawName]
   ): EitherRes[SelectAll[I, ResolvedName]] =
     for {
-      // TODO This is hilariously complex
-      old <- EitherT.right(ReaderWriterState.get[Catalog, Log, Resolver])
-      ref <- sa.ref.traverse(resolveTableRef)
-      _   <- EitherT.right(ReaderWriterState.set[Catalog, Log, Resolver](old))
+      ref <- preserveScope(sa.ref.traverse(resolveTableRef))
       _ <- EitherT.right(
-        // Update Resolver with CTE and reset so we have an empty scope for the next query
         ReaderWriterState.modify[Catalog, Log, Resolver] {
           case res => {
             ref match {
