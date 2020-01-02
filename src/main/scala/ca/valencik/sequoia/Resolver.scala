@@ -235,9 +235,23 @@ object MonadSqlState extends App {
       expr: PrimaryExpression[I, RawName]
   ): EitherRes[PrimaryExpression[I, ResolvedName]] =
     expr match {
-      case ce: ColumnExpr[I, RawName] => resolveColumnExpr(ce).widen
+      case e: ColumnExpr[I, RawName]  => resolveColumnExpr(e).widen
+      case e: LiteralExpr[I, RawName] => resolveLiteralExpr(e).widen
       case _                          => ???
     }
+
+  def resolveLiteralExpr[I](
+      expr: LiteralExpr[I, RawName]
+  ): EitherRes[LiteralExpr[I, ResolvedName]] =
+    EitherT.right(
+      ReaderWriterState
+        .pure[Catalog, Log, Resolver, LiteralExpr[I, ResolvedName]](
+          // We can simply cast it as LiteralExpr doesn't contain a RawName,
+          // it is a phantom type.
+          // TODO: I wonder if there's a better way
+          expr.asInstanceOf[LiteralExpr[I, ResolvedName]]
+        )
+    )
 
   def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
     for {
