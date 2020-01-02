@@ -216,9 +216,20 @@ object MonadSqlState extends App {
       expr: ValueExpression[I, RawName]
   ): EitherRes[ValueExpression[I, ResolvedName]] =
     expr match {
-      case pe: PrimaryExpression[I, RawName] => resolvePrimaryExpression(pe).widen
-      case _                                 => ???
+      case e: PrimaryExpression[I, RawName] => resolvePrimaryExpression(e).widen
+      case e: ArithmeticUnary[I, RawName] =>
+        resolveValueExpression(e.value).map(ArithmeticUnary(e.info, e.sign, _))
+      case e: ArithmeticBinary[I, RawName] => resolveArithmeticBinary(e).widen
     }
+
+  def resolveArithmeticBinary[I](
+      ab: ArithmeticBinary[I, RawName]
+  ): EitherRes[ArithmeticBinary[I, ResolvedName]] =
+    for {
+      left <- resolveValueExpression(ab.left)
+      // TODO: Is the left allowed to modify the resolver state? It currently does...
+      right <- resolveValueExpression(ab.right)
+    } yield ArithmeticBinary(ab.info, left, ab.op, right)
 
   def resolvePrimaryExpression[I](
       expr: PrimaryExpression[I, RawName]
