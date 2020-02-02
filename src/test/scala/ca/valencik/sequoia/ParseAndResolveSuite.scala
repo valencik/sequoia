@@ -190,4 +190,73 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     finalState shouldBe expected
     rq.isRight shouldBe true
   }
+
+  it should "resolve queries with SubQueryExprs from catalog without leaking state" in {
+    val parsedQuery =
+      ParseBuddy.parse("select (select a from db)")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addColumnToProjection("_col0")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "resolve queries with SubQueryExprs from catalog including CTEs without leaking state" in {
+    val parsedQuery =
+      ParseBuddy.parse("select (with justA as (select * from db) select justA.* from justA) as cteA")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addColumnToProjection("cteA")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "resolve queries with anonymous columns" in {
+    val parsedQuery =
+      ParseBuddy.parse("select 0, 1")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addColumnToProjection("_col0")
+      .addColumnToProjection("_col1")
+    log.isEmpty shouldBe true // we never do any catalog lookups
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "resolve queries with anonymous columns and aliases" in {
+    val parsedQuery =
+      ParseBuddy.parse("select 0, 1 as one")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addColumnToProjection("_col0")
+      .addColumnToProjection("one")
+    log.isEmpty shouldBe true // we never do any catalog lookups
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "resolve queries with a mix of regular and anonymous columns" in {
+    val parsedQuery =
+      ParseBuddy.parse("select a, 1 from db")
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .addColumnToProjection("_col1")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
 }

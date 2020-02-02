@@ -93,7 +93,7 @@ object ParseBuddyApp {
   def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)
 
   def resolveQandPrint(query: Query[Info, RawName]): Unit = {
-    val catalog               = Catalog(Map("db" -> List("a")))
+    val catalog               = Catalog(Map("db" -> List("a", "b")))
     val emptyState            = Resolver()
     val (log, finalState, rq) = resolveQuery(query).value.run(catalog, emptyState).value
     pprintln(log)

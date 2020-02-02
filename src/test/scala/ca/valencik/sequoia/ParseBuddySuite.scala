@@ -86,7 +86,7 @@ class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyC
     val queries = Table(
       "select * from (VALUES 3.14)",
       "select * from (VALUES (1, 2, 3), (4, 8, 12))",
-      "select x, y from (VALUES (1, 'a', 3.0), (4, 'b', 12.0)) AS foo (num, let, flt)"
+      "select num, let from (VALUES (1, 'a', 3.0), (4, 'b', 12.0)) AS foo (num, let, flt)"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
