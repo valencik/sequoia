@@ -1,7 +1,7 @@
-val scalaTestVersion  = "3.0.8"
+val scalaTestVersion  = "3.1.0"
 val antlrVersion      = "4.7.2"
 val catsVersion       = "2.0.0"
-val scalaCheckVersion = "1.14.2"
+val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.5"
 val disciplineVersion = "1.0.0-RC1"
 
