@@ -202,46 +202,24 @@ object MonadSqlState extends App {
   ): EitherRes[SelectSingle[I, ResolvedName]] =
     for {
       e <- resolveExpression(ss.expr)
-      _ <- EitherT.right(ss.alias match {
-        // Did resolving e add a col? if not, assign col alias
-        case None        => maybeAssignColumnAlias(e)
-        case Some(alias) => resolveColumnAlias(e, alias)
-      })
+      _ <- EitherT.right(resolveColumnAlias(e, ss.alias))
     } yield SelectSingle(ss.info, e, ss.alias)
 
   def resolveColumnAlias[I](
       exp: Expression[I, ResolvedName],
-      colAlias: ColumnAlias[I]
-  ): RState[ColumnAlias[I]] = ReaderWriterState { (_, res) =>
-    exp match {
-      case _: ColumnExpr[I, ResolvedName] =>
-        (
-          Chain("No anonymous alias generate"),
-          res.aliasPreviousColumnInScope(colAlias.value),
-          ColumnAlias(colAlias.info, colAlias.value)
-        )
-      case _ =>
-        (
-          Chain(s"Added alias '${colAlias.value}'"),
-          res.addColumnAlias(colAlias.value),
-          ColumnAlias(colAlias.info, colAlias.value)
-        )
+      colAlias: Option[ColumnAlias[I]]
+  ): RState[Unit] = ReaderWriterState.modify[Catalog, Log, Resolver] { res =>
+    (exp, colAlias) match {
+      case (_: ColumnExpr[I, ResolvedName], Some(alias)) =>
+        res.aliasPreviousColumnInScope(alias.value)
+      case (_: ColumnExpr[I, ResolvedName], None) =>
+        res
+      case (_, Some(alias)) =>
+        res.addColumnAlias(alias.value)
+      case (_, None) =>
+        res.assignColAlias()
     }
   }
-
-  def maybeAssignColumnAlias[I](exp: Expression[I, ResolvedName]): RState[Unit] =
-    ReaderWriterState { (_, res) =>
-      exp match {
-        case _: ColumnExpr[I, ResolvedName] => (Chain("No anonymous alias generate"), res, ())
-        case _ =>
-          (
-            // TODO: We should be able to say what alias we generate here.
-            Chain(s"Assigning anonymous alias"),
-            res.assignColAlias(),
-            ()
-          )
-      }
-    }
 
   def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
     expr match {
@@ -296,9 +274,7 @@ object MonadSqlState extends App {
   ): EitherRes[SubQueryExpr[I, ResolvedName]] =
     for {
       // SubQueryExpr cannot bring columns and relations into scope
-      // TODO: Should we perform some validation that SubQueryExpr returns a single value?
       q <- preserveScope(resolveQuery(expr.q))
-      //_ <- EitherT.right(ReaderWriterState.modify[Catalog, Log, Resolver](_.assignColAlias()))
     } yield SubQueryExpr(expr.info, q)
 
   def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
