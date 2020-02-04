@@ -1,9 +1,9 @@
 val scalaTestVersion  = "3.1.0"
 val antlrVersion      = "4.7.2"
-val catsVersion       = "2.0.0"
+val catsVersion       = "2.1.0"
 val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.8"
-val disciplineVersion = "1.0.0-RC1"
+val disciplineVersion = "1.0.0"
 
 lazy val ScalacOptions = Seq(
   scalacOptions ++= Seq(
