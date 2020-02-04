@@ -107,7 +107,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val expected = emptyState
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
-      .aliasPreviousColumnInScope("apple")
+      .addColumnAlias("apple")
       .addCTE("justA")
       .resetRelationScope
       .addRelationToScope("justA", List("apple"))
@@ -126,7 +126,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val expected = emptyState
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
-      .aliasPreviousColumnInScope("apple")
+      .addColumnAlias("apple")
       .addCTE("justA")
       .resetRelationScope
       .addRelationToScope("justA", List("apple"))
@@ -144,7 +144,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val expected = emptyState
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
-      .aliasPreviousColumnInScope("apple")
+      .addColumnAlias("apple")
       .addCTE("justA")
       .resetRelationScope
       .addRelationToScope("justA", List("apple"))
@@ -163,7 +163,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val expected = emptyState
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
-      .aliasPreviousColumnInScope("apple")
+      .addColumnAlias("apple")
       .addCTE("justA")
       .resetRelationScope
       .addRelationToScope("justA", List("apple"))
@@ -206,12 +206,14 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
 
   it should "resolve queries with SubQueryExprs from catalog including CTEs without leaking state" in {
     val parsedQuery =
-      ParseBuddy.parse("select (with justA as (select * from db) select justA.* from justA) as cteA")
+      ParseBuddy.parse(
+        "select (with justA as (select a from db) select justA.* from justA) as subQA"
+      )
     val (log, finalState, rq) =
       resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
 
     val expected = emptyState
-      .addColumnToProjection("cteA")
+      .addColumnToProjection("subQA")
     log.isEmpty shouldBe false
     finalState shouldBe expected
     rq.isRight shouldBe true

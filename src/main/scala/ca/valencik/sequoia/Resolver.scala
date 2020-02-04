@@ -38,11 +38,12 @@ case class Resolver private (
     this.copy(s = t.get(rel).get ::: s)
   def addAllColumnsToProjection: Resolver = this.copy(s = t.values.flatten.toList ::: s)
   // TODO why is the "previous column" at the head?
+  def addColumnAlias(alias: String): Resolver             = this.copy(s = alias :: s)
   def aliasPreviousColumnInScope(alias: String): Resolver = this.copy(s = alias :: s.tail)
   // NEXT TIME: I now believe we should handle `_col` naming as a seperate step from name resolution
   // Furthermore it's likely time we refactor Resolve to be simpler, we also need some way to say where in the SQL
   // source code we ran into an issue, i.e. linking the AST node type I info.
-  def assignColAlias(): Resolver                          = this.copy(s = s"_col${s.length}" :: s)
+  def assignColAlias(): Resolver = this.copy(s = s"_col${s.length}" :: s)
   def columnIsInScope(rc: RawName): Boolean =
     r.exists(rr => t.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
 
@@ -203,29 +204,44 @@ object MonadSqlState extends App {
       e <- resolveExpression(ss.expr)
       _ <- EitherT.right(ss.alias match {
         // Did resolving e add a col? if not, assign col alias
-        case None        => assignColumnAlias()
-        case Some(alias) => resolveColumnAlias(alias)
+        case None        => maybeAssignColumnAlias(e)
+        case Some(alias) => resolveColumnAlias(e, alias)
       })
     } yield SelectSingle(ss.info, e, ss.alias)
 
   def resolveColumnAlias[I](
+      exp: Expression[I, ResolvedName],
       colAlias: ColumnAlias[I]
   ): RState[ColumnAlias[I]] = ReaderWriterState { (_, res) =>
-    (
-      Chain(s"Added alias '${colAlias.value}'"),
-      res.aliasPreviousColumnInScope(colAlias.value),
-      ColumnAlias(colAlias.info, colAlias.value)
-    )
+    exp match {
+      case _: ColumnExpr[I, ResolvedName] =>
+        (
+          Chain("No anonymous alias generate"),
+          res.aliasPreviousColumnInScope(colAlias.value),
+          ColumnAlias(colAlias.info, colAlias.value)
+        )
+      case _ =>
+        (
+          Chain(s"Added alias '${colAlias.value}'"),
+          res.addColumnAlias(colAlias.value),
+          ColumnAlias(colAlias.info, colAlias.value)
+        )
+    }
   }
 
-  def assignColumnAlias[I](): RState[Unit] = ReaderWriterState { (_, res) =>
-    (
-      // TODO: We should be able to say what alias we generate here.
-      Chain(s"Assigning anonymous alias"),
-      res.assignColAlias(),
-      ()
-    )
-  }
+  def maybeAssignColumnAlias[I](exp: Expression[I, ResolvedName]): RState[Unit] =
+    ReaderWriterState { (_, res) =>
+      exp match {
+        case _: ColumnExpr[I, ResolvedName] => (Chain("No anonymous alias generate"), res, ())
+        case _ =>
+          (
+            // TODO: We should be able to say what alias we generate here.
+            Chain(s"Assigning anonymous alias"),
+            res.assignColAlias(),
+            ()
+          )
+      }
+    }
 
   def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
     expr match {
@@ -282,7 +298,7 @@ object MonadSqlState extends App {
       // SubQueryExpr cannot bring columns and relations into scope
       // TODO: Should we perform some validation that SubQueryExpr returns a single value?
       q <- preserveScope(resolveQuery(expr.q))
-      _ <- EitherT.right(ReaderWriterState.modify[Catalog, Log, Resolver](_.assignColAlias()))
+      //_ <- EitherT.right(ReaderWriterState.modify[Catalog, Log, Resolver](_.assignColAlias()))
     } yield SubQueryExpr(expr.info, q)
 
   def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
