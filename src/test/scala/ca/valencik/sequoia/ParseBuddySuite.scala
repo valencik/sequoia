@@ -121,6 +121,14 @@ class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyC
     parse("select a aa b bb from foo").isLeft shouldBe true
   }
 
+  it should "parse queries with sampled relations" in {
+    val queries = Table(
+      "select a from foo TABLESAMPLE BERNOULLI (10)",
+      "select a from foo TABLESAMPLE SYSTEM (25 + 10)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
+  }
+
   it should "parse comparison expressions" in {
     val queries = Table(
       "select 1 < 2",

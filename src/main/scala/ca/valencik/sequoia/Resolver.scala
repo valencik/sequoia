@@ -293,8 +293,15 @@ object MonadSqlState extends App {
   ): EitherRes[SampledRelation[I, ResolvedName]] =
     for {
       ar <- resolveAliasedRelation(sr.ar)
-      // TODO: TableSample
-    } yield SampledRelation(sr.info, ar, None)
+      ts <- sr.ts.traverse(resolveTableSample)
+    } yield SampledRelation(sr.info, ar, ts)
+
+  def resolveTableSample[I](
+      ts: TableSample[I, RawName]
+  ): EitherRes[TableSample[I, ResolvedName]] =
+    for {
+      e <- resolveExpression(ts.percentage)
+    } yield TableSample(ts.info, ts.st, e)
 
   def resolveAliasedRelation[I](
       ar: AliasedRelation[I, RawName]

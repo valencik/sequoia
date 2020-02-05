@@ -261,4 +261,21 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     finalState shouldBe expected
     rq.isRight shouldBe true
   }
+
+  it should "resolve queries with sampled tables with sub query expressions" in {
+    val parsedQuery =
+      ParseBuddy.parse(
+        "select a, 42 from db TABLESAMPLE BERNOULLI ((select a num from db limit 1))"
+      )
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("a")
+      .addColumnToProjection("_col1")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
 }
