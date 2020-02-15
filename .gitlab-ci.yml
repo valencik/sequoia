@@ -7,4 +7,4 @@ before_script:
 
 test:
   script:
-    - sbt clean scalastyle test:scalastyle scalafmtCheckAll coverage test coverageReport
+    - sbt clean scalafmtCheckAll coverage test coverageReport
