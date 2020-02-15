@@ -15,7 +15,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   "ParseAndResolver" should "resolve simple queries from catalog" in {
     val parsedQuery = ParseBuddy.parse("select a from db")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe emptyState.addRelationToScope("db", List("a")).addColumnToProjection("a")
@@ -25,7 +25,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "not resolve simple queries not from catalog" in {
     val parsedQuery = ParseBuddy.parse("select a from foo")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe emptyState
@@ -35,7 +35,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "not resolve simple queries with columns not in relation" in {
     val parsedQuery = ParseBuddy.parse("select b from db")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe emptyState.addRelationToScope("db", List("a"))
@@ -45,7 +45,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "not resolve simple queries with some columns not in relation" in {
     val parsedQuery = ParseBuddy.parse("select a, b from db")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     log.isEmpty shouldBe false
     finalState shouldBe emptyState.addRelationToScope("db", List("a")).addColumnToProjection("a")
@@ -55,7 +55,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "resolve queries with CTEs from catalog" in {
     val parsedQuery = ParseBuddy.parse("with justA as (select a from db) select a from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -72,7 +72,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "not resolve queries with CTEs not in catalog" in {
     val parsedQuery = ParseBuddy.parse("with justA as (select a, b from db) select a from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -85,7 +85,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   it should "not resolve queries with CTEs from catalog but with outer query out of scope" in {
     val parsedQuery = ParseBuddy.parse("with justA as (select a from db) select b from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -102,7 +102,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("with justA as (select a apple from db) select apple from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -121,7 +121,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("with justA as (select a apple from db) select a from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -139,7 +139,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("with justA as (select a apple from db) select * from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -158,7 +158,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("with justA as (select a apple from db) select justA.* from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -177,7 +177,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("with justA as (select * from db) select justA.* from justA")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -195,7 +195,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("select (select a from db)")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addColumnToProjection("_col0")
@@ -210,7 +210,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
         "select (with justA as (select a from db) select justA.* from justA) as subQA"
       )
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addColumnToProjection("subQA")
@@ -223,7 +223,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("select 0, 1")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addColumnToProjection("_col0")
@@ -237,7 +237,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("select 0, 1 as one")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addColumnToProjection("_col0")
@@ -251,7 +251,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val parsedQuery =
       ParseBuddy.parse("select a, 1 from db")
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -268,7 +268,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
         "select a, 42 from db TABLESAMPLE BERNOULLI ((select a num from db limit 1))"
       )
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
@@ -285,7 +285,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
         "select a, b2 from db join db2 on a = a2"
       )
     val (log, finalState, rq) =
-      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
 
     val expected = emptyState
       .addRelationToScope("db", List("a"))
