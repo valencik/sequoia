@@ -68,7 +68,7 @@ object ParseBuddy {
         }
         spotTheNulls(pp)
       }
-      case _ => Unit
+      case _ => ()
     }
   }
 

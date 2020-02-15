@@ -1,6 +1,5 @@
 package ca.valencik.sequoia
 
-import cats._
 import cats.data.NonEmptyList
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}

@@ -1,6 +1,5 @@
 package ca.valencik.sequoia
 
-import scala.language.higherKinds
 import cats.{Applicative, Eq, Eval, Functor, Traverse}
 import cats.data.NonEmptyList
 import cats.implicits._
