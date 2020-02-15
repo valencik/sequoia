@@ -285,7 +285,7 @@ object MonadSqlState extends App {
   def resolveRelation[I](rel: Relation[I, RawName]): EitherRes[Relation[I, ResolvedName]] =
     rel match {
       case sr: SampledRelation[I, RawName] => resolveSampledRelation(sr).widen
-      case _                               => ???
+      case jr: JoinRelation[I, RawName]    => resolveJoinRelation(jr).widen
     }
 
   def resolveSampledRelation[I](
@@ -322,4 +322,28 @@ object MonadSqlState extends App {
     for {
       tr <- resolveTableRef(tn.r)
     } yield TableName(tn.info, tr)
+
+  def resolveJoinRelation[I](
+      jr: JoinRelation[I, RawName]
+  ): EitherRes[JoinRelation[I, ResolvedName]] =
+    for {
+      // TODO confirm ordering and scope rules
+      left  <- resolveRelation(jr.left)
+      right <- resolveRelation(jr.right)
+      jc    <- jr.criteria.traverse(resolveJoinCriteria)
+    } yield JoinRelation(jr.info, jr.jointype, left, right, jc)
+
+  def resolveJoinCriteria[I](
+      jc: JoinCriteria[I, RawName]
+  ): EitherRes[JoinCriteria[I, ResolvedName]] = jc match {
+    case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
+    case _                         => ???
+  }
+
+  def resolveJoinOn[I](
+      jo: JoinOn[I, RawName]
+  ): EitherRes[JoinOn[I, ResolvedName]] =
+    for {
+      exp  <- resolveExpression(jo.be)
+    } yield JoinOn(jo.info, exp)
 }
