@@ -86,7 +86,7 @@ class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyC
     val queries = Table(
       "select * from (VALUES 3.14)",
       "select * from (VALUES (1, 2, 3), (4, 8, 12))",
-      "select x, y from (VALUES (1, 'a', 3.0), (4, 'b', 12.0)) AS foo (num, let, flt)"
+      "select num, let from (VALUES (1, 'a', 3.0), (4, 'b', 12.0)) AS foo (num, let, flt)"
     )
     forAll(queries)(shouldParseWithNoNulls)
   }
@@ -119,6 +119,14 @@ class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyC
     parse("func() over () as thing").isLeft shouldBe true
     parse("select x from").isLeft shouldBe true
     parse("select a aa b bb from foo").isLeft shouldBe true
+  }
+
+  it should "parse queries with sampled relations" in {
+    val queries = Table(
+      "select a from foo TABLESAMPLE BERNOULLI (10)",
+      "select a from foo TABLESAMPLE SYSTEM (25 + 10)"
+    )
+    forAll(queries)(shouldParseWithNoNulls)
   }
 
   it should "parse comparison expressions" in {

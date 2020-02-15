@@ -87,9 +87,19 @@ object ParseBuddy {
 
 object ParseBuddyApp {
   import ca.valencik.sequoia.ParseBuddy._
+  import ca.valencik.sequoia.MonadSqlState._
 
   private val exitCommands                  = Seq("exit", ":q", "q")
   def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)
+
+  def resolveQandPrint(query: Query[Info, RawName]): Unit = {
+    val catalog               = Catalog(Map("db" -> List("a", "b")))
+    val emptyState            = Resolver()
+    val (log, finalState, rq) = resolveQuery(query).value.run(catalog, emptyState).value
+    pprintln(log)
+    pprintln(finalState)
+    pprintln(rq)
+  }
 
   def inputLoop(): Unit = {
     val inputQuery = scala.io.StdIn.readLine("\nParseBuddy> ")
@@ -97,6 +107,8 @@ object ParseBuddyApp {
       val pq = parse(inputQuery)
       pprintln(pq, height = 10000)
       spotTheNulls(pq)
+
+      pq.foreach(resolveQandPrint)
       inputLoop()
     }
   }

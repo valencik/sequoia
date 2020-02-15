@@ -3,13 +3,13 @@ package ca.valencik.sequoia
 import cats.implicits._
 import cats.{Functor, Traverse}
 import org.scalatest.funsuite.AnyFunSuite
-import org.typelevel.discipline.scalatest.Discipline
-import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
+import org.scalatestplus.scalacheck.Checkers
+import org.typelevel.discipline.scalatest.FunSuiteDiscipline
 import cats.laws.discipline.{FunctorTests, SerializableTests, TraverseTests}
 
 import ca.valencik.sequoia.arbitrary._
 
-class TableRefLawTests extends AnyFunSuite with Discipline {
+class TableRefLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "TableRef[Int, Int] with Option",
     TraverseTests[TableRef[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
@@ -17,7 +17,7 @@ class TableRefLawTests extends AnyFunSuite with Discipline {
   checkAll("Traverse[TableRef[Int, ?]]", SerializableTests.serializable(Traverse[TableRef[Int, ?]]))
 }
 
-class ColumnRefLawTests extends AnyFunSuite with Discipline {
+class ColumnRefLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ColumnRef[Int, Int] with Option",
     TraverseTests[ColumnRef[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
@@ -28,7 +28,7 @@ class ColumnRefLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class UsingColumnLawTests extends AnyFunSuite with Discipline {
+class UsingColumnLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "UsingColumn[Int, Int] with Option",
     TraverseTests[UsingColumn[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
@@ -40,7 +40,7 @@ class UsingColumnLawTests extends AnyFunSuite with Discipline {
 
 }
 
-class QueryLawTests extends AnyFunSuite with Discipline {
+class QueryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Query[Int, ?]", FunctorTests[Query[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Query[Int, ?]]", SerializableTests.serializable(Functor[Query[Int, ?]]))
 
@@ -54,17 +54,17 @@ class QueryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class OrderByLawTests extends AnyFunSuite with Discipline {
+class OrderByLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("OrderBy[Int, ?]", FunctorTests[OrderBy[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[OrderBy[Int, ?]]", SerializableTests.serializable(Functor[OrderBy[Int, ?]]))
 }
 
-class QueryTermLawTests extends AnyFunSuite with Discipline {
+class QueryTermLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("QueryTerm[Int, ?]", FunctorTests[QueryTerm[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[QueryTerm[Int, ?]]", SerializableTests.serializable(Functor[QueryTerm[Int, ?]]))
 }
 
-class SetOperationLawTests extends AnyFunSuite with Discipline {
+class SetOperationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SetOperation[Int, ?]", FunctorTests[SetOperation[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SetOperation[Int, ?]]",
@@ -72,7 +72,7 @@ class SetOperationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class QueryPrimaryLawTests extends AnyFunSuite with Discipline {
+class QueryPrimaryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("QueryPrimary[Int, ?]", FunctorTests[QueryPrimary[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[QueryPrimary[Int, ?]]",
@@ -80,7 +80,7 @@ class QueryPrimaryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class QueryPrimaryTableLawTests extends AnyFunSuite with Discipline {
+class QueryPrimaryTableLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "QueryPrimaryTable[Int, ?]",
     FunctorTests[QueryPrimaryTable[Int, ?]].functor[Int, Int, String]
@@ -91,7 +91,7 @@ class QueryPrimaryTableLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class InlineTableLawTests extends AnyFunSuite with Discipline {
+class InlineTableLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("InlineTable[Int, ?]", FunctorTests[InlineTable[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[InlineTable[Int, ?]]",
@@ -99,17 +99,17 @@ class InlineTableLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SubQueryLawTests extends AnyFunSuite with Discipline {
+class SubQueryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SubQuery[Int, ?]", FunctorTests[SubQuery[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[SubQuery[Int, ?]]", SerializableTests.serializable(Functor[SubQuery[Int, ?]]))
 }
 
-class SortItemLawTests extends AnyFunSuite with Discipline {
+class SortItemLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SortItem[Int, ?]", FunctorTests[SortItem[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[SortItem[Int, ?]]", SerializableTests.serializable(Functor[SortItem[Int, ?]]))
 }
 
-class QuerySpecificationLawTests extends AnyFunSuite with Discipline {
+class QuerySpecificationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "QuerySpecification[Int, ?]",
     FunctorTests[QuerySpecification[Int, ?]].functor[Int, Int, String]
@@ -120,12 +120,12 @@ class QuerySpecificationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class GroupByLawTests extends AnyFunSuite with Discipline {
+class GroupByLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("GroupBy[Int, ?]", FunctorTests[GroupBy[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[GroupBy[Int, ?]]", SerializableTests.serializable(Functor[GroupBy[Int, ?]]))
 }
 
-class GroupingElementLawTests extends AnyFunSuite with Discipline {
+class GroupingElementLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "GroupingElement[Int, ?]",
     FunctorTests[GroupingElement[Int, ?]].functor[Int, Int, String]
@@ -136,7 +136,7 @@ class GroupingElementLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SingleGroupingSetLawTests extends AnyFunSuite with Discipline {
+class SingleGroupingSetLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "SingleGroupingSet[Int, ?]",
     FunctorTests[SingleGroupingSet[Int, ?]].functor[Int, Int, String]
@@ -147,17 +147,17 @@ class SingleGroupingSetLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class RollupLawTests extends AnyFunSuite with Discipline {
+class RollupLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Rollup[Int, ?]", FunctorTests[Rollup[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Rollup[Int, ?]]", SerializableTests.serializable(Functor[Rollup[Int, ?]]))
 }
 
-class CubeLawTests extends AnyFunSuite with Discipline {
+class CubeLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Cube[Int, ?]", FunctorTests[Cube[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Cube[Int, ?]]", SerializableTests.serializable(Functor[Cube[Int, ?]]))
 }
 
-class MultipleGroupingSetsLawTests extends AnyFunSuite with Discipline {
+class MultipleGroupingSetsLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "MultipleGroupingSets[Int, ?]",
     FunctorTests[MultipleGroupingSets[Int, ?]].functor[Int, Int, String]
@@ -168,7 +168,7 @@ class MultipleGroupingSetsLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class GroupingSetLawTests extends AnyFunSuite with Discipline {
+class GroupingSetLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("GroupingSet[Int, ?]", FunctorTests[GroupingSet[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[GroupingSet[Int, ?]]",
@@ -176,7 +176,7 @@ class GroupingSetLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class NamedQueryLawTests extends AnyFunSuite with Discipline {
+class NamedQueryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("NamedQuery[Int, ?]", FunctorTests[NamedQuery[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[NamedQuery[Int, ?]]",
@@ -184,7 +184,7 @@ class NamedQueryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SelectItemLawTests extends AnyFunSuite with Discipline {
+class SelectItemLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SelectItem[Int, ?]", FunctorTests[SelectItem[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SelectItem[Int, ?]]",
@@ -192,7 +192,7 @@ class SelectItemLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SelectSingleLawTests extends AnyFunSuite with Discipline {
+class SelectSingleLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SelectSingle[Int, ?]", FunctorTests[SelectSingle[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SelectSingle[Int, ?]]",
@@ -200,17 +200,17 @@ class SelectSingleLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SelectAllLawTests extends AnyFunSuite with Discipline {
+class SelectAllLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SelectAll[Int, ?]", FunctorTests[SelectAll[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[SelectAll[Int, ?]]", SerializableTests.serializable(Functor[SelectAll[Int, ?]]))
 }
 
-class RelationLawTests extends AnyFunSuite with Discipline {
+class RelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Relation[Int, ?]", FunctorTests[Relation[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Relation[Int, ?]]", SerializableTests.serializable(Functor[Relation[Int, ?]]))
 }
 
-class JoinRelationLawTests extends AnyFunSuite with Discipline {
+class JoinRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("JoinRelation[Int, ?]", FunctorTests[JoinRelation[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[JoinRelation[Int, ?]]",
@@ -218,7 +218,7 @@ class JoinRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class JoinCriteriaLawTests extends AnyFunSuite with Discipline {
+class JoinCriteriaLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("JoinCriteria[Int, ?]", FunctorTests[JoinCriteria[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[JoinCriteria[Int, ?]]",
@@ -226,17 +226,17 @@ class JoinCriteriaLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class JoinOnLawTests extends AnyFunSuite with Discipline {
+class JoinOnLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("JoinOn[Int, ?]", FunctorTests[JoinOn[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[JoinOn[Int, ?]]", SerializableTests.serializable(Functor[JoinOn[Int, ?]]))
 }
 
-class JoinUsingLawTests extends AnyFunSuite with Discipline {
+class JoinUsingLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("JoinUsing[Int, ?]", FunctorTests[JoinUsing[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[JoinUsing[Int, ?]]", SerializableTests.serializable(Functor[JoinUsing[Int, ?]]))
 }
 
-class SampledRelationLawTests extends AnyFunSuite with Discipline {
+class SampledRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "SampledRelation[Int, ?]",
     FunctorTests[SampledRelation[Int, ?]].functor[Int, Int, String]
@@ -247,7 +247,7 @@ class SampledRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class TableSampleLawTests extends AnyFunSuite with Discipline {
+class TableSampleLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("TableSample[Int, ?]", FunctorTests[TableSample[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[TableSample[Int, ?]]",
@@ -255,7 +255,7 @@ class TableSampleLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class AliasedRelationLawTests extends AnyFunSuite with Discipline {
+class AliasedRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "AliasedRelation[Int, ?]",
     FunctorTests[AliasedRelation[Int, ?]].functor[Int, Int, String]
@@ -266,7 +266,7 @@ class AliasedRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class RelationPrimaryLawTests extends AnyFunSuite with Discipline {
+class RelationPrimaryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "RelationPrimary[Int, ?]",
     FunctorTests[RelationPrimary[Int, ?]].functor[Int, Int, String]
@@ -277,7 +277,7 @@ class RelationPrimaryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class TableNameLawTests extends AnyFunSuite with Discipline {
+class TableNameLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "TableName[Int, Int] with Option",
     TraverseTests[TableName[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
@@ -288,12 +288,12 @@ class TableNameLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class UnnestLawTests extends AnyFunSuite with Discipline {
+class UnnestLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Unnest[Int, ?]", FunctorTests[Unnest[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Unnest[Int, ?]]", SerializableTests.serializable(Functor[Unnest[Int, ?]]))
 }
 
-class SubQueryRelationLawTests extends AnyFunSuite with Discipline {
+class SubQueryRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "SubQueryRelation[Int, ?]",
     FunctorTests[SubQueryRelation[Int, ?]].functor[Int, Int, String]
@@ -304,7 +304,7 @@ class SubQueryRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class LateralRelationLawTests extends AnyFunSuite with Discipline {
+class LateralRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "LateralRelation[Int, ?]",
     FunctorTests[LateralRelation[Int, ?]].functor[Int, Int, String]
@@ -315,7 +315,7 @@ class LateralRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ParenthesizedRelationLawTests extends AnyFunSuite with Discipline {
+class ParenthesizedRelationLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ParenthesizedRelation[Int, ?]",
     FunctorTests[ParenthesizedRelation[Int, ?]].functor[Int, Int, String]
@@ -326,7 +326,7 @@ class ParenthesizedRelationLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ExpressionLawTests extends AnyFunSuite with Discipline {
+class ExpressionLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Expression[Int, ?]", FunctorTests[Expression[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[Expression[Int, ?]]",
@@ -334,7 +334,7 @@ class ExpressionLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class LogicalBinaryLawTests extends AnyFunSuite with Discipline {
+class LogicalBinaryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("LogicalBinary[Int, ?]", FunctorTests[LogicalBinary[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[LogicalBinary[Int, ?]]",
@@ -342,12 +342,12 @@ class LogicalBinaryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class PredicateLawTests extends AnyFunSuite with Discipline {
+class PredicateLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Predicate[Int, ?]", FunctorTests[Predicate[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Predicate[Int, ?]]", SerializableTests.serializable(Functor[Predicate[Int, ?]]))
 }
 
-class NotPredicateLawTests extends AnyFunSuite with Discipline {
+class NotPredicateLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("NotPredicate[Int, ?]", FunctorTests[NotPredicate[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[NotPredicate[Int, ?]]",
@@ -355,7 +355,7 @@ class NotPredicateLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ComparisonExprLawTests extends AnyFunSuite with Discipline {
+class ComparisonExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("ComparisonExpr[Int, ?]", FunctorTests[ComparisonExpr[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[ComparisonExpr[Int, ?]]",
@@ -363,7 +363,7 @@ class ComparisonExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class QuantifiedComparisonLawTests extends AnyFunSuite with Discipline {
+class QuantifiedComparisonLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "QuantifiedComparison[Int, ?]",
     FunctorTests[QuantifiedComparison[Int, ?]].functor[Int, Int, String]
@@ -374,17 +374,17 @@ class QuantifiedComparisonLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class BetweenLawTests extends AnyFunSuite with Discipline {
+class BetweenLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Between[Int, ?]", FunctorTests[Between[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Between[Int, ?]]", SerializableTests.serializable(Functor[Between[Int, ?]]))
 }
 
-class InListLawTests extends AnyFunSuite with Discipline {
+class InListLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("InList[Int, ?]", FunctorTests[InList[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[InList[Int, ?]]", SerializableTests.serializable(Functor[InList[Int, ?]]))
 }
 
-class InSubQueryLawTests extends AnyFunSuite with Discipline {
+class InSubQueryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("InSubQuery[Int, ?]", FunctorTests[InSubQuery[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[InSubQuery[Int, ?]]",
@@ -392,12 +392,12 @@ class InSubQueryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class LikeLawTests extends AnyFunSuite with Discipline {
+class LikeLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Like[Int, ?]", FunctorTests[Like[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Like[Int, ?]]", SerializableTests.serializable(Functor[Like[Int, ?]]))
 }
 
-class NullPredicateLawTests extends AnyFunSuite with Discipline {
+class NullPredicateLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("NullPredicate[Int, ?]", FunctorTests[NullPredicate[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[NullPredicate[Int, ?]]",
@@ -405,7 +405,7 @@ class NullPredicateLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class DistinctFromLawTests extends AnyFunSuite with Discipline {
+class DistinctFromLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("DistinctFrom[Int, ?]", FunctorTests[DistinctFrom[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[DistinctFrom[Int, ?]]",
@@ -413,7 +413,7 @@ class DistinctFromLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ValueExpressionLawTests extends AnyFunSuite with Discipline {
+class ValueExpressionLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ValueExpression[Int, ?]",
     FunctorTests[ValueExpression[Int, ?]].functor[Int, Int, String]
@@ -424,7 +424,7 @@ class ValueExpressionLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ArithmeticUnaryLawTests extends AnyFunSuite with Discipline {
+class ArithmeticUnaryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ArithmeticUnary[Int, ?]",
     FunctorTests[ArithmeticUnary[Int, ?]].functor[Int, Int, String]
@@ -435,7 +435,7 @@ class ArithmeticUnaryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ArithmeticBinaryLawTests extends AnyFunSuite with Discipline {
+class ArithmeticBinaryLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ArithmeticBinary[Int, ?]",
     FunctorTests[ArithmeticBinary[Int, ?]].functor[Int, Int, String]
@@ -446,7 +446,7 @@ class ArithmeticBinaryLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class PrimaryExpressionLawTests extends AnyFunSuite with Discipline {
+class PrimaryExpressionLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "PrimaryExpression[Int, ?]",
     FunctorTests[PrimaryExpression[Int, ?]].functor[Int, Int, String]
@@ -457,7 +457,7 @@ class PrimaryExpressionLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class LiteralExprLawTests extends AnyFunSuite with Discipline {
+class LiteralExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("LiteralExpr[Int, ?]", FunctorTests[LiteralExpr[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[LiteralExpr[Int, ?]]",
@@ -465,7 +465,7 @@ class LiteralExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ColumnExprLawTests extends AnyFunSuite with Discipline {
+class ColumnExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "ColumnExpr[Int, Int] with Option",
     TraverseTests[ColumnExpr[Int, ?]].traverse[Int, Int, Int, Set[Int], Option, Option]
@@ -476,7 +476,7 @@ class ColumnExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SubQueryExprLawTests extends AnyFunSuite with Discipline {
+class SubQueryExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SubQueryExpr[Int, ?]", FunctorTests[SubQueryExpr[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SubQueryExpr[Int, ?]]",
@@ -484,7 +484,7 @@ class SubQueryExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ExistsExprLawTests extends AnyFunSuite with Discipline {
+class ExistsExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("ExistsExpr[Int, ?]", FunctorTests[ExistsExpr[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[ExistsExpr[Int, ?]]",
@@ -492,7 +492,7 @@ class ExistsExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SimpleCaseLawTests extends AnyFunSuite with Discipline {
+class SimpleCaseLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SimpleCase[Int, ?]", FunctorTests[SimpleCase[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SimpleCase[Int, ?]]",
@@ -500,7 +500,7 @@ class SimpleCaseLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class SearchedCaseLawTests extends AnyFunSuite with Discipline {
+class SearchedCaseLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("SearchedCase[Int, ?]", FunctorTests[SearchedCase[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[SearchedCase[Int, ?]]",
@@ -508,7 +508,7 @@ class SearchedCaseLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class WhenClauseLawTests extends AnyFunSuite with Discipline {
+class WhenClauseLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("WhenClause[Int, ?]", FunctorTests[WhenClause[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[WhenClause[Int, ?]]",
@@ -516,17 +516,17 @@ class WhenClauseLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class CastLawTests extends AnyFunSuite with Discipline {
+class CastLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Cast[Int, ?]", FunctorTests[Cast[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Cast[Int, ?]]", SerializableTests.serializable(Functor[Cast[Int, ?]]))
 }
 
-class SubscriptLawTests extends AnyFunSuite with Discipline {
+class SubscriptLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Subscript[Int, ?]", FunctorTests[Subscript[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Subscript[Int, ?]]", SerializableTests.serializable(Functor[Subscript[Int, ?]]))
 }
 
-class DereferenceExprLawTests extends AnyFunSuite with Discipline {
+class DereferenceExprLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "DereferenceExpr[Int, ?]",
     FunctorTests[DereferenceExpr[Int, ?]].functor[Int, Int, String]
@@ -537,12 +537,12 @@ class DereferenceExprLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class RowLawTests extends AnyFunSuite with Discipline {
+class RowLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Row[Int, ?]", FunctorTests[Row[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Row[Int, ?]]", SerializableTests.serializable(Functor[Row[Int, ?]]))
 }
 
-class FunctionCallLawTests extends AnyFunSuite with Discipline {
+class FunctionCallLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("FunctionCall[Int, ?]", FunctorTests[FunctionCall[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[FunctionCall[Int, ?]]",
@@ -550,7 +550,7 @@ class FunctionCallLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class FunctionFilterLawTests extends AnyFunSuite with Discipline {
+class FunctionFilterLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("FunctionFilter[Int, ?]", FunctorTests[FunctionFilter[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[FunctionFilter[Int, ?]]",
@@ -558,7 +558,7 @@ class FunctionFilterLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class FunctionOverLawTests extends AnyFunSuite with Discipline {
+class FunctionOverLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("FunctionOver[Int, ?]", FunctorTests[FunctionOver[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[FunctionOver[Int, ?]]",
@@ -566,7 +566,7 @@ class FunctionOverLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class WindowFrameLawTests extends AnyFunSuite with Discipline {
+class WindowFrameLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("WindowFrame[Int, ?]", FunctorTests[WindowFrame[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[WindowFrame[Int, ?]]",
@@ -574,7 +574,7 @@ class WindowFrameLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class FrameBoundLawTests extends AnyFunSuite with Discipline {
+class FrameBoundLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("FrameBound[Int, ?]", FunctorTests[FrameBound[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[FrameBound[Int, ?]]",
@@ -582,7 +582,7 @@ class FrameBoundLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class UnboundedFrameLawTests extends AnyFunSuite with Discipline {
+class UnboundedFrameLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("UnboundedFrame[Int, ?]", FunctorTests[UnboundedFrame[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[UnboundedFrame[Int, ?]]",
@@ -590,7 +590,7 @@ class UnboundedFrameLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class CurrentRowBoundLawTests extends AnyFunSuite with Discipline {
+class CurrentRowBoundLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "CurrentRowBound[Int, ?]",
     FunctorTests[CurrentRowBound[Int, ?]].functor[Int, Int, String]
@@ -601,7 +601,7 @@ class CurrentRowBoundLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class BoundedFrameLawTests extends AnyFunSuite with Discipline {
+class BoundedFrameLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("BoundedFrame[Int, ?]", FunctorTests[BoundedFrame[Int, ?]].functor[Int, Int, String])
   checkAll(
     "Functor[BoundedFrame[Int, ?]]",
@@ -609,7 +609,7 @@ class BoundedFrameLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class IntervalLiteralLawTests extends AnyFunSuite with Discipline {
+class IntervalLiteralLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "IntervalLiteral[Int, ?]",
     FunctorTests[IntervalLiteral[Int, ?]].functor[Int, Int, String]
@@ -620,12 +620,12 @@ class IntervalLiteralLawTests extends AnyFunSuite with Discipline {
   )
 }
 
-class ExtractLawTests extends AnyFunSuite with Discipline {
+class ExtractLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll("Extract[Int, ?]", FunctorTests[Extract[Int, ?]].functor[Int, Int, String])
   checkAll("Functor[Extract[Int, ?]]", SerializableTests.serializable(Functor[Extract[Int, ?]]))
 }
 
-class SpecialDateTimeFuncLawTests extends AnyFunSuite with Discipline {
+class SpecialDateTimeFuncLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(
     "SpecialDateTimeFunc[Int, ?]",
     FunctorTests[SpecialDateTimeFunc[Int, ?]].functor[Int, Int, String]
