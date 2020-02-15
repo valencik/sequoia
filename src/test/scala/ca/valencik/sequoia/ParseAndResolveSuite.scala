@@ -9,7 +9,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
   import ca.valencik.sequoia.MonadSqlState._
   import ca.valencik.sequoia._
 
-  val catalog    = Catalog(Map("db" -> List("a")))
+  val catalog    = Catalog(Map("db" -> List("a"), "db2" -> List("a2", "b2")))
   val emptyState = Resolver()
 
   "ParseAndResolver" should "resolve simple queries from catalog" in {
@@ -274,6 +274,24 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
       .addColumnToProjection("_col1")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
+  it should "resolve queries with join relations" in {
+    val parsedQuery =
+      ParseBuddy.parse(
+        "select a, b2 from db join db2 on a = a2"
+      )
+    val (log, finalState, rq) =
+      resolveQuery(parsedQuery.right.get).value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addRelationToScope("db2", List("a2", "b2"))
+      .addColumnToProjection("a")
+      .addColumnToProjection("b2")
     log.isEmpty shouldBe false
     finalState shouldBe expected
     rq.isRight shouldBe true

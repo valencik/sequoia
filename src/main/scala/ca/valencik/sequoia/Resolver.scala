@@ -223,9 +223,36 @@ object MonadSqlState extends App {
 
   def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
     expr match {
+      case lb: LogicalBinary[I, RawName]   => resolveLogicalBinary(lb).widen
+      case p: Predicate[I, RawName]        => resolvePredicate(p).widen
       case ve: ValueExpression[I, RawName] => resolveValueExpression(ve).widen
-      case _                               => ???
     }
+
+  def resolveLogicalBinary[I](
+      lb: LogicalBinary[I, RawName]
+  ): EitherRes[LogicalBinary[I, ResolvedName]] =
+    for {
+      left <- resolveExpression(lb.left)
+      // TODO: Is the left allowed to modify the resolver state? It currently does...
+      right <- resolveExpression(lb.right)
+    } yield LogicalBinary(lb.info, left, lb.op, right)
+
+  def resolvePredicate[I](
+      pred: Predicate[I, RawName]
+  ): EitherRes[Predicate[I, ResolvedName]] =
+    pred match {
+      case e: ComparisonExpr[I, RawName] => resolveComparisonExpr(e).widen
+      case _                             => ???
+    }
+
+  def resolveComparisonExpr[I](
+      e: ComparisonExpr[I, RawName]
+  ): EitherRes[ComparisonExpr[I, ResolvedName]] =
+    for {
+      left <- resolveValueExpression(e.left)
+      // TODO: Is the left allowed to modify the resolver state? It currently does...
+      right <- resolveValueExpression(e.right)
+    } yield ComparisonExpr(e.info, left, e.op, right)
 
   def resolveValueExpression[I](
       expr: ValueExpression[I, RawName]
@@ -337,13 +364,14 @@ object MonadSqlState extends App {
       jc: JoinCriteria[I, RawName]
   ): EitherRes[JoinCriteria[I, ResolvedName]] = jc match {
     case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
-    case _                         => ???
+    case _                      => ???
   }
 
   def resolveJoinOn[I](
       jo: JoinOn[I, RawName]
   ): EitherRes[JoinOn[I, ResolvedName]] =
     for {
-      exp  <- resolveExpression(jo.be)
+      // Resolving a JoinOn expression shouldn't bring things into scope
+      exp <- preserveScope(resolveExpression(jo.be))
     } yield JoinOn(jo.info, exp)
 }
