@@ -350,6 +350,7 @@ object MonadSqlState extends App {
       case e: ColumnExpr[I, RawName]   => resolveColumnExpr(e).widen
       case e: LiteralExpr[I, RawName]  => resolveLiteralExpr(e).widen
       case e: SubQueryExpr[I, RawName] => resolveSubQueryExpr(e).widen
+      case e: ExistsExpr[I, RawName]   => resolveExistsExpr(e).widen
       case _                           => ???
     }
 
@@ -365,6 +366,14 @@ object MonadSqlState extends App {
           expr.asInstanceOf[LiteralExpr[I, ResolvedName]]
         )
     )
+
+  def resolveExistsExpr[I](
+      expr: ExistsExpr[I, RawName]
+  ): EitherRes[ExistsExpr[I, ResolvedName]] =
+    for {
+      // ExistsExpr cannot bring columns and relations into scope
+      q <- preserveScope(resolveQuery(expr.q))
+    } yield ExistsExpr(expr.info, q)
 
   def resolveSubQueryExpr[I](
       expr: SubQueryExpr[I, RawName]
