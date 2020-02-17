@@ -14,7 +14,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, parse, tests)
+  .aggregate(core, parse, tests, laws)
 
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
@@ -47,6 +47,16 @@ lazy val tests = (project in file("modules/tests"))
   .settings(
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime"        % antlrVersion,
+      "org.typelevel"  %% "cats-core"            % catsVersion,
+      "org.scalatest"  %% "scalatest"            % scalaTestVersion % Test
+    )
+  )
+
+lazy val laws = (project in file("modules/laws"))
+  .dependsOn(core, parse)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
       "org.typelevel"  %% "cats-laws"            % catsVersion % Test,
       "org.typelevel"  %% "discipline-scalatest" % disciplineVersion % Test,
