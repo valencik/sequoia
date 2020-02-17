@@ -4,19 +4,17 @@ val scalaTestVersion  = "3.1.0"
 val antlrVersion      = "4.7.2"
 val catsVersion       = "2.1.0"
 val scalaCheckVersion = "1.14.3"
-val pPrintVersion     = "0.5.8"
+val pPrintVersion     = "0.5.9"
 val disciplineVersion = "1.0.0"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
   version := "0.1.0-SNAPSHOT",
-  scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-  scalacOptions in (Test) --= Seq("-Ywarn-unused:imports"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, parse, tests)
+  .aggregate(core, parse, tests, laws)
 
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
@@ -48,7 +46,17 @@ lazy val tests = (project in file("modules/tests"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.antlr"      % "antlr4-runtime"        % antlrVersion,
+      "org.antlr"     % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"     % catsVersion,
+      "org.scalatest" %% "scalatest"     % scalaTestVersion % Test
+    )
+  )
+
+lazy val laws = (project in file("modules/laws"))
+  .dependsOn(core, parse)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
       "org.typelevel"  %% "cats-laws"            % catsVersion % Test,
       "org.typelevel"  %% "discipline-scalatest" % disciplineVersion % Test,

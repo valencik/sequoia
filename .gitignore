@@ -1,10 +1,12 @@
 # Manually Added
 
 src/main/antlr4/
-.bloop/
 docs/scala-up-north/
 .idea/
-
+*.code-workspace
+.metals/
+.bloop/
+project/metals.sbt
 
 ### https://raw.github.com/github/gitignore/ade08baee2cf60afd794432b3e779fe5844c545d/Scala.gitignore
 
