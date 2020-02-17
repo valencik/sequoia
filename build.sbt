@@ -46,9 +46,9 @@ lazy val tests = (project in file("modules/tests"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.antlr"      % "antlr4-runtime"        % antlrVersion,
-      "org.typelevel"  %% "cats-core"            % catsVersion,
-      "org.scalatest"  %% "scalatest"            % scalaTestVersion % Test
+      "org.antlr"     % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"     % catsVersion,
+      "org.scalatest" %% "scalatest"     % scalaTestVersion % Test
     )
   )
 
