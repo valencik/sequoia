@@ -10,8 +10,6 @@ val disciplineVersion = "1.0.0"
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
   version := "0.1.0-SNAPSHOT",
-  scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-  scalacOptions in (Test) --= Seq("-Ywarn-unused:imports"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 )
 
