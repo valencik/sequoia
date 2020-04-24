@@ -3,13 +3,13 @@ package ca.valencik.sequoia
 import cats.data.{Chain, EitherT, ReaderWriterState}
 import cats.implicits._
 
-sealed trait RawName {
+sealed trait RawName extends Product with Serializable {
   def value: String
 }
 final case class RawTableName(value: String)  extends RawName
 final case class RawColumnName(value: String) extends RawName
 
-sealed trait ResolvedName {
+sealed trait ResolvedName extends Product with Serializable {
   def value: String
 }
 final case class ResolvedTableName(value: String)  extends ResolvedName

@@ -60,7 +60,7 @@ final case class TableAlias[I](info: I, value: String)
 
 // --- TREE --
 
-sealed trait Node
+sealed trait Node extends Product with Serializable
 
 final case class Identifier(value: String) extends Node
 
