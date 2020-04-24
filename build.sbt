@@ -1,11 +1,11 @@
-ThisBuild / scalaVersion := "2.13.1"
+ThisBuild / scalaVersion := "2.13.2"
 
-val scalaTestVersion  = "3.1.0"
+val scalaTestVersion  = "3.1.1"
 val antlrVersion      = "4.7.2"
-val catsVersion       = "2.1.0"
+val catsVersion       = "2.1.1"
 val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.9"
-val disciplineVersion = "1.0.0"
+val disciplineVersion = "1.0.1"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
@@ -32,9 +32,9 @@ lazy val parse = (project in file("modules/parse"))
   .settings(
     name := "sequoia-parse",
     libraryDependencies ++= Seq(
-      "org.antlr"     % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"     % catsVersion,
-      "com.lihaoyi"   %% "pprint"        % pPrintVersion
+      "org.antlr"      % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"      % catsVersion,
+      "com.lihaoyi"   %% "pprint"         % pPrintVersion
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
@@ -46,9 +46,9 @@ lazy val tests = (project in file("modules/tests"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.antlr"     % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"     % catsVersion,
-      "org.scalatest" %% "scalatest"     % scalaTestVersion % Test
+      "org.antlr"      % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"      % catsVersion,
+      "org.scalatest" %% "scalatest"      % scalaTestVersion % Test
     )
   )
 
@@ -58,9 +58,9 @@ lazy val laws = (project in file("modules/laws"))
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
-      "org.typelevel"  %% "cats-laws"            % catsVersion % Test,
+      "org.typelevel"  %% "cats-laws"            % catsVersion       % Test,
       "org.typelevel"  %% "discipline-scalatest" % disciplineVersion % Test,
-      "org.scalatest"  %% "scalatest"            % scalaTestVersion % Test,
+      "org.scalatest"  %% "scalatest"            % scalaTestVersion  % Test,
       "org.scalacheck" %% "scalacheck"           % scalaCheckVersion % Test
     )
   )
