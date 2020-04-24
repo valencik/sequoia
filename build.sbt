@@ -32,9 +32,9 @@ lazy val parse = (project in file("modules/parse"))
   .settings(
     name := "sequoia-parse",
     libraryDependencies ++= Seq(
-      "org.antlr"     % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"     % catsVersion,
-      "com.lihaoyi"   %% "pprint"        % pPrintVersion
+      "org.antlr"      % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"      % catsVersion,
+      "com.lihaoyi"   %% "pprint"         % pPrintVersion
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
@@ -46,9 +46,9 @@ lazy val tests = (project in file("modules/tests"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.antlr"     % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"     % catsVersion,
-      "org.scalatest" %% "scalatest"     % scalaTestVersion % Test
+      "org.antlr"      % "antlr4-runtime" % antlrVersion,
+      "org.typelevel" %% "cats-core"      % catsVersion,
+      "org.scalatest" %% "scalatest"      % scalaTestVersion % Test
     )
   )
 
@@ -58,9 +58,9 @@ lazy val laws = (project in file("modules/laws"))
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
-      "org.typelevel"  %% "cats-laws"            % catsVersion % Test,
+      "org.typelevel"  %% "cats-laws"            % catsVersion       % Test,
       "org.typelevel"  %% "discipline-scalatest" % disciplineVersion % Test,
-      "org.scalatest"  %% "scalatest"            % scalaTestVersion % Test,
+      "org.scalatest"  %% "scalatest"            % scalaTestVersion  % Test,
       "org.scalacheck" %% "scalacheck"           % scalaCheckVersion % Test
     )
   )

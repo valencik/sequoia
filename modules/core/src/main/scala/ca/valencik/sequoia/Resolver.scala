@@ -152,17 +152,19 @@ object MonadSqlState extends App {
 
   def resolveQueryTerm[I](
       qt: QueryTerm[I, RawName]
-  ): EitherRes[QueryTerm[I, ResolvedName]] = qt match {
-    case qp: QueryPrimary[I, RawName] => resolveQueryPrimary(qp).widen
-    case _                            => ???
-  }
+  ): EitherRes[QueryTerm[I, ResolvedName]] =
+    qt match {
+      case qp: QueryPrimary[I, RawName] => resolveQueryPrimary(qp).widen
+      case _                            => ???
+    }
 
   def resolveQueryPrimary[I](
       qp: QueryPrimary[I, RawName]
-  ): EitherRes[QueryPrimary[I, ResolvedName]] = qp match {
-    case qs: QuerySpecification[I, RawName] => resolveQuerySpecification(qs).widen
-    case _                                  => ???
-  }
+  ): EitherRes[QueryPrimary[I, ResolvedName]] =
+    qp match {
+      case qs: QuerySpecification[I, RawName] => resolveQuerySpecification(qs).widen
+      case _                                  => ???
+    }
 
   def resolveQuerySpecification[I](
       qs: QuerySpecification[I, RawName]
@@ -175,10 +177,11 @@ object MonadSqlState extends App {
 
   def resolveSelectItem[I](
       rel: SelectItem[I, RawName]
-  ): EitherRes[SelectItem[I, ResolvedName]] = rel match {
-    case sa: SelectAll[I, RawName]    => resolveSelectAll(sa).widen
-    case ss: SelectSingle[I, RawName] => resolveSelectSingle(ss).widen
-  }
+  ): EitherRes[SelectItem[I, ResolvedName]] =
+    rel match {
+      case sa: SelectAll[I, RawName]    => resolveSelectAll(sa).widen
+      case ss: SelectSingle[I, RawName] => resolveSelectSingle(ss).widen
+    }
 
   def resolveSelectAll[I](
       sa: SelectAll[I, RawName]
@@ -208,18 +211,19 @@ object MonadSqlState extends App {
   def resolveColumnAlias[I](
       exp: Expression[I, ResolvedName],
       colAlias: Option[ColumnAlias[I]]
-  ): RState[Unit] = ReaderWriterState.modify[Catalog, Log, Resolver] { res =>
-    (exp, colAlias) match {
-      case (_: ColumnExpr[I, ResolvedName], Some(alias)) =>
-        res.aliasPreviousColumnInScope(alias.value)
-      case (_: ColumnExpr[I, ResolvedName], None) =>
-        res
-      case (_, Some(alias)) =>
-        res.addColumnAlias(alias.value)
-      case (_, None) =>
-        res.assignColAlias()
+  ): RState[Unit] =
+    ReaderWriterState.modify[Catalog, Log, Resolver] { res =>
+      (exp, colAlias) match {
+        case (_: ColumnExpr[I, ResolvedName], Some(alias)) =>
+          res.aliasPreviousColumnInScope(alias.value)
+        case (_: ColumnExpr[I, ResolvedName], None) =>
+          res
+        case (_, Some(alias)) =>
+          res.addColumnAlias(alias.value)
+        case (_, None) =>
+          res.assignColAlias()
+      }
     }
-  }
 
   def resolveExpression[I](expr: Expression[I, RawName]): EitherRes[Expression[I, ResolvedName]] =
     expr match {
@@ -340,10 +344,11 @@ object MonadSqlState extends App {
 
   def resolveRelationPrimary[I](
       rel: RelationPrimary[I, RawName]
-  ): EitherRes[RelationPrimary[I, ResolvedName]] = rel match {
-    case tn: TableName[I, RawName] => resolveTableName(tn).widen
-    case _                         => ???
-  }
+  ): EitherRes[RelationPrimary[I, ResolvedName]] =
+    rel match {
+      case tn: TableName[I, RawName] => resolveTableName(tn).widen
+      case _                         => ???
+    }
 
   def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
     for {
@@ -362,10 +367,11 @@ object MonadSqlState extends App {
 
   def resolveJoinCriteria[I](
       jc: JoinCriteria[I, RawName]
-  ): EitherRes[JoinCriteria[I, ResolvedName]] = jc match {
-    case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
-    case _                      => ???
-  }
+  ): EitherRes[JoinCriteria[I, ResolvedName]] =
+    jc match {
+      case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
+      case _                      => ???
+    }
 
   def resolveJoinOn[I](
       jo: JoinOn[I, RawName]
