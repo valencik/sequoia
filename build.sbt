@@ -1,11 +1,11 @@
 ThisBuild / scalaVersion := "2.13.2"
 
-val scalaTestVersion  = "3.1.0"
+val scalaTestVersion  = "3.1.1"
 val antlrVersion      = "4.7.2"
-val catsVersion       = "2.1.0"
+val catsVersion       = "2.1.1"
 val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.9"
-val disciplineVersion = "1.0.0"
+val disciplineVersion = "1.0.1"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
