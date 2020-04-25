@@ -32,9 +32,8 @@ lazy val parse = (project in file("modules/parse"))
   .settings(
     name := "sequoia-parse",
     libraryDependencies ++= Seq(
-      "org.antlr"      % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"      % catsVersion,
-      "com.lihaoyi"   %% "pprint"         % pPrintVersion
+      "org.antlr"    % "antlr4-runtime" % antlrVersion,
+      "com.lihaoyi" %% "pprint"         % pPrintVersion
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
