@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.2"
+ThisBuild / scalaVersion := "2.13.1"
 
 val scalaTestVersion  = "3.1.1"
 val antlrVersion      = "4.7.2"
@@ -14,7 +14,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, parse, tests, laws)
+  .aggregate(core, rewrite, parse, tests, laws)
 
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
@@ -22,6 +22,17 @@ lazy val core = (project in file("modules/core"))
     name := "sequoia-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion
+    )
+  )
+
+lazy val rewrite = (project in file("modules/rewrite"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(
+    name := "sequoia-rewrite",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % catsVersion,
+      "com.lihaoyi"   %% "pprint"    % pPrintVersion
     )
   )
 
