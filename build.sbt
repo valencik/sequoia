@@ -6,6 +6,7 @@ val catsVersion       = "2.1.1"
 val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.9"
 val disciplineVersion = "1.0.1"
+val paigesVersion     = "0.3.1"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
@@ -14,7 +15,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, rewrite, parse, tests, laws)
+  .aggregate(core, pretty, rewrite, parse, tests, laws)
 
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
@@ -22,6 +23,17 @@ lazy val core = (project in file("modules/core"))
     name := "sequoia-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion
+    )
+  )
+
+lazy val pretty = (project in file("modules/pretty"))
+  .dependsOn(core, parse, rewrite)
+  .settings(commonSettings)
+  .settings(
+    name := "sequoia-pretty",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core"   % catsVersion,
+      "org.typelevel" %% "paiges-core" % paigesVersion
     )
   )
 
