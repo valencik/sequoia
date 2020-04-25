@@ -198,8 +198,7 @@ object QueryPrimaryTable {
     }
 }
 
-final case class InlineTable[I, R](info: I, vs: List[Expression[I, R]])
-    extends QueryPrimary[I, R]
+final case class InlineTable[I, R](info: I, vs: List[Expression[I, R]]) extends QueryPrimary[I, R]
 object InlineTable {
   implicit def eqInlineTable[I: Eq, R: Eq]: Eq[InlineTable[I, R]] = Eq.fromUniversalEquals
   implicit def inlineTableInstances[I]: Functor[InlineTable[I, ?]] =
@@ -447,8 +446,7 @@ object JoinOn {
     }
 }
 
-final case class JoinUsing[I, R](info: I, cols: List[UsingColumn[I, R]])
-    extends JoinCriteria[I, R]
+final case class JoinUsing[I, R](info: I, cols: List[UsingColumn[I, R]]) extends JoinCriteria[I, R]
 object JoinUsing {
   implicit def eqJoinUsing[I: Eq, R: Eq]: Eq[JoinUsing[I, R]] = Eq.fromUniversalEquals
   implicit def joinUsingInstances[I]: Functor[JoinUsing[I, ?]] =
@@ -958,8 +956,7 @@ object DereferenceExpr {
     }
 }
 
-final case class Row[I, R](info: I, exps: List[Expression[I, R]])
-    extends PrimaryExpression[I, R]
+final case class Row[I, R](info: I, exps: List[Expression[I, R]]) extends PrimaryExpression[I, R]
 object Row {
   implicit def eqRow[I: Eq, R: Eq]: Eq[Row[I, R]] = Eq.fromUniversalEquals
   implicit def rowInstances[I]: Functor[Row[I, ?]] =

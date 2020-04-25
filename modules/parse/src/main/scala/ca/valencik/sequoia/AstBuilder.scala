@@ -186,10 +186,10 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.QuerySpecificationContext
   ): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
-    val sq = maybeSetQuantifier(ctx.setQuantifier)
+    val sq  = maybeSetQuantifier(ctx.setQuantifier)
     val sis = ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]).toList
-    val f = ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList
-    val w = if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[RawExpression]) else None
+    val f   = ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList
+    val w   = if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[RawExpression]) else None
     val g =
       if (ctx.groupBy != null) Some(visit(ctx.groupBy).asInstanceOf[GroupBy[Info, RawName]])
       else None
