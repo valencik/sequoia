@@ -27,7 +27,7 @@ lazy val core = (project in file("modules/core"))
   )
 
 lazy val pretty = (project in file("modules/pretty"))
-  .dependsOn(core, parse, rewrite)
+  .dependsOn(core)
   .settings(commonSettings)
   .settings(
     name := "sequoia-pretty",
@@ -62,6 +62,9 @@ lazy val parse = (project in file("modules/parse"))
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia")
   )
+
+lazy val examples = (project in file("examples"))
+  .dependsOn(core, pretty, rewrite, parse)
 
 lazy val tests = (project in file("modules/tests"))
   .dependsOn(core, parse)

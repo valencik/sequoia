@@ -2,31 +2,7 @@ package ca.valencik.sequoia
 
 import pprint.pprintln
 
-object SimpleRelationToCte {
-  val inQ: Query[Int, RawName] = Query(
-    1,
-    None,
-    QueryNoWith(
-      10,
-      QuerySpecification(
-        9,
-        None,
-        List(SelectSingle(4, ColumnExpr(2, ColumnRef(3, RawColumnName("a"))), None)),
-        List(
-          SampledRelation(
-            8,
-            AliasedRelation(7, TableName(6, TableRef(5, RawTableName("foo"))), None, None),
-            None
-          )
-        ),
-        None,
-        None,
-        None
-      ),
-      None,
-      None
-    )
-  )
+object Rewrite {
 
   def ifRelation[R](pred: Relation[_, R] => Boolean): Query[_, R] => Boolean =
     query => {
@@ -73,7 +49,34 @@ object SimpleRelationToCte {
         None
       )
     )
+}
 
+object RewriteApp {
+  import Rewrite._
+  val inQ: Query[Int, RawName] = Query(
+    1,
+    None,
+    QueryNoWith(
+      10,
+      QuerySpecification(
+        9,
+        None,
+        List(SelectSingle(4, ColumnExpr(2, ColumnRef(3, RawColumnName("a"))), None)),
+        List(
+          SampledRelation(
+            8,
+            AliasedRelation(7, TableName(6, TableRef(5, RawTableName("foo"))), None, None),
+            None
+          )
+        ),
+        None,
+        None,
+        None
+      ),
+      None,
+      None
+    )
+  )
   val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
   val ifQueryHasFoo = ifRelation(ifFoo)
 

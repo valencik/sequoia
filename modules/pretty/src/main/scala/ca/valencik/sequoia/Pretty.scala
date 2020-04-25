@@ -73,30 +73,3 @@ object Pretty {
       case _                    => Doc.text("--OOPS EXPR--")
     }
 }
-
-object PrettyApp {
-  import Pretty._
-  def main(args: Array[String]): Unit = {
-
-    val queryString = "select apple, banana from foo"
-
-    val qD = ParseBuddy
-      .parse(queryString)
-      .map { pq =>
-        if (SimpleRelationToCte.ifQueryHasFoo(pq)) {
-          println("Rewriting query...")
-          val rewrittenQ = SimpleRelationToCte.setCTE(pq, "myCTE")
-          prettyQuery(rewrittenQ)
-        } else {
-          println("Not rewritting query...")
-          prettyQuery(pq)
-        }
-      }
-      .getOrElse(Doc.text("Parse Failure"))
-
-    println(qD.render(80))
-    println("---")
-    println(qD.render(7))
-  }
-
-}
