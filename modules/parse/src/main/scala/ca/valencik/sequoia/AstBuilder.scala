@@ -1,9 +1,6 @@
 package ca.valencik.sequoia
 
 import scala.jdk.CollectionConverters._
-import scala.collection.mutable.Buffer
-
-import cats.data.NonEmptyList
 
 class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
@@ -18,8 +15,6 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     var i = 0;
     () => { i += 1; i }
   }
-
-  def toUnsafeNEL[A](xs: Buffer[A]): NonEmptyList[A] = NonEmptyList.fromListUnsafe(xs.toList)
 
   def qualifiedNameAsString(ctx: SqlBaseParser.QualifiedNameContext): String = {
     val idents = ctx.identifier.asScala.map(visit(_).asInstanceOf[Identifier])
@@ -80,7 +75,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
             .asScala
             .map { case ic => UsingColumn(nextId(), getColumnName(ic)) }
             .toList
-        Some(JoinUsing(nextId(), NonEmptyList.fromListUnsafe(ucs)))
+        Some(JoinUsing(nextId(), ucs))
       } else
         None
     }
@@ -136,7 +131,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitWith(ctx: SqlBaseParser.WithContext): With[Info, RawName] = {
     if (verbose) println(s"-------visitWith called: ${ctx.getText}-------------")
-    val nqs = toUnsafeNEL(ctx.namedQuery.asScala.map(visitNamedQuery))
+    val nqs = ctx.namedQuery.asScala.map(visitNamedQuery).toList
     With(nextId(), nqs)
   }
 
@@ -147,7 +142,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val qt = visit(ctx.queryTerm).asInstanceOf[QueryTerm[Info, RawName]]
     val orderBy = {
       if (ctx.sortItem.size > 0)
-        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+        Some(OrderBy(nextId(), ctx.sortItem.asScala.map(visitSortItem).toList))
       else
         None
     }
@@ -192,12 +187,8 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   ): QuerySpecification[Info, RawName] = {
     if (verbose) println(s"-------visitQuerySpecification called: ${ctx.getText}-------------")
     val sq = maybeSetQuantifier(ctx.setQuantifier)
-    val sis = toUnsafeNEL(
-      ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]])
-    )
-    val f = NonEmptyList.fromList(
-      ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList
-    )
+    val sis = ctx.selectItem.asScala.map(visit(_).asInstanceOf[SelectItem[Info, RawName]]).toList
+    val f = ctx.relation.asScala.map(visit(_).asInstanceOf[Relation[Info, RawName]]).toList
     val w = if (ctx.where != null) Some(visit(ctx.where).asInstanceOf[RawExpression]) else None
     val g =
       if (ctx.groupBy != null) Some(visit(ctx.groupBy).asInstanceOf[GroupBy[Info, RawName]])
@@ -210,7 +201,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitInlineTable(
       ctx: SqlBaseParser.InlineTableContext
   ): InlineTable[Info, RawName] = {
-    val vs = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    val vs = ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] }.toList
     InlineTable(nextId(), vs)
   }
 
@@ -220,9 +211,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitGroupBy(ctx: SqlBaseParser.GroupByContext): GroupBy[Info, RawName] = {
     val sq = maybeSetQuantifier(ctx.setQuantifier)
-    val ges = toUnsafeNEL(ctx.groupingElement.asScala.map { g =>
+    val ges = ctx.groupingElement.asScala.map { g =>
       visit(g).asInstanceOf[GroupingElement[Info, RawName]]
-    })
+    }.toList
     GroupBy(nextId(), sq, ges)
   }
 
@@ -305,9 +296,9 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitColumnAliases(ctx: SqlBaseParser.ColumnAliasesContext): ColumnAliases[Info] = {
-    val cols = toUnsafeNEL(ctx.identifier.asScala.map { i =>
+    val cols = ctx.identifier.asScala.map { i =>
       ColumnAlias(nextId(), visit(i).asInstanceOf[Identifier].value)
-    })
+    }.toList
     ColumnAliases(cols)
   }
 
@@ -325,7 +316,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitUnnest(ctx: SqlBaseParser.UnnestContext): RelationPrimary[Info, RawName] = {
-    val exps    = toUnsafeNEL(ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]))
+    val exps    = ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
     val ordinal = ctx.ORDINALITY != null
     Unnest(nextId(), exps, ordinal)
   }
@@ -417,7 +408,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitInList(ctx: SqlBaseParser.InListContext): Predicate[Info, RawName] = {
     if (verbose) println(s"-------visitInList called: ${ctx.getText}-------------")
     val value = visit(ctx.value).asInstanceOf[RawValueExpression]
-    val exps  = toUnsafeNEL(ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]))
+    val exps  = ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
     val res   = InList(nextId(), value, exps)
     if (ctx.NOT != null) NotPredicate(nextId(), res) else res
   }
@@ -506,7 +497,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   override def visitSimpleCase(ctx: SqlBaseParser.SimpleCaseContext): SimpleCase[Info, RawName] = {
     if (verbose) println(s"-------visitSimpleCase called: ${ctx.getText}-------------")
     val exp         = visit(ctx.valueExpression).asInstanceOf[ValueExpression[Info, RawName]]
-    val whenClauses = toUnsafeNEL(ctx.whenClause.asScala.map(visitWhenClause))
+    val whenClauses = ctx.whenClause.asScala.map(visitWhenClause).toList
     val elseExpression =
       if (ctx.elseExpression != null) Some(visit(ctx.elseExpression).asInstanceOf[RawExpression])
       else None
@@ -517,7 +508,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       ctx: SqlBaseParser.SearchedCaseContext
   ): SearchedCase[Info, RawName] = {
     if (verbose) println(s"-------visitSearchedCase called: ${ctx.getText}-------------")
-    val whenClauses = toUnsafeNEL(ctx.whenClause.asScala.map(visitWhenClause))
+    val whenClauses = ctx.whenClause.asScala.map(visitWhenClause).toList
     val elseExpression =
       if (ctx.elseExpression != null) Some(visit(ctx.elseExpression).asInstanceOf[RawExpression])
       else None
@@ -564,7 +555,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitRowConstructor(ctx: SqlBaseParser.RowConstructorContext): Row[Info, RawName] = {
     if (verbose) println(s"-------visitRowConstructor called: ${ctx.getText}-------------")
-    val exps = toUnsafeNEL(ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] })
+    val exps = ctx.expression.asScala.map { visit(_).asInstanceOf[RawExpression] }.toList
     Row(nextId(), exps)
   }
 
@@ -577,7 +568,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val exprs = ctx.expression.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
     val orderby = {
       if (ctx.sortItem.size > 0)
-        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+        Some(OrderBy(nextId(), ctx.sortItem.asScala.map(visitSortItem).toList))
       else
         None
     }
@@ -598,7 +589,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val partitionBy = ctx.partition.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
     val orderBy = {
       if (ctx.sortItem.size > 0)
-        Some(OrderBy(nextId(), toUnsafeNEL(ctx.sortItem.asScala.map(visitSortItem))))
+        Some(OrderBy(nextId(), ctx.sortItem.asScala.map(visitSortItem).toList))
       else
         None
     }

@@ -1,16 +1,9 @@
 package ca.valencik.sequoia
 
-import cats.data.NonEmptyList
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
 
 object arbitrary {
-  implicit def arbNonEmptyList[A](implicit A: Arbitrary[A]): Arbitrary[NonEmptyList[A]] =
-    Arbitrary(
-      implicitly[Arbitrary[List[A]]].arbitrary
-        .flatMap(fa => A.arbitrary.map(a => NonEmptyList(a, fa)))
-    )
-
   implicit def arbTableRef[I: Arbitrary, R: Arbitrary]: Arbitrary[TableRef[I, R]] =
     Arbitrary(for { i <- getArbitrary[I]; r <- getArbitrary[R] } yield TableRef(i, r))
 
@@ -36,7 +29,7 @@ object arbitrary {
   implicit def arbWith[I: Arbitrary, R: Arbitrary]: Arbitrary[With[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      n <- Gen.resize(3, getArbitrary[NonEmptyList[NamedQuery[I, R]]])
+      n <- Gen.resize(3, getArbitrary[List[NamedQuery[I, R]]])
     } yield With(i, n))
 
   implicit def arbQueryNoWith[I: Arbitrary, R: Arbitrary]: Arbitrary[QueryNoWith[I, R]] =
@@ -50,7 +43,7 @@ object arbitrary {
   implicit def arbOrderBy[I: Arbitrary, R: Arbitrary]: Arbitrary[OrderBy[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      s <- Gen.resize(3, getArbitrary[NonEmptyList[SortItem[I, R]]])
+      s <- Gen.resize(3, getArbitrary[List[SortItem[I, R]]])
     } yield OrderBy(i, s))
 
   implicit def arbOrdering: Arbitrary[Ordering] =
@@ -110,7 +103,7 @@ object arbitrary {
   implicit def arbInlineTable[I: Arbitrary, R: Arbitrary]: Arbitrary[InlineTable[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      v <- Gen.resize(3, getArbitrary[NonEmptyList[Expression[I, R]]])
+      v <- Gen.resize(3, getArbitrary[List[Expression[I, R]]])
     } yield InlineTable(i, v))
 
   implicit def arbSubQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[SubQuery[I, R]] =
@@ -124,8 +117,8 @@ object arbitrary {
     Arbitrary(for {
       i <- getArbitrary[I]
       q <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
-      s <- Gen.resize(5, getArbitrary[NonEmptyList[SelectItem[I, R]]])
-      f <- Gen.option(Gen.resize(2, getArbitrary[NonEmptyList[Relation[I, R]]]))
+      s <- Gen.resize(5, getArbitrary[List[SelectItem[I, R]]])
+      f <- Gen.resize(2, getArbitrary[List[Relation[I, R]]])
       w <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
       g <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[GroupBy[I, R]])))
       h <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[LogicalBinary[I, R]])))
@@ -135,7 +128,7 @@ object arbitrary {
     Arbitrary(for {
       i <- getArbitrary[I]
       s <- Gen.frequency((8, Gen.const(None)), (2, Gen.some(getArbitrary[SetQuantifier])))
-      g <- Gen.resize(5, getArbitrary[NonEmptyList[GroupingElement[I, R]]])
+      g <- Gen.resize(5, getArbitrary[List[GroupingElement[I, R]]])
     } yield GroupBy(i, s, g))
 
   implicit def arbGroupingElement[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupingElement[I, R]] =
@@ -171,7 +164,7 @@ object arbitrary {
       : Arbitrary[MultipleGroupingSets[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      g <- Gen.resize(2, getArbitrary[NonEmptyList[GroupingSet[I, R]]])
+      g <- Gen.resize(2, getArbitrary[List[GroupingSet[I, R]]])
     } yield MultipleGroupingSets(i, g))
 
   implicit def arbGroupingSet[I: Arbitrary, R: Arbitrary]: Arbitrary[GroupingSet[I, R]] =
@@ -240,7 +233,7 @@ object arbitrary {
   implicit def arbJoinUsing[I: Arbitrary, R: Arbitrary]: Arbitrary[JoinUsing[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      c <- Gen.resize(5, getArbitrary[NonEmptyList[UsingColumn[I, R]]])
+      c <- Gen.resize(5, getArbitrary[List[UsingColumn[I, R]]])
     } yield JoinUsing(i, c))
 
   implicit def arbSampledRelation[I: Arbitrary, R: Arbitrary]: Arbitrary[SampledRelation[I, R]] =
@@ -270,7 +263,7 @@ object arbitrary {
 
   implicit def arbColumnAliases[I: Arbitrary]: Arbitrary[ColumnAliases[I]] =
     Arbitrary(for {
-      c <- Gen.resize(5, getArbitrary[NonEmptyList[ColumnAlias[I]]])
+      c <- Gen.resize(5, getArbitrary[List[ColumnAlias[I]]])
     } yield ColumnAliases(c))
 
   implicit def arbRelationPrimary[I: Arbitrary, R: Arbitrary]: Arbitrary[RelationPrimary[I, R]] =
@@ -291,7 +284,7 @@ object arbitrary {
   implicit def arbUnnest[I: Arbitrary, R: Arbitrary]: Arbitrary[Unnest[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      e <- Gen.resize(1, getArbitrary[NonEmptyList[Expression[I, R]]])
+      e <- Gen.resize(1, getArbitrary[List[Expression[I, R]]])
       o <- getArbitrary[Boolean]
     } yield Unnest(i, e, o))
 
@@ -383,7 +376,7 @@ object arbitrary {
     Arbitrary(for {
       i <- getArbitrary[I]
       v <- getArbitrary[ValueExpression[I, R]]
-      l <- Gen.resize(1, getArbitrary[NonEmptyList[Expression[I, R]]])
+      l <- Gen.resize(1, getArbitrary[List[Expression[I, R]]])
     } yield InList(i, v, l))
 
   implicit def arbInSubQuery[I: Arbitrary, R: Arbitrary]: Arbitrary[InSubQuery[I, R]] =
@@ -485,14 +478,14 @@ object arbitrary {
     Arbitrary(for {
       i  <- getArbitrary[I]
       e  <- getArbitrary[ValueExpression[I, R]]
-      w  <- Gen.resize(2, getArbitrary[NonEmptyList[WhenClause[I, R]]])
+      w  <- Gen.resize(2, getArbitrary[List[WhenClause[I, R]]])
       el <- Gen.some(getArbitrary[Expression[I, R]])
     } yield SimpleCase(i, e, w, el))
 
   implicit def arbSearchedCase[I: Arbitrary, R: Arbitrary]: Arbitrary[SearchedCase[I, R]] =
     Arbitrary(for {
       i  <- getArbitrary[I]
-      w  <- Gen.resize(2, getArbitrary[NonEmptyList[WhenClause[I, R]]])
+      w  <- Gen.resize(2, getArbitrary[List[WhenClause[I, R]]])
       el <- Gen.some(getArbitrary[Expression[I, R]])
     } yield SearchedCase(i, w, el))
 
@@ -574,7 +567,7 @@ object arbitrary {
   implicit def arbRow[I: Arbitrary, R: Arbitrary]: Arbitrary[Row[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
-      e <- Gen.resize(3, getArbitrary[NonEmptyList[Expression[I, R]]])
+      e <- Gen.resize(3, getArbitrary[List[Expression[I, R]]])
     } yield Row(i, e))
 
   implicit def arbFunctionCall[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionCall[I, R]] =
