@@ -7,7 +7,7 @@ object Pretty {
   def prettyQuery[I](q: Query[I, RawName]): Doc = {
     q.w match {
       case None        => prettyQueryNoWith(q.qnw)
-      case Some(withQ) => prettyWith(withQ)
+      case Some(withQ) => prettyWith(withQ) + Doc.lineOrSpace + prettyQueryNoWith(q.qnw)
     }
   }
 
@@ -78,8 +78,21 @@ object PrettyApp {
   import Pretty._
   def main(args: Array[String]): Unit = {
 
-    val queryString = "with myCTE as (select apple, banana from foo) select * from myCTE"
-    val qD          = ParseBuddy.parse(queryString).map(prettyQuery).getOrElse(Doc.text("Parse Failure"))
+    val queryString = "select apple, banana from foo"
+
+    val qD = ParseBuddy
+      .parse(queryString)
+      .map { pq =>
+        if (SimpleRelationToCte.ifQueryHasFoo(pq)) {
+          println("Rewriting query...")
+          val rewrittenQ = SimpleRelationToCte.setCTE(pq, "myCTE")
+          prettyQuery(rewrittenQ)
+        } else {
+          println("Not rewritting query...")
+          prettyQuery(pq)
+        }
+      }
+      .getOrElse(Doc.text("Parse Failure"))
 
     println(qD.render(80))
     println("---")
