@@ -24,31 +24,40 @@ object Rewrite {
       }
     }
 
-  def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] =
+  def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] = {
+    val selectItems = q.qnw.qt match {
+      case qs: QuerySpecification[Int, RawName] => qs.sis
+      case _                                    => ???
+    }
+    val orderBy      = q.qnw.ob
+    val limit        = q.qnw.l
+    val rewrittenQNW = q.qnw.copy(ob = None, l = None)
+    val rewrittenQ   = q.copy(qnw = rewrittenQNW)
     Query(
       14,
-      Some(With(13, List(NamedQuery(12, name, None, q)))),
+      Some(With(13, List(NamedQuery(12, name, None, rewrittenQ)))),
       QueryNoWith(
         23,
         QuerySpecification(
-          22,
-          None,
-          List(SelectSingle(17, ColumnExpr(15, ColumnRef(16, RawColumnName("a"))), None)),
-          List(
+          info = 22,
+          sq = None,
+          sis = selectItems,
+          f = List(
             SampledRelation(
               21,
               AliasedRelation(20, TableName(19, TableRef(18, RawTableName(name))), None, None),
               None
             )
           ),
-          None,
-          None,
-          None
+          w = None,
+          g = None,
+          h = None
         ),
-        None,
-        None
+        orderBy,
+        limit
       )
     )
+  }
 }
 
 object RewriteApp {

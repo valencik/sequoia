@@ -10,7 +10,8 @@ object TrivialCTE {
 
   def main(args: Array[String]): Unit = {
 
-    val queryString = "select apple, banana from foo where inventory >= 2 and x < 42 and largename = 666 and y != 27 limit 100"
+    val queryString =
+      "select apple, banana from foo where inventory >= 2 and x < 42 and largename = 666 and y != 27 order by apple limit 100"
 
     val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
     val ifQueryHasFoo = ifRelation(ifFoo)
@@ -21,7 +22,7 @@ object TrivialCTE {
         if (ifQueryHasFoo(pq)) {
           println("Rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
-          prettyQuery(rewrittenQ).render(80)
+          prettyQuery(rewrittenQ).render(30)
         } else {
           println("Not rewritting query...")
           prettyQuery(pq).render(80)
