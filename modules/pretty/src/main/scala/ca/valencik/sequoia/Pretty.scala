@@ -98,12 +98,37 @@ object Pretty {
 
   def prettyRelation[I](r: Relation[I, RawName]): Doc =
     r match {
-      case SampledRelation(_, ar, _) => prettyAliasedRelation(ar)
-      case _                         => Doc.text("--OOPS RELATION--")
+      case jr: JoinRelation[I, RawName] => prettyJoinRelation(jr)
+      case SampledRelation(_, ar, _)    => prettyAliasedRelation(ar)
     }
+
   def prettyAliasedRelation[I](ar: AliasedRelation[I, RawName]): Doc = {
     prettyRelationPrimary(ar.rp)
   }
+
+  def prettyJoinRelation[I](jr: JoinRelation[I, RawName]): Doc = {
+    val left  = prettyRelation(jr.left)
+    val right = prettyRelation(jr.right)
+    val joinType = jr.jointype match {
+      case CrossJoin => Doc.text("CROSS")
+      case FullJoin  => Doc.text("FULL")
+      case InnerJoin => Doc.text("INNER")
+      case LeftJoin  => Doc.text("LEFT")
+      case RightJoin => Doc.text("RIGHT")
+    }
+    val criteria = jr.criteria.map(prettyJoinCriteria).getOrElse(Doc.empty)
+    // TODO does this add a space when criteria is empty?
+    left & joinType & Doc.text("JOIN") & right & criteria
+  }
+
+  def prettyJoinCriteria[I](jc: JoinCriteria[I, RawName]): Doc =
+    jc match {
+      case JoinOn(_, be) => Doc.text("ON") & prettyExpr(be)
+      case JoinUsing(_, cols) => {
+        val cs = cols.map { case uc => Doc.text(uc.value.value) }
+        Doc.text("USING") & Doc.intercalate(Doc.char(',') + Doc.space, cs)
+      }
+    }
 
   def prettyRelationPrimary[I](rp: RelationPrimary[I, RawName]): Doc =
     rp match {
@@ -131,7 +156,9 @@ object Pretty {
         prettyExpr(left) + Doc.lineOrSpace + prettyBooleanOp(op) & prettyExpr(right)
       case ComparisonExpr(_, left, op, right) =>
         prettyExpr(left) & prettyComparison(op) & prettyExpr(right)
-      case _ => Doc.text("--OOPS EXPR--")
+      case DereferenceExpr(_, base, fieldName) =>
+        prettyExpr(base) + Doc.char('.') + Doc.text(fieldName)
+      case _ => ???
     }
 
   def prettyArithmeticOp(op: ArithmeticOperator): Doc =
