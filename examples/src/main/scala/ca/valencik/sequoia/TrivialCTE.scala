@@ -10,7 +10,7 @@ object TrivialCTE {
 
   def main(args: Array[String]): Unit = {
 
-    val queryString = "select apple, banana from foo"
+    val queryString = "select apple, banana from foo where inventory >= 2 and x < 42 and largename = 666 and y != 27 limit 100"
 
     val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
     val ifQueryHasFoo = ifRelation(ifFoo)

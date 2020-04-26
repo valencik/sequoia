@@ -7,39 +7,94 @@ object Pretty {
   def prettyQuery[I](q: Query[I, RawName]): Doc = {
     q.w match {
       case None        => prettyQueryNoWith(q.qnw)
-      case Some(withQ) => prettyWith(withQ) + Doc.lineOrSpace + prettyQueryNoWith(q.qnw)
+      case Some(withQ) => prettyWith(withQ) + Doc.line + prettyQueryNoWith(q.qnw)
     }
   }
 
   def prettyWith[I](withQ: With[I, RawName]): Doc = {
     val namedQs = withQ.nqs.map(prettyNamedQuery)
-    val nqBody  = Doc.intercalate(Doc.char(',') + Doc.lineOrSpace, namedQs)
-    Doc.text("WITH ") + nqBody
+    val nqBody  = Doc.intercalate(Doc.char(',') + Doc.line, namedQs)
+    Doc.text("WITH") & nqBody
   }
 
   def prettyNamedQuery[I](nq: NamedQuery[I, RawName]): Doc = {
     val q      = prettyQuery(nq.q)
     val inside = q.tightBracketBy(Doc.char('('), Doc.char(')'))
-    Doc.text(nq.n) + Doc.text(" AS ") + inside
+    Doc.text(nq.n) & Doc.text("AS") & inside
   }
 
   def prettyQueryNoWith[I](qnw: QueryNoWith[I, RawName]): Doc = {
-    qnw.qt match {
+    val qt = prettyQueryTerm(qnw.qt)
+    val limit = qnw.l match {
+      case None      => Doc.empty
+      case Some(lim) => Doc.text("LIMIT") & Doc.text(lim.l)
+    }
+    val order = qnw.ob match {
+      case None      => Doc.empty
+      case Some(ord) => Doc.text("ORDER BY") & prettyOrderBy(ord)
+    }
+    qt + Doc.lineOrSpace + order + Doc.lineOrSpace + limit
+  }
+
+  def prettyOrderBy[I](orderBy: OrderBy[I, RawName]): Doc = {
+    val sortItems = orderBy.sis.map(prettySortItem)
+    Doc.intercalate(Doc.char(',') + Doc.space, sortItems)
+  }
+
+  def prettySortItem[I](sortItem: SortItem[I, RawName]): Doc = {
+    prettyExpr(sortItem.e)
+  }
+
+  def prettyQueryTerm[I](qt: QueryTerm[I, RawName]): Doc =
+    qt match {
+      case qp: QueryPrimary[I, RawName] => prettyQueryPrimary(qp)
+      case so: SetOperation[I, RawName] => prettySetOperation(so)
+    }
+
+  def prettyQueryPrimary[I](qp: QueryPrimary[I, RawName]): Doc =
+    qp match {
       case qs: QuerySpecification[I, RawName] => prettyQuerySpecification(qs)
-      case _                                  => Doc.text("---OOPS QUERYNOWITH---")
+      case _                                  => ???
+    }
+
+  def prettyQuerySpecification[I](qs: QuerySpecification[I, RawName]): Doc = {
+    val clauseEnd = Doc.lineOrEmpty
+
+    val sis        = qs.sis.map(prettySelectItem)
+    val selectBody = Doc.intercalate(Doc.char(',') + Doc.line, sis)
+    val select     = selectBody.bracketBy(Doc.text("SELECT"), clauseEnd)
+    val f          = qs.f.map(prettyRelation)
+    val fBody      = Doc.intercalate(Doc.char(',') + Doc.line, f)
+    val from       = fBody.bracketBy(Doc.text("FROM"), clauseEnd)
+    val where = qs.w match {
+      case None       => Doc.empty
+      case Some(expr) => Doc.text("WHERE") & prettyExpr(expr)
+    }
+    select + from + where
+  }
+
+  def prettySetOperation[I](so: SetOperation[I, RawName]): Doc = {
+    val left  = prettyQueryTerm(so.left)
+    val right = prettyQueryTerm(so.right)
+    val op    = prettySetOperator(so.op)
+    so.sq match {
+      case None             => left + op + right
+      case Some(quantifier) => left + op + prettySetQuantifier(quantifier) + right
     }
   }
 
-  def prettyQuerySpecification[I](qs: QuerySpecification[I, RawName]): Doc = {
-    val clauseEnd  = Doc.lineOrSpace
-    val sis        = qs.sis.map(prettySelectItem)
-    val selectBody = Doc.intercalate(Doc.char(',') + Doc.lineOrSpace, sis)
-    val select     = selectBody.bracketBy(Doc.text("SELECT"), clauseEnd)
-    val f          = qs.f.map(prettyRelation)
-    val fBody      = Doc.intercalate(Doc.char(',') + Doc.space, f)
-    val from       = fBody.bracketBy(Doc.text("FROM"), Doc.empty)
-    select + from
-  }
+  def prettySetOperator(so: SetOperator): Doc =
+    so match {
+      case UNION     => Doc.text("UNION")
+      case EXCEPT    => Doc.text("EXCEPT")
+      case INTERSECT => Doc.text("INTERSECT")
+    }
+
+  def prettySetQuantifier(sq: SetQuantifier): Doc =
+    sq match {
+      case ALL      => Doc.text("ALL")
+      case DISTINCT => Doc.text("DISTINCT")
+    }
 
   def prettyRelation[I](r: Relation[I, RawName]): Doc =
     r match {
@@ -62,7 +117,7 @@ object Pretty {
       case SelectSingle(_, expr, alias) =>
         alias match {
           case None        => prettyExpr(expr)
-          case Some(value) => prettyExpr(expr) + Doc.space + Doc.text("AS") + Doc.text(value.value)
+          case Some(alias) => prettyExpr(expr) + Doc.space + Doc.text("AS") + Doc.text(alias.value)
         }
     }
 
@@ -70,6 +125,37 @@ object Pretty {
     expr match {
       case ColumnExpr(_, col)   => Doc.text(col.value.value)
       case IntLiteral(_, value) => Doc.text(value.toString)
-      case _                    => Doc.text("--OOPS EXPR--")
+      case ArithmeticBinary(_, left, op, right) =>
+        prettyExpr(left) & prettyArithmeticOp(op) & prettyExpr(right)
+      case LogicalBinary(_, left, op, right) =>
+        prettyExpr(left) + Doc.lineOrSpace + prettyBooleanOp(op) & prettyExpr(right)
+      case ComparisonExpr(_, left, op, right) =>
+        prettyExpr(left) & prettyComparison(op) & prettyExpr(right)
+      case _ => Doc.text("--OOPS EXPR--")
+    }
+
+  def prettyArithmeticOp(op: ArithmeticOperator): Doc =
+    op match {
+      case ADD      => Doc.char('+')
+      case DIVIDE   => Doc.char('/')
+      case MODULUS  => Doc.char('%')
+      case MULTIPLY => Doc.char('*')
+      case SUBTRACT => Doc.char('-')
+    }
+
+  def prettyBooleanOp(op: BooleanOperator): Doc =
+    op match {
+      case AND => Doc.text("AND")
+      case OR  => Doc.text("OR")
+    }
+
+  def prettyComparison(op: Comparison): Doc =
+    op match {
+      case EQ  => Doc.char('=')
+      case GT  => Doc.char('>')
+      case GTE => Doc.text(">=")
+      case LT  => Doc.char('<')
+      case LTE => Doc.text("<=")
+      case NEQ => Doc.text("!=")
     }
 }
