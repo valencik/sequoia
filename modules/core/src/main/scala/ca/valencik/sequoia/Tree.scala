@@ -805,7 +805,6 @@ sealed trait PrimaryExpression[I, R] extends ValueExpression[I, R]
 object PrimaryExpression {
   implicit def eqPrimaryExpression[I: Eq, R: Eq]: Eq[PrimaryExpression[I, R]] =
     Eq.fromUniversalEquals
-  // scalastyle:off cyclomatic.complexity
   implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, ?]] =
     new Functor[PrimaryExpression[I, ?]] {
       def map[A, B](fa: PrimaryExpression[I, A])(f: A => B): PrimaryExpression[I, B] =
@@ -826,7 +825,6 @@ object PrimaryExpression {
           case e: Extract[I, _]             => e.map(f)
         }
     }
-  // scalastyle:on cyclomatic.complexity
 }
 
 sealed trait LiteralExpr[I, R] extends PrimaryExpression[I, R]
