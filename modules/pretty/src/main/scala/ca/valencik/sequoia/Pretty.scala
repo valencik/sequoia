@@ -158,8 +158,31 @@ object Pretty {
         prettyExpr(left) & prettyComparison(op) & prettyExpr(right)
       case DereferenceExpr(_, base, fieldName) =>
         prettyExpr(base) + Doc.char('.') + Doc.text(fieldName)
-      case _ => ???
+      case sc: SimpleCase[I, RawName] => prettySimpleCase(sc)
+      case sc: SearchedCase[I, RawName] => prettySearchCase(sc)
+      case sl: StringLiteral[I, RawName] =>
+        Doc.char('\'') + Doc.text(sl.value) + Doc.char('\'')
+      case _ => Doc.text("oops expr")
     }
+
+  def prettySimpleCase[I](sc: SimpleCase[I, RawName]): Doc = {
+      val vExp = prettyExpr(sc.exp)
+      val wcs = Doc.intercalate(Doc.space, sc.whenClauses.map(prettyWhenClause))
+      val elseC = sc.elseExpression match {
+          case None => Doc.empty
+          case Some(exp) => Doc.text("ELSE") & prettyExpr(exp)
+      }
+      Doc.text("CASE") & vExp & wcs & elseC & Doc.text("END")
+  }
+
+  def prettySearchCase[I](sc: SearchedCase[I, RawName]): Doc = {
+      val wcs = Doc.intercalate(Doc.space, sc.whenClauses.map(prettyWhenClause))
+      val elseC = sc.elseExpression match {
+          case None => Doc.empty
+          case Some(exp) => Doc.char('(') + Doc.text("ELSE") & prettyExpr(exp) + Doc.char(')')
+      }
+      Doc.text("CASE") & wcs & elseC & Doc.text("END")
+  }
 
   def prettyArithmeticOp(op: ArithmeticOperator): Doc =
     op match {
@@ -185,4 +208,10 @@ object Pretty {
       case LTE => Doc.text("<=")
       case NEQ => Doc.text("!=")
     }
+
+  def prettyWhenClause[I](wc: WhenClause[I, RawName]): Doc = {
+      val cond = prettyExpr(wc.condition)
+      val res = prettyExpr(wc.result)
+      Doc.text("WHEN") & cond & Doc.text("THEN") & res
+  }
 }
