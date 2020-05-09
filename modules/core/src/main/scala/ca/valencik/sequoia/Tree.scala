@@ -63,13 +63,14 @@ sealed trait Node extends Product with Serializable
 
 final case class Identifier(value: String) extends Node
 
-final case class Query[I, R](info: I, w: Option[With[I, R]], qnw: QueryNoWith[I, R]) extends Node
+final case class Query[I, R](info: I, cte: Option[With[I, R]], queryNoWith: QueryNoWith[I, R])
+    extends Node
 object Query {
   implicit def eqQuery[I: Eq, R: Eq]: Eq[Query[I, R]] = Eq.fromUniversalEquals
   implicit def queryInstances[I]: Functor[Query[I, ?]] =
     new Functor[Query[I, ?]] {
       def map[A, B](fa: Query[I, A])(f: A => B): Query[I, B] =
-        fa.copy(w = fa.w.map(_.map(f)), qnw = fa.qnw.map(f))
+        fa.copy(cte = fa.cte.map(_.map(f)), queryNoWith = fa.queryNoWith.map(f))
     }
 }
 
@@ -78,38 +79,38 @@ object Query {
   *  Note: Despite being in the SqlBase.g4 grammar, we ignore the RECURSIVE term
   *  as it is not supported.
   */
-final case class With[I, R](info: I, nqs: List[NamedQuery[I, R]]) extends Node
+final case class With[I, R](info: I, namedQueries: List[NamedQuery[I, R]]) extends Node
 object With {
   implicit def eqWith[I: Eq, R: Eq]: Eq[With[I, R]] = Eq.fromUniversalEquals
   implicit def withInstances[I]: Functor[With[I, ?]] =
     new Functor[With[I, ?]] {
       def map[A, B](fa: With[I, A])(f: A => B): With[I, B] =
-        fa.copy(nqs = fa.nqs.map(_.map(f)))
+        fa.copy(namedQueries = fa.namedQueries.map(_.map(f)))
     }
 }
 
 final case class QueryNoWith[I, R](
     info: I,
-    qt: QueryTerm[I, R],
-    ob: Option[OrderBy[I, R]],
-    l: Option[Limit[I]]
+    queryTerm: QueryTerm[I, R],
+    orderBy: Option[OrderBy[I, R]],
+    limit: Option[Limit[I]]
 ) extends Node
 object QueryNoWith {
   implicit def eqQueryNoWith[I: Eq, R: Eq]: Eq[QueryNoWith[I, R]] = Eq.fromUniversalEquals
   implicit def queryNoWithInstances[I]: Functor[QueryNoWith[I, ?]] =
     new Functor[QueryNoWith[I, ?]] {
       def map[A, B](fa: QueryNoWith[I, A])(f: A => B): QueryNoWith[I, B] =
-        fa.copy(qt = fa.qt.map(f), ob = fa.ob.map(_.map(f)))
+        fa.copy(queryTerm = fa.queryTerm.map(f), orderBy = fa.orderBy.map(_.map(f)))
     }
 }
 
-final case class OrderBy[I, R](info: I, sis: List[SortItem[I, R]])
+final case class OrderBy[I, R](info: I, sortItems: List[SortItem[I, R]])
 object OrderBy {
   implicit def eqOrderBy[I: Eq, R: Eq]: Eq[OrderBy[I, R]] = Eq.fromUniversalEquals
   implicit def orderByInstances[I]: Functor[OrderBy[I, ?]] =
     new Functor[OrderBy[I, ?]] {
       def map[A, B](fa: OrderBy[I, A])(f: A => B): OrderBy[I, B] =
-        fa.copy(sis = fa.sis.map(_.map(f)))
+        fa.copy(sortItems = fa.sortItems.map(_.map(f)))
     }
 }
 
@@ -121,7 +122,7 @@ sealed trait NullOrdering
 final case object FIRST extends NullOrdering
 final case object LAST  extends NullOrdering
 
-final case class Limit[I](info: I, l: String)
+final case class Limit[I](info: I, value: String)
 object Limit {
   implicit def eqLimit[I: Eq]: Eq[Limit[I]] = Eq.fromUniversalEquals
   // TODO Override constructor and do checking on whether it is a integer value or 'all' text?
@@ -147,7 +148,7 @@ final case class SetOperation[I, R](
     info: I,
     left: QueryTerm[I, R],
     op: SetOperator,
-    sq: Option[SetQuantifier],
+    setQuantifier: Option[SetQuantifier],
     right: QueryTerm[I, R]
 ) extends QueryTerm[I, R]
 object SetOperation {
@@ -187,24 +188,25 @@ object QueryPrimary {
     }
 }
 
-final case class QueryPrimaryTable[I, R](info: I, t: TableRef[I, R]) extends QueryPrimary[I, R]
+final case class QueryPrimaryTable[I, R](info: I, table: TableRef[I, R]) extends QueryPrimary[I, R]
 object QueryPrimaryTable {
   implicit def eqQueryPrimaryTable[I: Eq, R: Eq]: Eq[QueryPrimaryTable[I, R]] =
     Eq.fromUniversalEquals
   implicit def queryQueryPrimaryTableInstances[I]: Functor[QueryPrimaryTable[I, ?]] =
     new Functor[QueryPrimaryTable[I, ?]] {
       def map[A, B](fa: QueryPrimaryTable[I, A])(f: A => B): QueryPrimaryTable[I, B] =
-        fa.copy(t = fa.t.map(f))
+        fa.copy(table = fa.table.map(f))
     }
 }
 
-final case class InlineTable[I, R](info: I, vs: List[Expression[I, R]]) extends QueryPrimary[I, R]
+final case class InlineTable[I, R](info: I, values: List[Expression[I, R]])
+    extends QueryPrimary[I, R]
 object InlineTable {
   implicit def eqInlineTable[I: Eq, R: Eq]: Eq[InlineTable[I, R]] = Eq.fromUniversalEquals
   implicit def inlineTableInstances[I]: Functor[InlineTable[I, ?]] =
     new Functor[InlineTable[I, ?]] {
       def map[A, B](fa: InlineTable[I, A])(f: A => B): InlineTable[I, B] =
-        fa.copy(vs = fa.vs.map(_.map(f)))
+        fa.copy(values = fa.values.map(_.map(f)))
     }
 }
 

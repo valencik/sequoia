@@ -6,7 +6,7 @@ object Rewrite {
 
   def ifRelation[R](pred: Relation[_, R] => Boolean): Query[_, R] => Boolean =
     query => {
-      query.qnw.qt match {
+      query.queryNoWith.queryTerm match {
         case qs: QuerySpecification[_, R] => qs.f.exists(pred)
         case _                            => false
       }
@@ -25,14 +25,14 @@ object Rewrite {
     }
 
   def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] = {
-    val selectItems = q.qnw.qt match {
+    val selectItems = q.queryNoWith.queryTerm match {
       case qs: QuerySpecification[Int, RawName] => qs.sis
       case _                                    => ???
     }
-    val orderBy      = q.qnw.ob
-    val limit        = q.qnw.l
-    val rewrittenQNW = q.qnw.copy(ob = None, l = None)
-    val rewrittenQ   = q.copy(qnw = rewrittenQNW)
+    val orderBy      = q.queryNoWith.orderBy
+    val limit        = q.queryNoWith.limit
+    val rewrittenQNW = q.queryNoWith.copy(orderBy = None, limit = None)
+    val rewrittenQ   = q.copy(queryNoWith = rewrittenQNW)
     Query(
       14,
       Some(With(13, List(NamedQuery(12, name, None, rewrittenQ)))),

@@ -5,14 +5,14 @@ import org.typelevel.paiges._
 object Pretty {
 
   def prettyQuery[I](q: Query[I, RawName]): Doc = {
-    q.w match {
-      case None        => prettyQueryNoWith(q.qnw)
-      case Some(withQ) => prettyWith(withQ) + Doc.line + prettyQueryNoWith(q.qnw)
+    q.cte match {
+      case None        => prettyQueryNoWith(q.queryNoWith)
+      case Some(withQ) => prettyWith(withQ) + Doc.line + prettyQueryNoWith(q.queryNoWith)
     }
   }
 
   def prettyWith[I](withQ: With[I, RawName]): Doc = {
-    val namedQs = withQ.nqs.map(prettyNamedQuery)
+    val namedQs = withQ.namedQueries.map(prettyNamedQuery)
     val nqBody  = Doc.intercalate(Doc.char(',') + Doc.line, namedQs)
     Doc.text("WITH") & nqBody
   }
@@ -24,12 +24,12 @@ object Pretty {
   }
 
   def prettyQueryNoWith[I](qnw: QueryNoWith[I, RawName]): Doc = {
-    val qt = prettyQueryTerm(qnw.qt)
-    val limit = qnw.l match {
+    val qt = prettyQueryTerm(qnw.queryTerm)
+    val limit = qnw.limit match {
       case None      => Doc.empty
-      case Some(lim) => Doc.text("LIMIT") & Doc.text(lim.l)
+      case Some(lim) => Doc.text("LIMIT") & Doc.text(lim.value)
     }
-    val order = qnw.ob match {
+    val order = qnw.orderBy match {
       case None      => Doc.empty
       case Some(ord) => Doc.text("ORDER BY") & prettyOrderBy(ord)
     }
@@ -37,7 +37,7 @@ object Pretty {
   }
 
   def prettyOrderBy[I](orderBy: OrderBy[I, RawName]): Doc = {
-    val sortItems = orderBy.sis.map(prettySortItem)
+    val sortItems = orderBy.sortItems.map(prettySortItem)
     Doc.intercalate(Doc.char(',') + Doc.space, sortItems)
   }
 
@@ -77,7 +77,7 @@ object Pretty {
     val left  = prettyQueryTerm(so.left)
     val right = prettyQueryTerm(so.right)
     val op    = prettySetOperator(so.op)
-    so.sq match {
+    so.setQuantifier match {
       case None             => left + op + right
       case Some(quantifier) => left + op + prettySetQuantifier(quantifier) + right
     }

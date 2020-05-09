@@ -120,15 +120,15 @@ object MonadSqlState extends App {
       q: Query[I, RawName]
   ): EitherRes[Query[I, ResolvedName]] =
     for {
-      w   <- q.w.traverse(resolveWith)
-      qnw <- resolveQueryNoWith(q.qnw)
+      w   <- q.cte.traverse(resolveWith)
+      qnw <- resolveQueryNoWith(q.queryNoWith)
     } yield Query(q.info, w, qnw)
 
   def resolveWith[I](
       w: With[I, RawName]
   ): EitherRes[With[I, ResolvedName]] =
     for {
-      nqs <- w.nqs.traverse(resolveNamedQuery)
+      nqs <- w.namedQueries.traverse(resolveNamedQuery)
     } yield With(w.info, nqs)
 
   def resolveNamedQuery[I](
@@ -146,7 +146,7 @@ object MonadSqlState extends App {
       qnw: QueryNoWith[I, RawName]
   ): EitherRes[QueryNoWith[I, ResolvedName]] =
     for {
-      qt <- resolveQueryTerm(qnw.qt)
+      qt <- resolveQueryTerm(qnw.queryTerm)
       // TODO: OrderBy
     } yield QueryNoWith(qnw.info, qt, None, None)
 
