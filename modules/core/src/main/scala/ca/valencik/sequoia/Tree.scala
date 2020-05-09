@@ -1,7 +1,6 @@
 package ca.valencik.sequoia
 
 import cats.{Applicative, Eq, Eval, Functor, Traverse}
-import cats.data.NonEmptyList
 import cats.implicits._
 
 final case class TableRef[I, R](info: I, value: R)
@@ -60,7 +59,7 @@ final case class TableAlias[I](info: I, value: String)
 
 // --- TREE --
 
-sealed trait Node
+sealed trait Node extends Product with Serializable
 
 final case class Identifier(value: String) extends Node
 
@@ -79,7 +78,7 @@ object Query {
   *  Note: Despite being in the SqlBase.g4 grammar, we ignore the RECURSIVE term
   *  as it is not supported.
   */
-final case class With[I, R](info: I, nqs: NonEmptyList[NamedQuery[I, R]]) extends Node
+final case class With[I, R](info: I, nqs: List[NamedQuery[I, R]]) extends Node
 object With {
   implicit def eqWith[I: Eq, R: Eq]: Eq[With[I, R]] = Eq.fromUniversalEquals
   implicit def withInstances[I]: Functor[With[I, ?]] =
@@ -104,7 +103,7 @@ object QueryNoWith {
     }
 }
 
-final case class OrderBy[I, R](info: I, sis: NonEmptyList[SortItem[I, R]])
+final case class OrderBy[I, R](info: I, sis: List[SortItem[I, R]])
 object OrderBy {
   implicit def eqOrderBy[I: Eq, R: Eq]: Eq[OrderBy[I, R]] = Eq.fromUniversalEquals
   implicit def orderByInstances[I]: Functor[OrderBy[I, ?]] =
@@ -199,8 +198,7 @@ object QueryPrimaryTable {
     }
 }
 
-final case class InlineTable[I, R](info: I, vs: NonEmptyList[Expression[I, R]])
-    extends QueryPrimary[I, R]
+final case class InlineTable[I, R](info: I, vs: List[Expression[I, R]]) extends QueryPrimary[I, R]
 object InlineTable {
   implicit def eqInlineTable[I: Eq, R: Eq]: Eq[InlineTable[I, R]] = Eq.fromUniversalEquals
   implicit def inlineTableInstances[I]: Functor[InlineTable[I, ?]] =
@@ -236,8 +234,8 @@ object SortItem {
 final case class QuerySpecification[I, R](
     info: I,
     sq: Option[SetQuantifier],
-    sis: NonEmptyList[SelectItem[I, R]],
-    f: Option[NonEmptyList[Relation[I, R]]],
+    sis: List[SelectItem[I, R]],
+    f: List[Relation[I, R]],
     w: Option[Expression[I, R]],
     g: Option[GroupBy[I, R]],
     h: Option[Expression[I, R]]
@@ -250,7 +248,7 @@ object QuerySpecification {
       def map[A, B](fa: QuerySpecification[I, A])(f: A => B): QuerySpecification[I, B] =
         fa.copy(
           sis = fa.sis.map(_.map(f)),
-          f = fa.f.map(_.map(_.map(f))),
+          f = fa.f.map(_.map(f)),
           w = fa.w.map(_.map(f)),
           g = fa.g.map(_.map(f)),
           h = fa.h.map(_.map(f))
@@ -261,7 +259,7 @@ object QuerySpecification {
 final case class GroupBy[I, R](
     info: I,
     sq: Option[SetQuantifier],
-    ges: NonEmptyList[GroupingElement[I, R]]
+    ges: List[GroupingElement[I, R]]
 ) extends Node
 object GroupBy {
   implicit def eqGroupBy[I: Eq, R: Eq]: Eq[GroupBy[I, R]] = Eq.fromUniversalEquals
@@ -317,7 +315,7 @@ object Cube {
     }
 }
 
-final case class MultipleGroupingSets[I, R](info: I, gs: NonEmptyList[GroupingSet[I, R]])
+final case class MultipleGroupingSets[I, R](info: I, gs: List[GroupingSet[I, R]])
     extends GroupingElement[I, R]
 object MultipleGroupingSets {
   implicit def eqMultipleGroupingSets[I: Eq, R: Eq]: Eq[MultipleGroupingSets[I, R]] =
@@ -448,8 +446,7 @@ object JoinOn {
     }
 }
 
-final case class JoinUsing[I, R](info: I, cols: NonEmptyList[UsingColumn[I, R]])
-    extends JoinCriteria[I, R]
+final case class JoinUsing[I, R](info: I, cols: List[UsingColumn[I, R]]) extends JoinCriteria[I, R]
 object JoinUsing {
   implicit def eqJoinUsing[I: Eq, R: Eq]: Eq[JoinUsing[I, R]] = Eq.fromUniversalEquals
   implicit def joinUsingInstances[I]: Functor[JoinUsing[I, ?]] =
@@ -502,7 +499,7 @@ object AliasedRelation {
     }
 }
 
-final case class ColumnAliases[I](cols: NonEmptyList[ColumnAlias[I]]) extends Node
+final case class ColumnAliases[I](cols: List[ColumnAlias[I]]) extends Node
 object ColumnAliases {
   implicit def eqColumnAliases[I: Eq]: Eq[ColumnAliases[I]] = Eq.fromUniversalEquals
 }
@@ -552,7 +549,7 @@ object SubQueryRelation {
     }
 }
 
-final case class Unnest[I, R](info: I, exps: NonEmptyList[Expression[I, R]], ordinality: Boolean)
+final case class Unnest[I, R](info: I, exps: List[Expression[I, R]], ordinality: Boolean)
     extends RelationPrimary[I, R]
 object Unnest {
   implicit def eqUnnest[I: Eq, R: Eq]: Eq[Unnest[I, R]] = Eq.fromUniversalEquals
@@ -699,7 +696,7 @@ object Between {
 final case class InList[I, R](
     info: I,
     value: ValueExpression[I, R],
-    exps: NonEmptyList[Expression[I, R]]
+    exps: List[Expression[I, R]]
 ) extends Predicate[I, R]
 object InList {
   implicit def eqInList[I: Eq, R: Eq]: Eq[InList[I, R]] = Eq.fromUniversalEquals
@@ -808,7 +805,6 @@ sealed trait PrimaryExpression[I, R] extends ValueExpression[I, R]
 object PrimaryExpression {
   implicit def eqPrimaryExpression[I: Eq, R: Eq]: Eq[PrimaryExpression[I, R]] =
     Eq.fromUniversalEquals
-  // scalastyle:off cyclomatic.complexity
   implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, ?]] =
     new Functor[PrimaryExpression[I, ?]] {
       def map[A, B](fa: PrimaryExpression[I, A])(f: A => B): PrimaryExpression[I, B] =
@@ -829,7 +825,6 @@ object PrimaryExpression {
           case e: Extract[I, _]             => e.map(f)
         }
     }
-  // scalastyle:on cyclomatic.complexity
 }
 
 sealed trait LiteralExpr[I, R] extends PrimaryExpression[I, R]
@@ -890,7 +885,7 @@ object ExistsExpr {
 final case class SimpleCase[I, R](
     info: I,
     exp: ValueExpression[I, R],
-    whenClauses: NonEmptyList[WhenClause[I, R]],
+    whenClauses: List[WhenClause[I, R]],
     elseExpression: Option[Expression[I, R]]
 ) extends PrimaryExpression[I, R]
 object SimpleCase {
@@ -908,7 +903,7 @@ object SimpleCase {
 
 final case class SearchedCase[I, R](
     info: I,
-    whenClauses: NonEmptyList[WhenClause[I, R]],
+    whenClauses: List[WhenClause[I, R]],
     elseExpression: Option[Expression[I, R]]
 ) extends PrimaryExpression[I, R]
 object SearchedCase {
@@ -959,8 +954,7 @@ object DereferenceExpr {
     }
 }
 
-final case class Row[I, R](info: I, exps: NonEmptyList[Expression[I, R]])
-    extends PrimaryExpression[I, R]
+final case class Row[I, R](info: I, exps: List[Expression[I, R]]) extends PrimaryExpression[I, R]
 object Row {
   implicit def eqRow[I: Eq, R: Eq]: Eq[Row[I, R]] = Eq.fromUniversalEquals
   implicit def rowInstances[I]: Functor[Row[I, ?]] =
@@ -970,7 +964,6 @@ object Row {
     }
 }
 
-// TODO Option[NonEmptyList] or just List?
 final case class FunctionCall[I, R](
     info: I,
     name: String,

@@ -3,13 +3,13 @@ package ca.valencik.sequoia
 import cats.data.{Chain, EitherT, ReaderWriterState}
 import cats.implicits._
 
-sealed trait RawName {
+sealed trait RawName extends Product with Serializable {
   def value: String
 }
 final case class RawTableName(value: String)  extends RawName
 final case class RawColumnName(value: String) extends RawName
 
-sealed trait ResolvedName {
+sealed trait ResolvedName extends Product with Serializable {
   def value: String
 }
 final case class ResolvedTableName(value: String)  extends ResolvedName
@@ -170,7 +170,7 @@ object MonadSqlState extends App {
       qs: QuerySpecification[I, RawName]
   ): EitherRes[QuerySpecification[I, ResolvedName]] =
     for {
-      from <- qs.f.traverse(rs => rs.traverse(resolveRelation))
+      from <- qs.f.traverse(resolveRelation)
       sis  <- qs.sis.traverse(resolveSelectItem)
       // TODO: QuerySpec
     } yield QuerySpecification(qs.info, None, sis, from, None, None, None)
@@ -245,8 +245,16 @@ object MonadSqlState extends App {
       pred: Predicate[I, RawName]
   ): EitherRes[Predicate[I, ResolvedName]] =
     pred match {
-      case e: ComparisonExpr[I, RawName] => resolveComparisonExpr(e).widen
-      case _                             => ???
+      case e: NotPredicate[I, RawName] =>
+        resolveExpression(e.value).map(NotPredicate(e.info, _)).widen
+      case e: ComparisonExpr[I, RawName]       => resolveComparisonExpr(e).widen
+      case e: QuantifiedComparison[I, RawName] => resolveQuantifiedComparison(e).widen
+      case e: Between[I, RawName]              => resolveBetween(e).widen
+      case e: InList[I, RawName]               => resolveInList(e).widen
+      case e: InSubQuery[I, RawName]           => resolveInSubQuery(e).widen
+      case e: Like[I, RawName]                 => resolveLike(e).widen
+      case e: NullPredicate[I, RawName]        => resolveNullPredicate(e).widen
+      case e: DistinctFrom[I, RawName]         => resolveDistinctFrom(e).widen
     }
 
   def resolveComparisonExpr[I](
@@ -257,6 +265,64 @@ object MonadSqlState extends App {
       // TODO: Is the left allowed to modify the resolver state? It currently does...
       right <- resolveValueExpression(e.right)
     } yield ComparisonExpr(e.info, left, e.op, right)
+
+  def resolveQuantifiedComparison[I](
+      e: QuantifiedComparison[I, RawName]
+  ): EitherRes[QuantifiedComparison[I, ResolvedName]] =
+    for {
+      value <- resolveValueExpression(e.value)
+      query <- resolveQuery(e.query)
+    } yield QuantifiedComparison(e.info, value, e.op, e.quantifier, query)
+
+  def resolveBetween[I](
+      e: Between[I, RawName]
+  ): EitherRes[Between[I, ResolvedName]] =
+    for {
+      // TODO: preserve scope?
+      value <- preserveScope(resolveValueExpression(e.value))
+      lower <- preserveScope(resolveValueExpression(e.lower))
+      upper <- preserveScope(resolveValueExpression(e.upper))
+    } yield Between(e.info, value, lower, upper)
+
+  def resolveInList[I](
+      e: InList[I, RawName]
+  ): EitherRes[InList[I, ResolvedName]] =
+    for {
+      value <- resolveValueExpression(e.value)
+      exps  <- e.exps.traverse(resolveExpression)
+    } yield InList(e.info, value, exps)
+
+  def resolveInSubQuery[I](
+      e: InSubQuery[I, RawName]
+  ): EitherRes[InSubQuery[I, ResolvedName]] =
+    for {
+      value <- resolveValueExpression(e.value)
+      query <- resolveQuery(e.query)
+    } yield InSubQuery(e.info, value, query)
+
+  def resolveLike[I](
+      e: Like[I, RawName]
+  ): EitherRes[Like[I, ResolvedName]] =
+    for {
+      value   <- resolveValueExpression(e.value)
+      pattern <- resolveValueExpression(e.pattern)
+      escape  <- e.escape.traverse(resolveValueExpression)
+    } yield Like(e.info, value, pattern, escape)
+
+  def resolveNullPredicate[I](
+      e: NullPredicate[I, RawName]
+  ): EitherRes[NullPredicate[I, ResolvedName]] =
+    for {
+      value <- resolveValueExpression(e.value)
+    } yield NullPredicate(e.info, value)
+
+  def resolveDistinctFrom[I](
+      e: DistinctFrom[I, RawName]
+  ): EitherRes[DistinctFrom[I, ResolvedName]] =
+    for {
+      value <- resolveValueExpression(e.value)
+      right <- resolveValueExpression(e.right)
+    } yield DistinctFrom(e.info, value, right)
 
   def resolveValueExpression[I](
       expr: ValueExpression[I, RawName]
@@ -284,6 +350,7 @@ object MonadSqlState extends App {
       case e: ColumnExpr[I, RawName]   => resolveColumnExpr(e).widen
       case e: LiteralExpr[I, RawName]  => resolveLiteralExpr(e).widen
       case e: SubQueryExpr[I, RawName] => resolveSubQueryExpr(e).widen
+      case e: ExistsExpr[I, RawName]   => resolveExistsExpr(e).widen
       case _                           => ???
     }
 
@@ -299,6 +366,14 @@ object MonadSqlState extends App {
           expr.asInstanceOf[LiteralExpr[I, ResolvedName]]
         )
     )
+
+  def resolveExistsExpr[I](
+      expr: ExistsExpr[I, RawName]
+  ): EitherRes[ExistsExpr[I, ResolvedName]] =
+    for {
+      // ExistsExpr cannot bring columns and relations into scope
+      q <- preserveScope(resolveQuery(expr.q))
+    } yield ExistsExpr(expr.info, q)
 
   def resolveSubQueryExpr[I](
       expr: SubQueryExpr[I, RawName]

@@ -6,6 +6,7 @@ val catsVersion       = "2.1.1"
 val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.9"
 val disciplineVersion = "1.0.1"
+val paigesVersion     = "0.3.1"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
@@ -14,7 +15,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, parse, tests, laws)
+  .aggregate(core, pretty, rewrite, parse, tests, laws)
 
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
@@ -25,6 +26,28 @@ lazy val core = (project in file("modules/core"))
     )
   )
 
+lazy val pretty = (project in file("modules/pretty"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(
+    name := "sequoia-pretty",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core"   % catsVersion,
+      "org.typelevel" %% "paiges-core" % paigesVersion
+    )
+  )
+
+lazy val rewrite = (project in file("modules/rewrite"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(
+    name := "sequoia-rewrite",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % catsVersion,
+      "com.lihaoyi"   %% "pprint"    % pPrintVersion
+    )
+  )
+
 lazy val parse = (project in file("modules/parse"))
   .dependsOn(core)
   .enablePlugins(Antlr4Plugin)
@@ -32,14 +55,16 @@ lazy val parse = (project in file("modules/parse"))
   .settings(
     name := "sequoia-parse",
     libraryDependencies ++= Seq(
-      "org.antlr"      % "antlr4-runtime" % antlrVersion,
-      "org.typelevel" %% "cats-core"      % catsVersion,
-      "com.lihaoyi"   %% "pprint"         % pPrintVersion
+      "org.antlr"    % "antlr4-runtime" % antlrVersion,
+      "com.lihaoyi" %% "pprint"         % pPrintVersion
     ),
     antlr4GenListener in Antlr4 := false,
     antlr4GenVisitor in Antlr4 := true,
     antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia")
   )
+
+lazy val examples = (project in file("examples"))
+  .dependsOn(core, pretty, rewrite, parse)
 
 lazy val tests = (project in file("modules/tests"))
   .dependsOn(core, parse)
