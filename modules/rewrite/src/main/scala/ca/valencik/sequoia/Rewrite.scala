@@ -7,7 +7,7 @@ object Rewrite {
   def ifRelation[R](pred: Relation[_, R] => Boolean): Query[_, R] => Boolean =
     query => {
       query.queryNoWith.queryTerm match {
-        case qs: QuerySpecification[_, R] => qs.f.exists(pred)
+        case qs: QuerySpecification[_, R] => qs.from.exists(pred)
         case _                            => false
       }
     }
@@ -26,7 +26,7 @@ object Rewrite {
 
   def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] = {
     val selectItems = q.queryNoWith.queryTerm match {
-      case qs: QuerySpecification[Int, RawName] => qs.sis
+      case qs: QuerySpecification[Int, RawName] => qs.selectItems
       case _                                    => ???
     }
     val orderBy      = q.queryNoWith.orderBy
@@ -40,18 +40,18 @@ object Rewrite {
         23,
         QuerySpecification(
           info = 22,
-          sq = None,
-          sis = selectItems,
-          f = List(
+          setQuantifier = None,
+          selectItems = selectItems,
+          from = List(
             SampledRelation(
               21,
               AliasedRelation(20, TableName(19, TableRef(18, RawTableName(name))), None, None),
               None
             )
           ),
-          w = None,
-          g = None,
-          h = None
+          where = None,
+          groupBy = None,
+          having = None
         ),
         orderBy,
         limit

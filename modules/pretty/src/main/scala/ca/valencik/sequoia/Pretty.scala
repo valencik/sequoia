@@ -42,7 +42,7 @@ object Pretty {
   }
 
   def prettySortItem[I](sortItem: SortItem[I, RawName]): Doc = {
-    prettyExpr(sortItem.e)
+    prettyExpr(sortItem.exp)
   }
 
   def prettyQueryTerm[I](qt: QueryTerm[I, RawName]): Doc =
@@ -60,13 +60,13 @@ object Pretty {
   def prettyQuerySpecification[I](qs: QuerySpecification[I, RawName]): Doc = {
     val clauseEnd = Doc.lineOrEmpty
 
-    val sis        = qs.sis.map(prettySelectItem)
+    val sis        = qs.selectItems.map(prettySelectItem)
     val selectBody = Doc.intercalate(Doc.char(',') + Doc.line, sis)
     val select     = selectBody.bracketBy(Doc.text("SELECT"), clauseEnd)
-    val f          = qs.f.map(prettyRelation)
+    val f          = qs.from.map(prettyRelation)
     val fBody      = Doc.intercalate(Doc.char(',') + Doc.line, f)
     val from       = fBody.bracketBy(Doc.text("FROM"), clauseEnd)
-    val where = qs.w match {
+    val where = qs.where match {
       case None       => Doc.empty
       case Some(expr) => Doc.text("WHERE") & prettyExpr(expr)
     }

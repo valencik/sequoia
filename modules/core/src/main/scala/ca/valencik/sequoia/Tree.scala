@@ -210,37 +210,38 @@ object InlineTable {
     }
 }
 
-final case class SubQuery[I, R](info: I, qnw: QueryNoWith[I, R]) extends QueryPrimary[I, R]
+final case class SubQuery[I, R](info: I, queryNoWith: QueryNoWith[I, R]) extends QueryPrimary[I, R]
 object SubQuery {
   implicit def eqSubQuery[I: Eq, R: Eq]: Eq[SubQuery[I, R]] = Eq.fromUniversalEquals
   implicit def subQueryInstances[I]: Functor[SubQuery[I, ?]] =
     new Functor[SubQuery[I, ?]] {
-      def map[A, B](fa: SubQuery[I, A])(f: A => B): SubQuery[I, B] = fa.copy(qnw = fa.qnw.map(f))
+      def map[A, B](fa: SubQuery[I, A])(f: A => B): SubQuery[I, B] =
+        fa.copy(queryNoWith = fa.queryNoWith.map(f))
     }
 }
 
 final case class SortItem[I, R](
     info: I,
-    e: Expression[I, R],
-    o: Option[Ordering],
-    no: Option[NullOrdering]
+    exp: Expression[I, R],
+    ordering: Option[Ordering],
+    nullOrdering: Option[NullOrdering]
 ) extends Node
 object SortItem {
   implicit def eqSortItem[I: Eq, R: Eq]: Eq[SortItem[I, R]] = Eq.fromUniversalEquals
   implicit def sortItemInstances[I]: Functor[SortItem[I, ?]] =
     new Functor[SortItem[I, ?]] {
-      def map[A, B](fa: SortItem[I, A])(f: A => B): SortItem[I, B] = fa.copy(e = fa.e.map(f))
+      def map[A, B](fa: SortItem[I, A])(f: A => B): SortItem[I, B] = fa.copy(exp = fa.exp.map(f))
     }
 }
 
 final case class QuerySpecification[I, R](
     info: I,
-    sq: Option[SetQuantifier],
-    sis: List[SelectItem[I, R]],
-    f: List[Relation[I, R]],
-    w: Option[Expression[I, R]],
-    g: Option[GroupBy[I, R]],
-    h: Option[Expression[I, R]]
+    setQuantifier: Option[SetQuantifier],
+    selectItems: List[SelectItem[I, R]],
+    from: List[Relation[I, R]],
+    where: Option[Expression[I, R]],
+    groupBy: Option[GroupBy[I, R]],
+    having: Option[Expression[I, R]]
 ) extends QueryPrimary[I, R]
 object QuerySpecification {
   implicit def eqQuerySpecification[I: Eq, R: Eq]: Eq[QuerySpecification[I, R]] =
@@ -249,11 +250,11 @@ object QuerySpecification {
     new Functor[QuerySpecification[I, ?]] {
       def map[A, B](fa: QuerySpecification[I, A])(f: A => B): QuerySpecification[I, B] =
         fa.copy(
-          sis = fa.sis.map(_.map(f)),
-          f = fa.f.map(_.map(f)),
-          w = fa.w.map(_.map(f)),
-          g = fa.g.map(_.map(f)),
-          h = fa.h.map(_.map(f))
+          selectItems = fa.selectItems.map(_.map(f)),
+          from = fa.from.map(_.map(f)),
+          where = fa.where.map(_.map(f)),
+          groupBy = fa.groupBy.map(_.map(f)),
+          having = fa.having.map(_.map(f))
         )
     }
 }
