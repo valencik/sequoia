@@ -7,6 +7,7 @@ val scalaCheckVersion = "1.14.3"
 val pPrintVersion     = "0.5.9"
 val disciplineVersion = "1.0.1"
 val paigesVersion     = "0.3.1"
+val monocleVersion    = "2.0.3"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
@@ -44,6 +45,7 @@ lazy val rewrite = (project in file("modules/rewrite"))
     name := "sequoia-rewrite",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion,
+      "com.github.julien-truffaut"  %%  "monocle-core" % monocleVersion,
       "com.lihaoyi"   %% "pprint"    % pPrintVersion
     )
   )
