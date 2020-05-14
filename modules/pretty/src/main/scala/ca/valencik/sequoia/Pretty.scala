@@ -18,9 +18,9 @@ object Pretty {
   }
 
   def prettyNamedQuery[I](nq: NamedQuery[I, RawName]): Doc = {
-    val q      = prettyQuery(nq.q)
+    val q      = prettyQuery(nq.query)
     val inside = q.tightBracketBy(Doc.char('('), Doc.char(')'))
-    Doc.text(nq.n) & Doc.text("AS") & inside
+    Doc.text(nq.name) & Doc.text("AS") & inside
   }
 
   def prettyQueryNoWith[I](qnw: QueryNoWith[I, RawName]): Doc = {
@@ -103,7 +103,7 @@ object Pretty {
     }
 
   def prettyAliasedRelation[I](ar: AliasedRelation[I, RawName]): Doc = {
-    prettyRelationPrimary(ar.rp)
+    prettyRelationPrimary(ar.relationPrimary)
   }
 
   def prettyJoinRelation[I](jr: JoinRelation[I, RawName]): Doc = {

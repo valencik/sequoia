@@ -16,7 +16,7 @@ object Rewrite {
     relation => {
       relation match {
         case sr: SampledRelation[_, R] =>
-          sr.ar.rp match {
+          sr.aliasedRelation.relationPrimary match {
             case TableName(_, r) => pred(r.value)
             case _               => false
           }
