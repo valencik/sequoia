@@ -120,33 +120,33 @@ object MonadSqlState extends App {
       q: Query[I, RawName]
   ): EitherRes[Query[I, ResolvedName]] =
     for {
-      w   <- q.w.traverse(resolveWith)
-      qnw <- resolveQueryNoWith(q.qnw)
+      w   <- q.cte.traverse(resolveWith)
+      qnw <- resolveQueryNoWith(q.queryNoWith)
     } yield Query(q.info, w, qnw)
 
   def resolveWith[I](
       w: With[I, RawName]
   ): EitherRes[With[I, ResolvedName]] =
     for {
-      nqs <- w.nqs.traverse(resolveNamedQuery)
+      nqs <- w.namedQueries.traverse(resolveNamedQuery)
     } yield With(w.info, nqs)
 
   def resolveNamedQuery[I](
       nq: NamedQuery[I, RawName]
   ): EitherRes[NamedQuery[I, ResolvedName]] =
     for {
-      q <- resolveQuery(nq.q)
+      q <- resolveQuery(nq.query)
       _ <- EitherT.right(
         // Update Resolver with CTE and reset so we have an empty scope for the next query
-        ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.n).resetRelationScope)
+        ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.name).resetRelationScope)
       )
-    } yield NamedQuery(nq.info, nq.n, None, q)
+    } yield NamedQuery(nq.info, nq.name, None, q)
 
   def resolveQueryNoWith[I](
       qnw: QueryNoWith[I, RawName]
   ): EitherRes[QueryNoWith[I, ResolvedName]] =
     for {
-      qt <- resolveQueryTerm(qnw.qt)
+      qt <- resolveQueryTerm(qnw.queryTerm)
       // TODO: OrderBy
     } yield QueryNoWith(qnw.info, qt, None, None)
 
@@ -170,8 +170,8 @@ object MonadSqlState extends App {
       qs: QuerySpecification[I, RawName]
   ): EitherRes[QuerySpecification[I, ResolvedName]] =
     for {
-      from <- qs.f.traverse(resolveRelation)
-      sis  <- qs.sis.traverse(resolveSelectItem)
+      from <- qs.from.traverse(resolveRelation)
+      sis  <- qs.selectItems.traverse(resolveSelectItem)
       // TODO: QuerySpec
     } yield QuerySpecification(qs.info, None, sis, from, None, None, None)
 
@@ -246,7 +246,7 @@ object MonadSqlState extends App {
   ): EitherRes[Predicate[I, ResolvedName]] =
     pred match {
       case e: NotPredicate[I, RawName] =>
-        resolveExpression(e.value).map(NotPredicate(e.info, _)).widen
+        resolveExpression(e.exp).map(NotPredicate(e.info, _)).widen
       case e: ComparisonExpr[I, RawName]       => resolveComparisonExpr(e).widen
       case e: QuantifiedComparison[I, RawName] => resolveQuantifiedComparison(e).widen
       case e: Between[I, RawName]              => resolveBetween(e).widen
@@ -372,7 +372,7 @@ object MonadSqlState extends App {
   ): EitherRes[ExistsExpr[I, ResolvedName]] =
     for {
       // ExistsExpr cannot bring columns and relations into scope
-      q <- preserveScope(resolveQuery(expr.q))
+      q <- preserveScope(resolveQuery(expr.query))
     } yield ExistsExpr(expr.info, q)
 
   def resolveSubQueryExpr[I](
@@ -380,7 +380,7 @@ object MonadSqlState extends App {
   ): EitherRes[SubQueryExpr[I, ResolvedName]] =
     for {
       // SubQueryExpr cannot bring columns and relations into scope
-      q <- preserveScope(resolveQuery(expr.q))
+      q <- preserveScope(resolveQuery(expr.query))
     } yield SubQueryExpr(expr.info, q)
 
   def resolveColumnExpr[I](ce: ColumnExpr[I, RawName]): EitherRes[ColumnExpr[I, ResolvedName]] =
@@ -398,8 +398,8 @@ object MonadSqlState extends App {
       sr: SampledRelation[I, RawName]
   ): EitherRes[SampledRelation[I, ResolvedName]] =
     for {
-      ar <- resolveAliasedRelation(sr.ar)
-      ts <- sr.ts.traverse(resolveTableSample)
+      ar <- resolveAliasedRelation(sr.aliasedRelation)
+      ts <- sr.tableSample.traverse(resolveTableSample)
     } yield SampledRelation(sr.info, ar, ts)
 
   def resolveTableSample[I](
@@ -407,13 +407,13 @@ object MonadSqlState extends App {
   ): EitherRes[TableSample[I, ResolvedName]] =
     for {
       e <- resolveExpression(ts.percentage)
-    } yield TableSample(ts.info, ts.st, e)
+    } yield TableSample(ts.info, ts.sampleType, e)
 
   def resolveAliasedRelation[I](
       ar: AliasedRelation[I, RawName]
   ): EitherRes[AliasedRelation[I, ResolvedName]] =
     for {
-      rp <- resolveRelationPrimary(ar.rp)
+      rp <- resolveRelationPrimary(ar.relationPrimary)
       // TODO: TableAlias and ColumnAliases
     } yield AliasedRelation(ar.info, rp, None, None)
 
@@ -427,7 +427,7 @@ object MonadSqlState extends App {
 
   def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
     for {
-      tr <- resolveTableRef(tn.r)
+      tr <- resolveTableRef(tn.ref)
     } yield TableName(tn.info, tr)
 
   def resolveJoinRelation[I](
@@ -453,6 +453,6 @@ object MonadSqlState extends App {
   ): EitherRes[JoinOn[I, ResolvedName]] =
     for {
       // Resolving a JoinOn expression shouldn't bring things into scope
-      exp <- preserveScope(resolveExpression(jo.be))
+      exp <- preserveScope(resolveExpression(jo.expr))
     } yield JoinOn(jo.info, exp)
 }

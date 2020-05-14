@@ -6,8 +6,8 @@ object Rewrite {
 
   def ifRelation[R](pred: Relation[_, R] => Boolean): Query[_, R] => Boolean =
     query => {
-      query.qnw.qt match {
-        case qs: QuerySpecification[_, R] => qs.f.exists(pred)
+      query.queryNoWith.queryTerm match {
+        case qs: QuerySpecification[_, R] => qs.from.exists(pred)
         case _                            => false
       }
     }
@@ -16,7 +16,7 @@ object Rewrite {
     relation => {
       relation match {
         case sr: SampledRelation[_, R] =>
-          sr.ar.rp match {
+          sr.aliasedRelation.relationPrimary match {
             case TableName(_, r) => pred(r.value)
             case _               => false
           }
@@ -25,14 +25,14 @@ object Rewrite {
     }
 
   def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] = {
-    val selectItems = q.qnw.qt match {
-      case qs: QuerySpecification[Int, RawName] => qs.sis
+    val selectItems = q.queryNoWith.queryTerm match {
+      case qs: QuerySpecification[Int, RawName] => qs.selectItems
       case _                                    => ???
     }
-    val orderBy      = q.qnw.ob
-    val limit        = q.qnw.l
-    val rewrittenQNW = q.qnw.copy(ob = None, l = None)
-    val rewrittenQ   = q.copy(qnw = rewrittenQNW)
+    val orderBy      = q.queryNoWith.orderBy
+    val limit        = q.queryNoWith.limit
+    val rewrittenQNW = q.queryNoWith.copy(orderBy = None, limit = None)
+    val rewrittenQ   = q.copy(queryNoWith = rewrittenQNW)
     Query(
       14,
       Some(With(13, List(NamedQuery(12, name, None, rewrittenQ)))),
@@ -40,18 +40,18 @@ object Rewrite {
         23,
         QuerySpecification(
           info = 22,
-          sq = None,
-          sis = selectItems,
-          f = List(
+          setQuantifier = None,
+          selectItems = selectItems,
+          from = List(
             SampledRelation(
               21,
               AliasedRelation(20, TableName(19, TableRef(18, RawTableName(name))), None, None),
               None
             )
           ),
-          w = None,
-          g = None,
-          h = None
+          where = None,
+          groupBy = None,
+          having = None
         ),
         orderBy,
         limit

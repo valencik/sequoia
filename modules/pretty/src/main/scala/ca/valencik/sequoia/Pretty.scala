@@ -5,31 +5,31 @@ import org.typelevel.paiges._
 object Pretty {
 
   def prettyQuery[I](q: Query[I, RawName]): Doc = {
-    q.w match {
-      case None        => prettyQueryNoWith(q.qnw)
-      case Some(withQ) => prettyWith(withQ) + Doc.line + prettyQueryNoWith(q.qnw)
+    q.cte match {
+      case None        => prettyQueryNoWith(q.queryNoWith)
+      case Some(withQ) => prettyWith(withQ) + Doc.line + prettyQueryNoWith(q.queryNoWith)
     }
   }
 
   def prettyWith[I](withQ: With[I, RawName]): Doc = {
-    val namedQs = withQ.nqs.map(prettyNamedQuery)
+    val namedQs = withQ.namedQueries.map(prettyNamedQuery)
     val nqBody  = Doc.intercalate(Doc.char(',') + Doc.line, namedQs)
     Doc.text("WITH") & nqBody
   }
 
   def prettyNamedQuery[I](nq: NamedQuery[I, RawName]): Doc = {
-    val q      = prettyQuery(nq.q)
+    val q      = prettyQuery(nq.query)
     val inside = q.tightBracketBy(Doc.char('('), Doc.char(')'))
-    Doc.text(nq.n) & Doc.text("AS") & inside
+    Doc.text(nq.name) & Doc.text("AS") & inside
   }
 
   def prettyQueryNoWith[I](qnw: QueryNoWith[I, RawName]): Doc = {
-    val qt = prettyQueryTerm(qnw.qt)
-    val limit = qnw.l match {
+    val qt = prettyQueryTerm(qnw.queryTerm)
+    val limit = qnw.limit match {
       case None      => Doc.empty
-      case Some(lim) => Doc.text("LIMIT") & Doc.text(lim.l)
+      case Some(lim) => Doc.text("LIMIT") & Doc.text(lim.value)
     }
-    val order = qnw.ob match {
+    val order = qnw.orderBy match {
       case None      => Doc.empty
       case Some(ord) => Doc.text("ORDER BY") & prettyOrderBy(ord)
     }
@@ -37,12 +37,12 @@ object Pretty {
   }
 
   def prettyOrderBy[I](orderBy: OrderBy[I, RawName]): Doc = {
-    val sortItems = orderBy.sis.map(prettySortItem)
+    val sortItems = orderBy.sortItems.map(prettySortItem)
     Doc.intercalate(Doc.char(',') + Doc.space, sortItems)
   }
 
   def prettySortItem[I](sortItem: SortItem[I, RawName]): Doc = {
-    prettyExpr(sortItem.e)
+    prettyExpr(sortItem.exp)
   }
 
   def prettyQueryTerm[I](qt: QueryTerm[I, RawName]): Doc =
@@ -60,13 +60,13 @@ object Pretty {
   def prettyQuerySpecification[I](qs: QuerySpecification[I, RawName]): Doc = {
     val clauseEnd = Doc.lineOrEmpty
 
-    val sis        = qs.sis.map(prettySelectItem)
+    val sis        = qs.selectItems.map(prettySelectItem)
     val selectBody = Doc.intercalate(Doc.char(',') + Doc.line, sis)
     val select     = selectBody.bracketBy(Doc.text("SELECT"), clauseEnd)
-    val f          = qs.f.map(prettyRelation)
+    val f          = qs.from.map(prettyRelation)
     val fBody      = Doc.intercalate(Doc.char(',') + Doc.line, f)
     val from       = fBody.bracketBy(Doc.text("FROM"), clauseEnd)
-    val where = qs.w match {
+    val where = qs.where match {
       case None       => Doc.empty
       case Some(expr) => Doc.text("WHERE") & prettyExpr(expr)
     }
@@ -77,7 +77,7 @@ object Pretty {
     val left  = prettyQueryTerm(so.left)
     val right = prettyQueryTerm(so.right)
     val op    = prettySetOperator(so.op)
-    so.sq match {
+    so.setQuantifier match {
       case None             => left + op + right
       case Some(quantifier) => left + op + prettySetQuantifier(quantifier) + right
     }
@@ -103,7 +103,7 @@ object Pretty {
     }
 
   def prettyAliasedRelation[I](ar: AliasedRelation[I, RawName]): Doc = {
-    prettyRelationPrimary(ar.rp)
+    prettyRelationPrimary(ar.relationPrimary)
   }
 
   def prettyJoinRelation[I](jr: JoinRelation[I, RawName]): Doc = {
