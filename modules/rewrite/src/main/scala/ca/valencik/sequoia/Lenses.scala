@@ -42,15 +42,17 @@ object Lenses {
   def tnRelationPrimary[I, R]: Optional[RelationPrimary[I, R], R] =
     Optional[RelationPrimary[I, R], R] {
       case tn: TableName[I, R]             => Some(tn.ref.value)
-      case _: SubQueryRelation[I, R]       => None
-      case _: Unnest[I, R]                 => None
-      case _: LateralRelation[I, R]        => None
       case pr: ParenthesizedRelation[I, R] => tnRelation.getOption(pr.relation)
+      case _: SubQueryRelation[I, R]       => None //TODO Requires Query support
+      case _: Unnest[I, R]                 => None //TODO Requires Expression support
+      case _: LateralRelation[I, R]        => None //TODO Requires Query support
     } { rawName => relation =>
       relation match {
-        case tn: TableName[I, R]            => tnTable.set(rawName)(tn)
-        case _: ParenthesizedRelation[I, R] => relation
-        case _                              => relation
+        case tn: TableName[I, R]             => tnTable.set(rawName)(tn)
+        case pr: ParenthesizedRelation[I, R] => pr.copy(relation = tnRelation.set(rawName)(pr.relation))
+        case _: SubQueryRelation[I, R]       => relation //TODO Requires Query support
+        case _: Unnest[I, R]                 => relation //TODO Requires Expression support
+        case _: LateralRelation[I, R]        => relation //TODO Requires Query support
       }
     }
 
@@ -78,7 +80,16 @@ object LensApp {
     val upperFoo = tnRelation[Int, String].modify(_.toUpperCase)(foo)
     println(upperFoo)
 
-    val y = relJoinR[Int, String].getAll(foobar).map(tnRelation.getOption)
+      // val y = relJoinR[Int, String].getAll(foobar).map(tnRelation.getOption)
+    val upperIfFoo = tnRelation[Int, String].modify{
+      case r => if (r.startsWith("foo")) r.toUpperCase else r
+    }
+    val y = relJoinR[Int, String].modify(upperIfFoo)(foobar)
     println(y)
+
+    val firstB = relJoinR[Int, String].find{
+      rel => tnRelation.getOption(rel).exists(_.startsWith("b"))
+    }(foobar)
+    println(firstB)
   }
 }
