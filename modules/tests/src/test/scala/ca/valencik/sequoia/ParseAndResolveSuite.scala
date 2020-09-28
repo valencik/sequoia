@@ -61,7 +61,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("a"))
       .addColumnToProjection("a")
     log.isEmpty shouldBe false
@@ -91,7 +91,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("a"))
     log.isEmpty shouldBe false
     finalState shouldBe expected
@@ -109,7 +109,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addColumnToProjection("a")
       .addColumnAlias("apple")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("apple"))
       .addColumnToProjection("apple")
     log.isEmpty shouldBe false
@@ -128,7 +128,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addColumnToProjection("a")
       .addColumnAlias("apple")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("apple"))
     log.isEmpty shouldBe false
     finalState shouldBe expected
@@ -146,7 +146,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addColumnToProjection("a")
       .addColumnAlias("apple")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("apple"))
       .addAllColumnsToProjection
     log.isEmpty shouldBe false
@@ -165,7 +165,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addColumnToProjection("a")
       .addColumnAlias("apple")
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("apple"))
       .addAllColumnsFromRelationToProjection("justA")
     log.isEmpty shouldBe false
@@ -183,7 +183,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
       .addRelationToScope("db", List("a"))
       .addAllColumnsToProjection
       .addCTE("justA")
-      .resetRelationScope
+      .resetRelationScope()
       .addRelationToScope("justA", List("a"))
       .addAllColumnsFromRelationToProjection("justA")
     log.isEmpty shouldBe false

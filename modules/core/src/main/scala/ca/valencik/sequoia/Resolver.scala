@@ -138,7 +138,7 @@ object MonadSqlState extends App {
       q <- resolveQuery(nq.query)
       _ <- EitherT.right(
         // Update Resolver with CTE and reset so we have an empty scope for the next query
-        ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.name).resetRelationScope)
+        ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.name).resetRelationScope())
       )
     } yield NamedQuery(nq.info, nq.name, None, q)
 
