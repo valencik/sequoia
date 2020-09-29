@@ -7,32 +7,35 @@ import ca.valencik.sequoia.Lenses
 object TrivialCTE {
 
   import Pretty._
-  import Rewrite.{setCTE, ifRelation}
-  import Lenses.relationNames
+  import Rewrite.setCTE
+  import Lenses.relationsFromQuery
 
   def main(args: Array[String]): Unit = {
 
     val queryString = """
-    |select apple, banana
-    |from foo
-    |join bar on foo.a = bar.a
-    |where inventory >= 2 and x < 42 and largename = 666 and y != 27
-    |order by apple
+    |with fruits as (
+    |  select name, price
+    |  from foo
+    |  join bar on foo.name = bar.name
+    |  where inventory >= 2 and x < 42 and largename = 666 and y != 27
+    |)
+    |select name, price from fruits
+    |order by price
     |limit 100
     """.stripMargin
 
-    def ifFoo = relationNames[ParseBuddy.Info, RawName].exist(_.value.startsWith("bar"))
-    val ifQueryHasFoo = ifRelation(ifFoo)
+    val tableToFind   = "bar"
+    def ifQueryHasFoo = relationsFromQuery[ParseBuddy.Info, RawName].exist(_.value == tableToFind)
 
     val qD = ParseBuddy
       .parse(queryString)
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
-          println("Rewriting query...")
+          println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
-          prettyQuery(rewrittenQ).render(30)
+          prettyQuery(rewrittenQ).render(80)
         } else {
-          println("Not rewritting query...")
+          println(s"Did not find table '${tableToFind}', skipping...")
           prettyQuery(pq).render(80)
         }
       }

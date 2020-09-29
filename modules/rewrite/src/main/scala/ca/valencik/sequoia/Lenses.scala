@@ -70,6 +70,94 @@ object Lenses {
       }
     }
 
+  // Query: Option[With], QueryNoWith
+  //
+  // With: List[NamedQuery]
+  //
+  // NamedQuery: Query
+  //
+  // QueryNoWith: QueryTerm
+  //
+  // QueryTerm
+  // -- QueryPrimary
+  // -- SetOperation: QueryTerm, QueryTerm
+  //
+  // QueryPrimary
+  // -- QuerySpecification: List[Relation], Option[Expression], Option[Expression]
+  // -- QueryPrimaryTable: TableRef
+  // -- InlineTable: List[Expression]
+  // -- SubQuery: QueryNoWith
+
+  def relationsFromQuery[I, R]: Traversal[Query[I, R], R] =
+    new Traversal[Query[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: Query[I, R]): F[Query[I, R]] = {
+        val cte: F[Option[With[I, R]]] = s.cte.traverse(relationsFromWith.modifyF(f)(_))
+        val qnw                        = relationsFromQueryNoWith.modifyF(f)(s.queryNoWith)
+        qnw.product(cte).map { case (q, c) => s.copy(cte = c, queryNoWith = q) }
+      }
+    }
+
+  private def relationsFromWith[I, R]: Traversal[With[I, R], R] =
+    new Traversal[With[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: With[I, R]): F[With[I, R]] = {
+        s.namedQueries
+          .traverse(relationsFromNamedQuery.modifyF(f))
+          .map(nqs => s.copy(namedQueries = nqs))
+      }
+    }
+
+  private def queryFromNamedQuery[I, R]: Lens[NamedQuery[I, R], Query[I, R]] =
+    Lens[NamedQuery[I, R], Query[I, R]](_.query)(q => nq => nq.copy(query = q))
+
+  private def relationsFromNamedQuery[I, R]: Traversal[NamedQuery[I, R], R] =
+    new Traversal[NamedQuery[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: NamedQuery[I, R]): F[NamedQuery[I, R]] = {
+        val lens: Traversal[NamedQuery[I, R], R] =
+          queryFromNamedQuery.composeTraversal(relationsFromQuery)
+        lens.modifyF(f)(s)
+      }
+    }
+
+  private def queryTermFromQueryNoWith[I, R]: Lens[QueryNoWith[I, R], QueryTerm[I, R]] =
+    Lens[QueryNoWith[I, R], QueryTerm[I, R]](_.queryTerm)(qt => qnw => qnw.copy(queryTerm = qt))
+
+  private def relationsFromQueryTerm[I, R]: Traversal[QueryTerm[I, R], R] =
+    new Traversal[QueryTerm[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryTerm[I, R]): F[QueryTerm[I, R]] = {
+        s match {
+          case qp: QueryPrimary[I, R] => relationsFromQueryPrimary.modifyF(f)(qp).widen
+          case so: SetOperation[I, R] => {
+            val left  = modifyF(f)(so.left)
+            val right = modifyF(f)(so.right)
+            left.product(right).map { case (l, r) => so.copy(left = l, right = r) }
+          }
+        }
+      }
+    }
+
+  private def relationsFromQueryNoWith[I, R]: Traversal[QueryNoWith[I, R], R] =
+    queryTermFromQueryNoWith.composeTraversal(relationsFromQueryTerm)
+
+  private def queryNoWithFromSubQuery[I, R]: Lens[SubQuery[I, R], QueryNoWith[I, R]] =
+    Lens[SubQuery[I, R], QueryNoWith[I, R]](_.queryNoWith)(qnw => sq => sq.copy(queryNoWith = qnw))
+
+  private def relationsFromQueryPrimary[I, R]: Traversal[QueryPrimary[I, R], R] =
+    new Traversal[QueryPrimary[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryPrimary[I, R]): F[QueryPrimary[I, R]] = {
+        s match {
+          case qs: QuerySpecification[I, R] =>
+            qs.from.traverse(relationNames.modifyF(f)(_)).map(from => qs.copy(from = from))
+          case qp: QueryPrimaryTable[I, R] =>
+            f(qp.table.value).map(r => qp.copy(table = qp.table.copy(value = r)))
+          case sq: SubQuery[I, R] => {
+            val lens: Traversal[SubQuery[I, R], R] =
+              queryNoWithFromSubQuery.composeTraversal(relationsFromQueryNoWith)
+            lens.modifyF(f)(sq).widen
+          }
+          case _: InlineTable[I, R] => ???
+        }
+      }
+    }
 }
 
 object LensApp {
