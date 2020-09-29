@@ -4,18 +4,18 @@ import pprint.pprintln
 
 object Rewrite {
 
-  def ifRelation[R](pred: Relation[_, R] => Boolean): Query[_, R] => Boolean =
+  def ifRelation[I, R](pred: Relation[I, R] => Boolean): Query[I, R] => Boolean =
     query => {
       query.queryNoWith.queryTerm match {
-        case qs: QuerySpecification[_, R] => qs.from.exists(pred)
+        case qs: QuerySpecification[I, R] => qs.from.exists(pred)
         case _                            => false
       }
     }
 
-  def ifTableName[R](pred: R => Boolean): Relation[_, R] => Boolean =
+  def ifTableName[I, R](pred: R => Boolean): Relation[I, R] => Boolean =
     relation => {
       relation match {
-        case sr: SampledRelation[_, R] =>
+        case sr: SampledRelation[I, R] =>
           sr.aliasedRelation.relationPrimary match {
             case TableName(_, r) => pred(r.value)
             case _               => false
@@ -86,7 +86,7 @@ object RewriteApp {
       None
     )
   )
-  val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
+  val ifFoo         = ifTableName[Int, RawName] { r => r.value == "foo" }
   val ifQueryHasFoo = ifRelation(ifFoo)
 
   def main(args: Array[String]): Unit =

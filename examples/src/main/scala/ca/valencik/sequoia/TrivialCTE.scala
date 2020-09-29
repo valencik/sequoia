@@ -1,12 +1,14 @@
 import ca.valencik.sequoia.ParseBuddy
+import ca.valencik.sequoia.RawName
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
-import ca.valencik.sequoia.RawName
+import ca.valencik.sequoia.Lenses
 
 object TrivialCTE {
 
   import Pretty._
-  import Rewrite._
+  import Rewrite.{setCTE, ifRelation}
+  import Lenses.relationNames
 
   def main(args: Array[String]): Unit = {
 
@@ -19,7 +21,7 @@ object TrivialCTE {
     |limit 100
     """.stripMargin
 
-    val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
+    def ifFoo = relationNames[ParseBuddy.Info, RawName].exist(_.value.startsWith("bar"))
     val ifQueryHasFoo = ifRelation(ifFoo)
 
     val qD = ParseBuddy
