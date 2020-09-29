@@ -22,10 +22,13 @@ object Lenses {
   //
   // TableRef: R
 
-  def nameFromTable[I, R]: Lens[TableName[I, R], R] =
+  private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
     Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))
 
-  def primaryFromSampled[I, R]: Lens[SampledRelation[I, R], RelationPrimary[I, R]] =
+  private def relationFromParenthesized[I, R]: Lens[ParenthesizedRelation[I, R], Relation[I, R]] =
+    Lens[ParenthesizedRelation[I, R], Relation[I, R]](_.relation)(r => pr => pr.copy(relation = r))
+
+  private def primaryFromSampled[I, R]: Lens[SampledRelation[I, R], RelationPrimary[I, R]] =
     Lens[SampledRelation[I, R], RelationPrimary[I, R]](_.aliasedRelation.relationPrimary) {
       rp => sr => sr.copy(aliasedRelation = sr.aliasedRelation.copy(relationPrimary = rp))
     }
@@ -38,38 +41,40 @@ object Lenses {
     }
   }
 
-  def tnRelationPrimary[I, R]: Traversal[RelationPrimary[I, R], R] =
+  private def namesFromPrimary[I, R]: Traversal[RelationPrimary[I, R], R] =
     new Traversal[RelationPrimary[I, R], R] {
       def modifyF[F[_]: Applicative](
           f: R => F[R]
       )(s: RelationPrimary[I, R]): F[RelationPrimary[I, R]] = {
-        val fs: F[RelationPrimary[I, R]] = s match {
-          case tn: TableName[I, R]            => nameFromTable.modifyF(f)(tn).widen
-          case _: ParenthesizedRelation[I, R] => ??? //relationNames.modifyF(f)(pr.relation)
-          case _: SubQueryRelation[I, R]      => ??? //TODO Requires Query support
-          case _: Unnest[I, R]                => ??? //TODO Requires Expression support
-          case _: LateralRelation[I, R]       => ??? //TODO Requires Query support
+        s match {
+          case tn: TableName[I, R] => nameFromTable.modifyF(f)(tn).widen
+          case pr: ParenthesizedRelation[I, R] => {
+            val lens: Traversal[ParenthesizedRelation[I, R], R] =
+              relationFromParenthesized.composeTraversal(relationNames)
+            lens.modifyF(f)(pr).widen
+          }
+          case _: SubQueryRelation[I, R] => ??? //TODO Requires Query support
+          case _: Unnest[I, R]           => ??? //TODO Requires Expression support
+          case _: LateralRelation[I, R]  => ??? //TODO Requires Query support
         }
-        fs.widen
       }
     }
 
   def relationNames[I, R]: Traversal[Relation[I, R], R] =
     new Traversal[Relation[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Relation[I, R]): F[Relation[I, R]] = {
-        val fs: F[Relation[I, R]] = s match {
+        s match {
           case jr: JoinRelation[I, R] => {
             val fleft: F[Relation[I, R]]  = modifyF(f)(jr.left).widen
             val fright: F[Relation[I, R]] = modifyF(f)(jr.right).widen
             fleft.product(fright).map { case (l, r) => jr.copy(left = l, right = r) }
           }
           case sr: SampledRelation[I, R] => {
-            val l: Traversal[SampledRelation[I, R], R] =
-              primaryFromSampled.composeTraversal(tnRelationPrimary)
-            l.modifyF(f)(sr).widen
+            val lens: Traversal[SampledRelation[I, R], R] =
+              primaryFromSampled.composeTraversal(namesFromPrimary)
+            lens.modifyF(f)(sr).widen
           }
         }
-        fs.widen
       }
     }
 
@@ -95,8 +100,7 @@ object LensApp {
     val upperIfFoo = relationNames[Int, String].modify {
       case r => if (r.startsWith("foo")) r.toUpperCase else r
     }
-    val y = relationsFromJoin[Int, String].modify(upperIfFoo)(foobar)
-    println(y)
+    println(upperIfFoo(foobar))
 
   }
 }
