@@ -33,14 +33,6 @@ object Lenses {
       rp => sr => sr.copy(aliasedRelation = sr.aliasedRelation.copy(relationPrimary = rp))
     }
 
-  def relationsFromJoin[I, R]: Traversal[JoinRelation[I, R], Relation[I, R]] = {
-    def getLeft(jr: JoinRelation[I, R]): Relation[I, R]  = jr.left
-    def getRight(jr: JoinRelation[I, R]): Relation[I, R] = jr.right
-    Traversal.apply2(getLeft, getRight) {
-      case (left, right, jr) => jr.copy(left = left, right = right)
-    }
-  }
-
   private def namesFromPrimary[I, R]: Traversal[RelationPrimary[I, R], R] =
     new Traversal[RelationPrimary[I, R], R] {
       def modifyF[F[_]: Applicative](
