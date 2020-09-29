@@ -83,15 +83,12 @@ object LensApp {
 
   def main(args: Array[String]): Unit = {
 
-    val foo    = simpleRelation("foo")
     val foobar = joinRelation("foo", "bar")
-
-    val upperFoo = relationNames[Int, String].modify(_.toUpperCase)(foo)
-    println(upperFoo)
 
     val upperIfFoo = relationNames[Int, String].modify {
       case r => if (r.startsWith("foo")) r.toUpperCase else r
     }
+    println("Uppercasing relations starting with 'foo':")
     println(upperIfFoo(foobar))
 
   }
