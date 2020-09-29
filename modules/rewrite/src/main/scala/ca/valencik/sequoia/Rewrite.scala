@@ -4,26 +4,6 @@ import pprint.pprintln
 
 object Rewrite {
 
-  def ifRelation[I, R](pred: Relation[I, R] => Boolean): Query[I, R] => Boolean =
-    query => {
-      query.queryNoWith.queryTerm match {
-        case qs: QuerySpecification[I, R] => qs.from.exists(pred)
-        case _                            => false
-      }
-    }
-
-  def ifTableName[I, R](pred: R => Boolean): Relation[I, R] => Boolean =
-    relation => {
-      relation match {
-        case sr: SampledRelation[I, R] =>
-          sr.aliasedRelation.relationPrimary match {
-            case TableName(_, r) => pred(r.value)
-            case _               => false
-          }
-        case _ => false
-      }
-    }
-
   def setCTE(q: Query[Int, RawName], name: String): Query[Int, RawName] = {
     val selectItems = q.queryNoWith.queryTerm match {
       case qs: QuerySpecification[Int, RawName] => qs.selectItems
@@ -86,13 +66,8 @@ object RewriteApp {
       None
     )
   )
-  val ifFoo         = ifTableName[Int, RawName] { r => r.value == "foo" }
-  val ifQueryHasFoo = ifRelation(ifFoo)
 
   def main(args: Array[String]): Unit =
-    if (ifQueryHasFoo(inQ))
-      pprintln(setCTE(inQ, "myCTE"), height = 10000)
-    else
-      println("Not query to rewrite")
+    pprintln(setCTE(inQ, "myCTE"), height = 10000)
 
 }
