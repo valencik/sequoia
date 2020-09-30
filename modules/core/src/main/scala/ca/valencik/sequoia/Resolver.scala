@@ -72,6 +72,17 @@ object MonadSqlState extends App {
     s"Column '${col}' was not resolvable with relations: '${rs}' in catalog '${c}'"
   }
 
+  def logUnresolvedUsingColumn[I](
+      column: UsingColumn[I, RawName],
+      state: Resolver,
+      catalog: Catalog
+  ): String = {
+    val col = column.value.value
+    val rs  = state.r.mkString(",")
+    val c   = catalog.c.toString
+    s"Column '${col}' in 'JOIN USING' clause was not resolvable with relations: '${rs}' in catalog '${c}'"
+  }
+
   def preserveScope[A](modify: => EitherRes[A]): EitherRes[A] =
     for {
       old   <- EitherT.right(ReaderWriterState.get[Catalog, Log, Resolver])
@@ -114,6 +125,18 @@ object MonadSqlState extends App {
         )
       else
         (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
+    })
+
+  def resolveUsingColumn[I](uc: UsingColumn[I, RawName]): EitherRes[UsingColumn[I, ResolvedName]] =
+    EitherT(ReaderWriterState { (cat, res) =>
+      if (res.columnIsInScope(uc.value))
+        (
+          Chain(s"Resolved UsingColumn '${uc.value.value}'"),
+          res,
+          Right(UsingColumn(uc.info, ResolvedColumnName(uc.value.value)))
+        )
+      else
+        (Chain(logUnresolvedUsingColumn(uc, res, cat)), res, Left(ResolutionError(uc.value)))
     })
 
   def resolveQuery[I](
@@ -558,8 +581,8 @@ object MonadSqlState extends App {
       jc: JoinCriteria[I, RawName]
   ): EitherRes[JoinCriteria[I, ResolvedName]] =
     jc match {
-      case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
-      case _                      => ???
+      case jo: JoinOn[I, RawName]    => resolveJoinOn(jo).widen
+      case ju: JoinUsing[I, RawName] => resolveJoinUsing(ju).widen
     }
 
   def resolveJoinOn[I](
@@ -569,4 +592,13 @@ object MonadSqlState extends App {
       // Resolving a JoinOn expression shouldn't bring things into scope
       exp <- preserveScope(resolveExpression(jo.expr))
     } yield JoinOn(jo.info, exp)
+
+  def resolveJoinUsing[I](
+      ju: JoinUsing[I, RawName]
+  ): EitherRes[JoinUsing[I, ResolvedName]] =
+    for {
+      // TODO Check out JoinUsing's scope rules
+      ucs <- preserveScope(ju.cols.traverse(resolveUsingColumn))
+    } yield JoinUsing(ju.info, ucs)
+
 }
