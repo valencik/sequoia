@@ -22,6 +22,7 @@ object Lenses {
   //
   // TableRef: R
 
+  // TODO : Is digging down to R going to make it impossible to tell the difference between ColumnRef's R and TableRef's R?
   private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
     Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))
 
@@ -158,6 +159,43 @@ object Lenses {
         }
       }
     }
+
+  // Expression
+  // -- LogicalBinary: Expression, Expression
+  // -- Predicate
+  // -- ValueExpession
+  //
+  // Predicate
+  // -- NotPredicate: Expression
+  // -- ComparsionExpr: ValueExpression, ValueExpression
+  // -- QuantifiedComparison: ValueExpression, Query
+  // -- Between: ValueExpression, ValueExpression, ValueExpression
+  // -- InList: ValueExpression, List[Expression]
+  // -- InSubQuery: ValueExpression, Query
+  // -- Like: ValueExpression, ValueExpression, Option[ValueExpression]
+  // -- NullPredicate: ValueExpression
+  // -- DistinctFrom: ValueExpression, ValueExpression
+  //
+  // ValueExpression
+  // -- ArithmeticUnary: ValueExpression
+  // -- ArithmeticBinary: ValueExpression, ValueExpression
+  // -- PrimaryExpression
+  //
+  // PrimaryExpression
+  // -- LiteralExpr
+  // -- ColumnRef
+  // -- SubQueryExpr: Query
+  // -- ExistsExpr: Query
+  // -- SimpleCase: ValueExpression, Option[Expression]
+  // -- SearchedCase: Option[Expression]
+  // -- Cast: Expression
+  // -- Subscript: PrimaryExpression, ValueExpression
+  // -- DereferenceExpr: PrimaryExpression
+  // -- Row: List[Expression]
+  // -- FunctionCall: List[Exprssion]
+  // -- IntervalLiteral
+  // -- SpecialDateTimeFunc
+  // -- Extract: ValueExpression
 }
 
 object LensApp {

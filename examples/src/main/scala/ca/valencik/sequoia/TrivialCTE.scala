@@ -3,6 +3,8 @@ import ca.valencik.sequoia.RawName
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
 import ca.valencik.sequoia.Lenses
+import ca.valencik.sequoia.RawColumnName
+import ca.valencik.sequoia.RawTableName
 
 object TrivialCTE {
 
@@ -31,6 +33,16 @@ object TrivialCTE {
       .parse(queryString)
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
+          val tableNames = relationsFromQuery[ParseBuddy.Info, RawName].getAll(pq)
+          tableNames.foreach {
+            case r => {
+              val msg = r match {
+                case RawColumnName(value) => s"Found col: ${value}"
+                case RawTableName(value)  => s"Found table: ${value}"
+              }
+              println(msg)
+            }
+          }
           println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
           prettyQuery(rewrittenQ).render(80)
