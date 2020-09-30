@@ -2,6 +2,7 @@ package ca.valencik.sequoia
 
 import monocle.Lens
 import monocle.Traversal
+import monocle.Prism
 import cats.implicits._
 import cats.Applicative
 
@@ -22,7 +23,18 @@ object Lenses {
   //
   // TableRef: R
 
-  // TODO : Is digging down to R going to make it impossible to tell the difference between ColumnRef's R and TableRef's R?
+  private def rawTableName[I]: Prism[RawName, RawTableName] =
+    Prism.partial[RawName, RawTableName] { case r: RawTableName => r }(identity)
+
+  private def rawColumnName[I]: Prism[RawName, RawColumnName] =
+    Prism.partial[RawName, RawColumnName] { case r: RawColumnName => r }(identity)
+
+  def tableNamesFromQuery[I]: Traversal[Query[I, RawName], RawTableName] =
+    relationsFromQuery.composePrism(rawTableName)
+
+  def columnNamesFromQuery[I]: Traversal[Query[I, RawName], RawColumnName] =
+    relationsFromQuery.composePrism(rawColumnName)
+
   private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
     Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))
 
@@ -146,8 +158,11 @@ object Lenses {
     new Traversal[QueryPrimary[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryPrimary[I, R]): F[QueryPrimary[I, R]] = {
         s match {
-          case qs: QuerySpecification[I, R] =>
-            qs.from.traverse(relationNames.modifyF(f)(_)).map(from => qs.copy(from = from))
+          case qs: QuerySpecification[I, R] => {
+            val from  = qs.from.traverse(relationNames.modifyF(f)(_))
+            val where = qs.where.traverse(namesFromExpression.modifyF(f)(_))
+            from.product(where).map { case (f, w) => qs.copy(from = f, where = w) }
+          }
           case qp: QueryPrimaryTable[I, R] =>
             f(qp.table.value).map(r => qp.copy(table = qp.table.copy(value = r)))
           case sq: SubQuery[I, R] => {
@@ -183,7 +198,7 @@ object Lenses {
   //
   // PrimaryExpression
   // -- LiteralExpr
-  // -- ColumnRef
+  // -- ColumnExpr: ColumnRef
   // -- SubQueryExpr: Query
   // -- ExistsExpr: Query
   // -- SimpleCase: ValueExpression, Option[Expression]
@@ -196,6 +211,59 @@ object Lenses {
   // -- IntervalLiteral
   // -- SpecialDateTimeFunc
   // -- Extract: ValueExpression
+
+  private def nameFromColumnExpr[I, R]: Lens[ColumnExpr[I, R], R] =
+    Lens[ColumnExpr[I, R], R](_.col.value)(v => ce => ce.copy(col = ce.col.copy(value = v)))
+
+  def namesFromExpression[I, R]: Traversal[Expression[I, R], R] =
+    new Traversal[Expression[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: Expression[I, R]): F[Expression[I, R]] = {
+        s match {
+          case ve: ValueExpression[I, R] => namesFromValueExpression.modifyF(f)(ve).widen
+          case p: Predicate[I, R]        => namesFromPredicate.modifyF(f)(p).widen
+          case x                         => x.pure[F]
+        }
+      }
+    }
+
+  def namesFromPredicate[I, R]: Traversal[Predicate[I, R], R] =
+    new Traversal[Predicate[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: Predicate[I, R]): F[Predicate[I, R]] = {
+        s match {
+          case ce: ComparisonExpr[I, R] => {
+            val left  = namesFromValueExpression.modifyF(f)(ce.left)
+            val right = namesFromValueExpression.modifyF(f)(ce.right)
+            left.product(right).map { case (l, r) => ce.copy(left = l, right = r) }
+          }
+          case x => x.pure[F]
+        }
+      }
+    }
+
+  private def namesFromValueExpression[I, R]: Traversal[ValueExpression[I, R], R] =
+    new Traversal[ValueExpression[I, R], R] {
+      def modifyF[F[_]: Applicative](
+          f: R => F[R]
+      )(s: ValueExpression[I, R]): F[ValueExpression[I, R]] = {
+        s match {
+          case pe: PrimaryExpression[I, R] => namesFromPrimaryExpression.modifyF(f)(pe).widen
+          case x                           => x.pure[F]
+        }
+      }
+    }
+
+  private def namesFromPrimaryExpression[I, R]: Traversal[PrimaryExpression[I, R], R] =
+    new Traversal[PrimaryExpression[I, R], R] {
+      def modifyF[F[_]: Applicative](
+          f: R => F[R]
+      )(s: PrimaryExpression[I, R]): F[PrimaryExpression[I, R]] = {
+        s match {
+          case ce: ColumnExpr[I, R] => nameFromColumnExpr.modifyF(f)(ce).widen
+          case x                    => x.pure[F]
+        }
+      }
+    }
+
 }
 
 object LensApp {

@@ -1,16 +1,15 @@
 import ca.valencik.sequoia.ParseBuddy
-import ca.valencik.sequoia.RawName
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
 import ca.valencik.sequoia.Lenses
-import ca.valencik.sequoia.RawColumnName
-import ca.valencik.sequoia.RawTableName
+
+import pprint.pprintln
 
 object TrivialCTE {
 
   import Pretty._
   import Rewrite.setCTE
-  import Lenses.relationsFromQuery
+  import Lenses.tableNamesFromQuery
 
   def main(args: Array[String]): Unit = {
 
@@ -19,7 +18,7 @@ object TrivialCTE {
     |  select name, price
     |  from foo
     |  join bar on foo.name = bar.name
-    |  where inventory >= 2 and x < 42 and largename = 666 and y != 27
+    |  where inventory >= jfkld
     |)
     |select name, price from fruits
     |order by price
@@ -27,21 +26,16 @@ object TrivialCTE {
     """.stripMargin
 
     val tableToFind   = "bar"
-    def ifQueryHasFoo = relationsFromQuery[ParseBuddy.Info, RawName].exist(_.value == tableToFind)
+    def ifQueryHasFoo[I] = tableNamesFromQuery[I].exist(_.value == tableToFind)
 
     val qD = ParseBuddy
       .parse(queryString)
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
-          val tableNames = relationsFromQuery[ParseBuddy.Info, RawName].getAll(pq)
-          tableNames.foreach {
-            case r => {
-              val msg = r match {
-                case RawColumnName(value) => s"Found col: ${value}"
-                case RawTableName(value)  => s"Found table: ${value}"
-              }
-              println(msg)
-            }
+          val tableNames = tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          pprintln(pq, height = 10000)
+          tableNames.foreach { case r =>
+            println(s"Found table ${r.value}")
           }
           println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
