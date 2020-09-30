@@ -506,14 +506,43 @@ object MonadSqlState extends App {
       rel: RelationPrimary[I, RawName]
   ): EitherRes[RelationPrimary[I, ResolvedName]] =
     rel match {
-      case tn: TableName[I, RawName] => resolveTableName(tn).widen
-      case _                         => ???
+      case tn: TableName[I, RawName]             => resolveTableName(tn).widen
+      case sqr: SubQueryRelation[I, RawName]     => resolveSubQueryRelation(sqr).widen
+      case un: Unnest[I, RawName]                => resolveUnnest(un).widen
+      case lr: LateralRelation[I, RawName]       => resolveLateralRelation(lr).widen
+      case pr: ParenthesizedRelation[I, RawName] => resolveParenthesizedRelation(pr).widen
     }
 
   def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
     for {
       tr <- resolveTableRef(tn.ref)
     } yield TableName(tn.info, tr)
+
+  def resolveSubQueryRelation[I](
+      sqr: SubQueryRelation[I, RawName]
+  ): EitherRes[SubQueryRelation[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(sqr.query)
+    } yield SubQueryRelation(sqr.info, q)
+
+  def resolveUnnest[I](un: Unnest[I, RawName]): EitherRes[Unnest[I, ResolvedName]] =
+    for {
+      es <- un.expressions.traverse(resolveExpression)
+    } yield Unnest(un.info, es, un.ordinality)
+
+  def resolveLateralRelation[I](
+      lr: LateralRelation[I, RawName]
+  ): EitherRes[LateralRelation[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(lr.query)
+    } yield LateralRelation(lr.info, q)
+
+  def resolveParenthesizedRelation[I](
+      pr: ParenthesizedRelation[I, RawName]
+  ): EitherRes[ParenthesizedRelation[I, ResolvedName]] =
+    for {
+      r <- resolveRelation(pr.relation)
+    } yield ParenthesizedRelation(pr.info, r)
 
   def resolveJoinRelation[I](
       jr: JoinRelation[I, RawName]
