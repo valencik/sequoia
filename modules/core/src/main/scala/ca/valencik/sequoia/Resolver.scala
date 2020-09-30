@@ -140,15 +140,26 @@ object MonadSqlState extends App {
         // Update Resolver with CTE and reset so we have an empty scope for the next query
         ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.name).resetRelationScope())
       )
+      // TODO column aliases
     } yield NamedQuery(nq.info, nq.name, None, q)
+
+  def resolveOrderBy[I](ob: OrderBy[I, RawName]): EitherRes[OrderBy[I, ResolvedName]] =
+    for {
+      sis <- ob.sortItems.traverse(resolveSortItem)
+    } yield OrderBy(ob.info, sis)
+
+  def resolveSortItem[I](si: SortItem[I, RawName]): EitherRes[SortItem[I, ResolvedName]] =
+    for {
+      e <- resolveExpression(si.exp)
+    } yield SortItem(si.info, e, si.ordering, si.nullOrdering)
 
   def resolveQueryNoWith[I](
       qnw: QueryNoWith[I, RawName]
   ): EitherRes[QueryNoWith[I, ResolvedName]] =
     for {
       qt <- resolveQueryTerm(qnw.queryTerm)
-      // TODO: OrderBy
-    } yield QueryNoWith(qnw.info, qt, None, None)
+      ob <- qnw.orderBy.traverse(resolveOrderBy)
+    } yield QueryNoWith(qnw.info, qt, ob, qnw.limit)
 
   def resolveQueryTerm[I](
       qt: QueryTerm[I, RawName]
