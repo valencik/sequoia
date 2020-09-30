@@ -1,7 +1,7 @@
 import ca.valencik.sequoia.ParseBuddy
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
-import ca.valencik.sequoia.Lenses
+import ca.valencik.sequoia.Optics.tableNamesFromQuery
 
 import pprint.pprintln
 
@@ -9,7 +9,6 @@ object TrivialCTE {
 
   import Pretty._
   import Rewrite.setCTE
-  import Lenses.tableNamesFromQuery
 
   def main(args: Array[String]): Unit = {
 

@@ -6,82 +6,19 @@ import monocle.Prism
 import cats.implicits._
 import cats.Applicative
 
-object Lenses {
+object Optics {
 
-  // Relation
-  // -- JoinRelation: Relation, Relation
-  // -- SampledRelation: AliasedRelation
-  //
-  // AliasedRelation: RelationPrimary
-  //
-  // RelationPrimary
-  // -- TableName: TableRef
-  // -- SubQueryRelation: Query
-  // -- Unnest: List[Expression]
-  // -- LateralRelation: Query
-  // -- ParenthesizedRelation: Relation
-  //
-  // TableRef: R
+  def tableNamesFromQuery[I]: Traversal[Query[I, RawName], RawTableName] =
+    namesFromQuery.composePrism(rawTableName)
+
+  def columnNamesFromQuery[I]: Traversal[Query[I, RawName], RawColumnName] =
+    namesFromQuery.composePrism(rawColumnName)
 
   private def rawTableName[I]: Prism[RawName, RawTableName] =
     Prism.partial[RawName, RawTableName] { case r: RawTableName => r }(identity)
 
   private def rawColumnName[I]: Prism[RawName, RawColumnName] =
     Prism.partial[RawName, RawColumnName] { case r: RawColumnName => r }(identity)
-
-  def tableNamesFromQuery[I]: Traversal[Query[I, RawName], RawTableName] =
-    relationsFromQuery.composePrism(rawTableName)
-
-  def columnNamesFromQuery[I]: Traversal[Query[I, RawName], RawColumnName] =
-    relationsFromQuery.composePrism(rawColumnName)
-
-  private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
-    Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))
-
-  private def relationFromParenthesized[I, R]: Lens[ParenthesizedRelation[I, R], Relation[I, R]] =
-    Lens[ParenthesizedRelation[I, R], Relation[I, R]](_.relation)(r => pr => pr.copy(relation = r))
-
-  private def primaryFromSampled[I, R]: Lens[SampledRelation[I, R], RelationPrimary[I, R]] =
-    Lens[SampledRelation[I, R], RelationPrimary[I, R]](_.aliasedRelation.relationPrimary) {
-      rp => sr => sr.copy(aliasedRelation = sr.aliasedRelation.copy(relationPrimary = rp))
-    }
-
-  private def namesFromPrimary[I, R]: Traversal[RelationPrimary[I, R], R] =
-    new Traversal[RelationPrimary[I, R], R] {
-      def modifyF[F[_]: Applicative](
-          f: R => F[R]
-      )(s: RelationPrimary[I, R]): F[RelationPrimary[I, R]] = {
-        s match {
-          case tn: TableName[I, R] => nameFromTable.modifyF(f)(tn).widen
-          case pr: ParenthesizedRelation[I, R] => {
-            val lens: Traversal[ParenthesizedRelation[I, R], R] =
-              relationFromParenthesized.composeTraversal(relationNames)
-            lens.modifyF(f)(pr).widen
-          }
-          case _: SubQueryRelation[I, R] => ??? //TODO Requires Query support
-          case _: Unnest[I, R]           => ??? //TODO Requires Expression support
-          case _: LateralRelation[I, R]  => ??? //TODO Requires Query support
-        }
-      }
-    }
-
-  def relationNames[I, R]: Traversal[Relation[I, R], R] =
-    new Traversal[Relation[I, R], R] {
-      def modifyF[F[_]: Applicative](f: R => F[R])(s: Relation[I, R]): F[Relation[I, R]] = {
-        s match {
-          case jr: JoinRelation[I, R] => {
-            val fleft: F[Relation[I, R]]  = modifyF(f)(jr.left).widen
-            val fright: F[Relation[I, R]] = modifyF(f)(jr.right).widen
-            fleft.product(fright).map { case (l, r) => jr.copy(left = l, right = r) }
-          }
-          case sr: SampledRelation[I, R] => {
-            val lens: Traversal[SampledRelation[I, R], R] =
-              primaryFromSampled.composeTraversal(namesFromPrimary)
-            lens.modifyF(f)(sr).widen
-          }
-        }
-      }
-    }
 
   // Query: Option[With], QueryNoWith
   //
@@ -101,20 +38,20 @@ object Lenses {
   // -- InlineTable: List[Expression]
   // -- SubQuery: QueryNoWith
 
-  def relationsFromQuery[I, R]: Traversal[Query[I, R], R] =
+  def namesFromQuery[I, R]: Traversal[Query[I, R], R] =
     new Traversal[Query[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Query[I, R]): F[Query[I, R]] = {
-        val cte: F[Option[With[I, R]]] = s.cte.traverse(relationsFromWith.modifyF(f)(_))
-        val qnw                        = relationsFromQueryNoWith.modifyF(f)(s.queryNoWith)
+        val cte: F[Option[With[I, R]]] = s.cte.traverse(namesFromWith.modifyF(f)(_))
+        val qnw                        = namesFromQueryNoWith.modifyF(f)(s.queryNoWith)
         qnw.product(cte).map { case (q, c) => s.copy(cte = c, queryNoWith = q) }
       }
     }
 
-  private def relationsFromWith[I, R]: Traversal[With[I, R], R] =
+  private def namesFromWith[I, R]: Traversal[With[I, R], R] =
     new Traversal[With[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: With[I, R]): F[With[I, R]] = {
         s.namedQueries
-          .traverse(relationsFromNamedQuery.modifyF(f))
+          .traverse(namesFromNamedQuery.modifyF(f))
           .map(nqs => s.copy(namedQueries = nqs))
       }
     }
@@ -122,11 +59,11 @@ object Lenses {
   private def queryFromNamedQuery[I, R]: Lens[NamedQuery[I, R], Query[I, R]] =
     Lens[NamedQuery[I, R], Query[I, R]](_.query)(q => nq => nq.copy(query = q))
 
-  private def relationsFromNamedQuery[I, R]: Traversal[NamedQuery[I, R], R] =
+  private def namesFromNamedQuery[I, R]: Traversal[NamedQuery[I, R], R] =
     new Traversal[NamedQuery[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: NamedQuery[I, R]): F[NamedQuery[I, R]] = {
         val lens: Traversal[NamedQuery[I, R], R] =
-          queryFromNamedQuery.composeTraversal(relationsFromQuery)
+          queryFromNamedQuery.composeTraversal(namesFromQuery)
         lens.modifyF(f)(s)
       }
     }
@@ -134,11 +71,11 @@ object Lenses {
   private def queryTermFromQueryNoWith[I, R]: Lens[QueryNoWith[I, R], QueryTerm[I, R]] =
     Lens[QueryNoWith[I, R], QueryTerm[I, R]](_.queryTerm)(qt => qnw => qnw.copy(queryTerm = qt))
 
-  private def relationsFromQueryTerm[I, R]: Traversal[QueryTerm[I, R], R] =
+  private def namesFromQueryTerm[I, R]: Traversal[QueryTerm[I, R], R] =
     new Traversal[QueryTerm[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryTerm[I, R]): F[QueryTerm[I, R]] = {
         s match {
-          case qp: QueryPrimary[I, R] => relationsFromQueryPrimary.modifyF(f)(qp).widen
+          case qp: QueryPrimary[I, R] => namesFromQueryPrimary.modifyF(f)(qp).widen
           case so: SetOperation[I, R] => {
             val left  = modifyF(f)(so.left)
             val right = modifyF(f)(so.right)
@@ -148,18 +85,18 @@ object Lenses {
       }
     }
 
-  private def relationsFromQueryNoWith[I, R]: Traversal[QueryNoWith[I, R], R] =
-    queryTermFromQueryNoWith.composeTraversal(relationsFromQueryTerm)
+  private def namesFromQueryNoWith[I, R]: Traversal[QueryNoWith[I, R], R] =
+    queryTermFromQueryNoWith.composeTraversal(namesFromQueryTerm)
 
   private def queryNoWithFromSubQuery[I, R]: Lens[SubQuery[I, R], QueryNoWith[I, R]] =
     Lens[SubQuery[I, R], QueryNoWith[I, R]](_.queryNoWith)(qnw => sq => sq.copy(queryNoWith = qnw))
 
-  private def relationsFromQueryPrimary[I, R]: Traversal[QueryPrimary[I, R], R] =
+  private def namesFromQueryPrimary[I, R]: Traversal[QueryPrimary[I, R], R] =
     new Traversal[QueryPrimary[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryPrimary[I, R]): F[QueryPrimary[I, R]] = {
         s match {
           case qs: QuerySpecification[I, R] => {
-            val from  = qs.from.traverse(relationNames.modifyF(f)(_))
+            val from  = qs.from.traverse(namesFromRelation.modifyF(f)(_))
             val where = qs.where.traverse(namesFromExpression.modifyF(f)(_))
             from.product(where).map { case (f, w) => qs.copy(from = f, where = w) }
           }
@@ -167,13 +104,76 @@ object Lenses {
             f(qp.table.value).map(r => qp.copy(table = qp.table.copy(value = r)))
           case sq: SubQuery[I, R] => {
             val lens: Traversal[SubQuery[I, R], R] =
-              queryNoWithFromSubQuery.composeTraversal(relationsFromQueryNoWith)
+              queryNoWithFromSubQuery.composeTraversal(namesFromQueryNoWith)
             lens.modifyF(f)(sq).widen
           }
           case _: InlineTable[I, R] => ???
         }
       }
     }
+
+  // Relation
+  // -- JoinRelation: Relation, Relation
+  // -- SampledRelation: AliasedRelation
+  //
+  // AliasedRelation: RelationPrimary
+  //
+  // RelationPrimary
+  // -- TableName: TableRef
+  // -- SubQueryRelation: Query
+  // -- Unnest: List[Expression]
+  // -- LateralRelation: Query
+  // -- ParenthesizedRelation: Relation
+  //
+  // TableRef: R
+
+  private def namesFromRelation[I, R]: Traversal[Relation[I, R], R] =
+    new Traversal[Relation[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: Relation[I, R]): F[Relation[I, R]] = {
+        s match {
+          case jr: JoinRelation[I, R] => {
+            val fleft: F[Relation[I, R]]  = modifyF(f)(jr.left).widen
+            val fright: F[Relation[I, R]] = modifyF(f)(jr.right).widen
+            fleft.product(fright).map { case (l, r) => jr.copy(left = l, right = r) }
+          }
+          case sr: SampledRelation[I, R] => {
+            val lens: Traversal[SampledRelation[I, R], R] =
+              primaryFromSampled.composeTraversal(namesFromPrimary)
+            lens.modifyF(f)(sr).widen
+          }
+        }
+      }
+    }
+
+  private def primaryFromSampled[I, R]: Lens[SampledRelation[I, R], RelationPrimary[I, R]] =
+    Lens[SampledRelation[I, R], RelationPrimary[I, R]](_.aliasedRelation.relationPrimary) {
+      rp => sr => sr.copy(aliasedRelation = sr.aliasedRelation.copy(relationPrimary = rp))
+    }
+
+  private def namesFromPrimary[I, R]: Traversal[RelationPrimary[I, R], R] =
+    new Traversal[RelationPrimary[I, R], R] {
+      def modifyF[F[_]: Applicative](
+          f: R => F[R]
+      )(s: RelationPrimary[I, R]): F[RelationPrimary[I, R]] = {
+        s match {
+          case tn: TableName[I, R] => nameFromTable.modifyF(f)(tn).widen
+          case pr: ParenthesizedRelation[I, R] => {
+            val lens: Traversal[ParenthesizedRelation[I, R], R] =
+              relationFromParenthesized.composeTraversal(namesFromRelation)
+            lens.modifyF(f)(pr).widen
+          }
+          case _: SubQueryRelation[I, R] => ??? //TODO Requires Query support
+          case _: Unnest[I, R]           => ??? //TODO Requires Expression support
+          case _: LateralRelation[I, R]  => ??? //TODO Requires Query support
+        }
+      }
+    }
+
+  private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
+    Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))
+
+  private def relationFromParenthesized[I, R]: Lens[ParenthesizedRelation[I, R], Relation[I, R]] =
+    Lens[ParenthesizedRelation[I, R], Relation[I, R]](_.relation)(r => pr => pr.copy(relation = r))
 
   // Expression
   // -- LogicalBinary: Expression, Expression
@@ -212,10 +212,7 @@ object Lenses {
   // -- SpecialDateTimeFunc
   // -- Extract: ValueExpression
 
-  private def nameFromColumnExpr[I, R]: Lens[ColumnExpr[I, R], R] =
-    Lens[ColumnExpr[I, R], R](_.col.value)(v => ce => ce.copy(col = ce.col.copy(value = v)))
-
-  def namesFromExpression[I, R]: Traversal[Expression[I, R], R] =
+  private def namesFromExpression[I, R]: Traversal[Expression[I, R], R] =
     new Traversal[Expression[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Expression[I, R]): F[Expression[I, R]] = {
         s match {
@@ -226,7 +223,7 @@ object Lenses {
       }
     }
 
-  def namesFromPredicate[I, R]: Traversal[Predicate[I, R], R] =
+  private def namesFromPredicate[I, R]: Traversal[Predicate[I, R], R] =
     new Traversal[Predicate[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Predicate[I, R]): F[Predicate[I, R]] = {
         s match {
@@ -264,26 +261,7 @@ object Lenses {
       }
     }
 
-}
+  private def nameFromColumnExpr[I, R]: Lens[ColumnExpr[I, R], R] =
+    Lens[ColumnExpr[I, R], R](_.col.value)(v => ce => ce.copy(col = ce.col.copy(value = v)))
 
-object LensApp {
-
-  import Lenses._
-  def simpleRelation(name: String) =
-    SampledRelation(1, AliasedRelation(2, TableName(3, TableRef(4, name)), None, None), None)
-
-  def joinRelation(left: String, right: String) =
-    JoinRelation(1, InnerJoin, simpleRelation(left), simpleRelation(right), None)
-
-  def main(args: Array[String]): Unit = {
-
-    val foobar = joinRelation("foo", "bar")
-
-    val upperIfFoo = relationNames[Int, String].modify {
-      case r => if (r.startsWith("foo")) r.toUpperCase else r
-    }
-    println("Uppercasing relations starting with 'foo':")
-    println(upperIfFoo(foobar))
-
-  }
 }
