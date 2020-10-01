@@ -304,13 +304,67 @@ object Optics {
           f: R => F[R]
       )(s: PrimaryExpression[I, R]): F[PrimaryExpression[I, R]] = {
         s match {
-          case ce: ColumnExpr[I, R] => nameFromColumnExpr.modifyF(f)(ce).widen
-          case x                    => x.pure[F]
+          // TODO How am I going to get the String from StringLiteral out here?
+          // I don't think I can unless I come up with more 'Raw' types
+          // Or we change every optic written so far to return a different type instead of R...
+          case pe: LiteralExpr[I, R] => pe.pure[F].widen
+          case pe: ColumnExpr[I, R]  => nameFromColumnExpr.modifyF(f)(pe).widen
+          case pe: SubQueryExpr[I, R] =>
+            namesFromQuery.modifyF(f)(pe.query).map(q => pe.copy(query = q))
+          case pe: ExistsExpr[I, R] =>
+            namesFromQuery.modifyF(f)(pe.query).map(q => pe.copy(query = q))
+          case pe: SimpleCase[I, R] => {
+            val exp  = namesFromValueExpression.modifyF(f)(pe.exp)
+            val when = pe.whenClauses.traverse(namesFromWhenClause.modifyF(f)(_))
+            val el   = pe.elseExpression.traverse(namesFromExpression.modifyF(f)(_))
+            exp.product(when).product(el).map {
+              case ((e, w), l) => pe.copy(exp = e, whenClauses = w, elseExpression = l)
+            }
+          }
+          case pe: SearchedCase[I, R] => {
+            val when = pe.whenClauses.traverse(namesFromWhenClause.modifyF(f)(_))
+            val el   = pe.elseExpression.traverse(namesFromExpression.modifyF(f)(_))
+            when.product(el).map {
+              case (w, l) => pe.copy(whenClauses = w, elseExpression = l)
+            }
+
+          }
+          case pe: Cast[I, R] =>
+            namesFromExpression.modifyF(f)(pe.exp).map(e => pe.copy(exp = e))
+          case pe: Subscript[I, R] => {
+            val value = namesFromPrimaryExpression.modifyF(f)(pe.value)
+            val index = namesFromValueExpression.modifyF(f)(pe.index)
+            value.product(index).map { case (v, i) => pe.copy(value = v, index = i) }
+          }
+          case pe: DereferenceExpr[I, R] =>
+            namesFromPrimaryExpression.modifyF(f)(pe.base).map(e => pe.copy(base = e))
+          case pe: Row[I, R] => {
+            val exps = pe.exps.traverse(namesFromExpression.modifyF(f)(_))
+            exps.map(es => pe.copy(exps = es))
+          }
+          case pe: FunctionCall[I, R] => {
+            val exps = pe.exprs.traverse(namesFromExpression.modifyF(f)(_))
+            exps.map(es => pe.copy(exprs = es))
+          }
+          case pe: IntervalLiteral[I, R] =>
+            pe.pure[F].widen //TODO there is a string literal in here
+          case pe: SpecialDateTimeFunc[I, R] => pe.pure[F].widen
+          case pe: Extract[I, R] =>
+            namesFromValueExpression.modifyF(f)(pe.exp).map(e => pe.copy(exp = e))
         }
       }
     }
 
   private def nameFromColumnExpr[I, R]: Lens[ColumnExpr[I, R], R] =
     Lens[ColumnExpr[I, R], R](_.col.value)(v => ce => ce.copy(col = ce.col.copy(value = v)))
+
+  private def namesFromWhenClause[I, R]: Traversal[WhenClause[I, R], R] =
+    new Traversal[WhenClause[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: WhenClause[I, R]): F[WhenClause[I, R]] = {
+        val cond   = namesFromExpression.modifyF(f)(s.condition)
+        val result = namesFromExpression.modifyF(f)(s.result)
+        cond.product(result).map { case (c, r) => s.copy(condition = c, result = r) }
+      }
+    }
 
 }
