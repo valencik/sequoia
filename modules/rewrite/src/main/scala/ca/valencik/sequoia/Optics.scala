@@ -216,9 +216,13 @@ object Optics {
     new Traversal[Expression[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Expression[I, R]): F[Expression[I, R]] = {
         s match {
-          case ve: ValueExpression[I, R] => namesFromValueExpression.modifyF(f)(ve).widen
+          case lb: LogicalBinary[I, R] => {
+            val left  = namesFromExpression.modifyF(f)(lb.left)
+            val right = namesFromExpression.modifyF(f)(lb.right)
+            left.product(right).map { case (l, r) => lb.copy(left = l, right = r) }
+          }
           case p: Predicate[I, R]        => namesFromPredicate.modifyF(f)(p).widen
-          case x                         => x.pure[F]
+          case ve: ValueExpression[I, R] => namesFromValueExpression.modifyF(f)(ve).widen
         }
       }
     }
@@ -227,12 +231,51 @@ object Optics {
     new Traversal[Predicate[I, R], R] {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: Predicate[I, R]): F[Predicate[I, R]] = {
         s match {
-          case ce: ComparisonExpr[I, R] => {
-            val left  = namesFromValueExpression.modifyF(f)(ce.left)
-            val right = namesFromValueExpression.modifyF(f)(ce.right)
-            left.product(right).map { case (l, r) => ce.copy(left = l, right = r) }
+          case pe: NotPredicate[I, R] =>
+            namesFromExpression.modifyF(f)(pe.exp).map(e => pe.copy(exp = e))
+          case pe: ComparisonExpr[I, R] => {
+            val left  = namesFromValueExpression.modifyF(f)(pe.left)
+            val right = namesFromValueExpression.modifyF(f)(pe.right)
+            left.product(right).map { case (l, r) => pe.copy(left = l, right = r) }
           }
-          case x => x.pure[F]
+          case pe: QuantifiedComparison[I, R] => {
+            val value = namesFromValueExpression.modifyF(f)(pe.value)
+            val query = namesFromQuery.modifyF(f)(pe.query)
+            value.product(query).map { case (v, q) => pe.copy(value = v, query = q) }
+          }
+          case pe: Between[I, R] => {
+            val lower = namesFromValueExpression.modifyF(f)(pe.lower)
+            val upper = namesFromValueExpression.modifyF(f)(pe.upper)
+            val value = namesFromValueExpression.modifyF(f)(pe.value)
+            lower.product(upper).product(value).map {
+              case ((l, u), v) => pe.copy(lower = l, upper = u, value = v)
+            }
+          }
+          case pe: InList[I, R] => {
+            val value = namesFromValueExpression.modifyF(f)(pe.value)
+            val exps  = pe.exps.traverse(namesFromExpression.modifyF(f)(_))
+            value.product(exps).map { case (v, es) => pe.copy(value = v, exps = es) }
+          }
+          case pe: InSubQuery[I, R] => {
+            val value = namesFromValueExpression.modifyF(f)(pe.value)
+            val query = namesFromQuery.modifyF(f)(pe.query)
+            value.product(query).map { case (v, q) => pe.copy(value = v, query = q) }
+          }
+          case pe: Like[I, R] => {
+            val escape  = pe.escape.traverse(namesFromValueExpression.modifyF(f)(_))
+            val pattern = namesFromValueExpression.modifyF(f)(pe.pattern)
+            val value   = namesFromValueExpression.modifyF(f)(pe.value)
+            escape.product(pattern).product(value).map {
+              case ((e, p), v) => pe.copy(escape = e, pattern = p, value = v)
+            }
+          }
+          case pe: NullPredicate[I, R] =>
+            namesFromValueExpression.modifyF(f)(pe.value).map(e => pe.copy(value = e))
+          case pe: DistinctFrom[I, R] => {
+            val value = namesFromValueExpression.modifyF(f)(pe.value)
+            val right = namesFromValueExpression.modifyF(f)(pe.right)
+            value.product(right).map { case (v, r) => pe.copy(value = v, right = r) }
+          }
         }
       }
     }
@@ -243,8 +286,14 @@ object Optics {
           f: R => F[R]
       )(s: ValueExpression[I, R]): F[ValueExpression[I, R]] = {
         s match {
+          case au: ArithmeticUnary[I, R] =>
+            namesFromValueExpression.modifyF(f)(au).map(v => au.copy(value = v))
+          case ab: ArithmeticBinary[I, R] => {
+            val left  = namesFromValueExpression.modifyF(f)(ab.left)
+            val right = namesFromValueExpression.modifyF(f)(ab.right)
+            left.product(right).map { case (l, r) => ab.copy(left = l, right = r) }
+          }
           case pe: PrimaryExpression[I, R] => namesFromPrimaryExpression.modifyF(f)(pe).widen
-          case x                           => x.pure[F]
         }
       }
     }
