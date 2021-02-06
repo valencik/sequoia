@@ -96,9 +96,15 @@ object Optics {
       def modifyF[F[_]: Applicative](f: R => F[R])(s: QueryPrimary[I, R]): F[QueryPrimary[I, R]] = {
         s match {
           case qs: QuerySpecification[I, R] => {
-            val from  = qs.from.traverse(namesFromRelation.modifyF(f)(_))
-            val where = qs.where.traverse(namesFromExpression.modifyF(f)(_))
-            from.product(where).map { case (f, w) => qs.copy(from = f, where = w) }
+            val select = qs.selectItems.traverse(namesFromSelectItem.modifyF(f)(_))
+            val from   = qs.from.traverse(namesFromRelation.modifyF(f)(_))
+            val where  = qs.where.traverse(namesFromExpression.modifyF(f)(_))
+            val group  = qs.groupBy.traverse(namesFromGroupBy.modifyF(f)(_))
+            val having = qs.having.traverse(namesFromExpression.modifyF(f)(_))
+            (select, from, where, group, having).mapN {
+              case (s, f, w, g, h) =>
+                qs.copy(selectItems = s, from = f, where = w, groupBy = g, having = h)
+            }
           }
           case qp: QueryPrimaryTable[I, R] =>
             f(qp.table.value).map(r => qp.copy(table = qp.table.copy(value = r)))
@@ -109,6 +115,60 @@ object Optics {
           }
           case _: InlineTable[I, R] => ???
         }
+      }
+    }
+
+  private def namesFromSelectItem[I, R]: Traversal[SelectItem[I, R], R] =
+    new Traversal[SelectItem[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: SelectItem[I, R]): F[SelectItem[I, R]] = {
+        s match {
+          case sa: SelectAll[I, R] =>
+            sa.ref.traverse(nameFromTableRef.modifyF(f)(_)).map(r => sa.copy(ref = r))
+          case ss: SelectSingle[I, R] =>
+            namesFromExpression.modifyF(f)(ss.expr).map(e => ss.copy(expr = e))
+        }
+      }
+    }
+
+  private def namesFromGroupBy[I, R]: Traversal[GroupBy[I, R], R] =
+    new Traversal[GroupBy[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: GroupBy[I, R]): F[GroupBy[I, R]] = {
+        s.groupingElements
+          .traverse(namesFromGroupingElement.modifyF(f)(_))
+          .map(gs => s.copy(groupingElements = gs))
+      }
+    }
+
+  def namesFromGroupingElement[I, R]: Traversal[GroupingElement[I, R], R] =
+    new Traversal[GroupingElement[I, R], R] {
+      def modifyF[F[_]: Applicative](
+          f: R => F[R]
+      )(s: GroupingElement[I, R]): F[GroupingElement[I, R]] = {
+        s match {
+          case s: SingleGroupingSet[I, R] =>
+            namesFromGroupingSet.modifyF(f)(s.groupingSet).map(gs => s.copy(groupingSet = gs))
+          case s: Rollup[I, R] =>
+            s.expressions
+              .traverse(namesFromExpression.modifyF(f)(_))
+              .map(es => s.copy(expressions = es))
+          case s: Cube[I, R] =>
+            s.expressions
+              .traverse(namesFromExpression.modifyF(f)(_))
+              .map(es => s.copy(expressions = es))
+          case s: MultipleGroupingSets[I, R] =>
+            s.groupingSets
+              .traverse(namesFromGroupingSet.modifyF(f)(_))
+              .map(gs => s.copy(groupingSets = gs))
+        }
+      }
+    }
+
+  def namesFromGroupingSet[I, R]: Traversal[GroupingSet[I, R], R] =
+    new Traversal[GroupingSet[I, R], R] {
+      def modifyF[F[_]: Applicative](f: R => F[R])(s: GroupingSet[I, R]): F[GroupingSet[I, R]] = {
+        s.expressions
+          .traverse(namesFromExpression.modifyF(f)(_))
+          .map(es => s.copy(expressions = es))
       }
     }
 
@@ -168,6 +228,9 @@ object Optics {
         }
       }
     }
+
+  private def nameFromTableRef[I, R]: Lens[TableRef[I, R], R] =
+    Lens[TableRef[I, R], R](_.value)(r => tf => tf.copy(value = r))
 
   private def nameFromTable[I, R]: Lens[TableName[I, R], R] =
     Lens[TableName[I, R], R](_.ref.value)(r => tn => tn.copy(ref = tn.ref.copy(value = r)))

@@ -1,9 +1,9 @@
 import ca.valencik.sequoia.ParseBuddy
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
-import ca.valencik.sequoia.Optics.tableNamesFromQuery
+import ca.valencik.sequoia.Optics
 
-import pprint.pprintln
+//import pprint.pprintln
 
 object TrivialCTE {
 
@@ -25,16 +25,20 @@ object TrivialCTE {
     """.stripMargin
 
     val tableToFind   = "bar"
-    def ifQueryHasFoo[I] = tableNamesFromQuery[I].exist(_.value == tableToFind)
+    def ifQueryHasFoo[I] = Optics.tableNamesFromQuery[I].exist(_.value == tableToFind)
 
     val qD = ParseBuddy
       .parse(queryString)
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
-          val tableNames = tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
-          pprintln(pq, height = 10000)
+          val tableNames = Optics.tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          val colNames = Optics.columnNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          //pprintln(pq, height = 10000)
           tableNames.foreach { case r =>
             println(s"Found table ${r.value}")
+          }
+          colNames.foreach { case r =>
+            println(s"Found col ${r.value}")
           }
           println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
