@@ -92,7 +92,7 @@ object ParseBuddyApp {
     val catalog               = Catalog(Map("db" -> List("a", "b")))
     val emptyState            = Resolver()
     val (log, finalState, rq) = resolveQuery(query).value.run(catalog, emptyState).value
-    pprintln(log)
+    pprintln(log.toList)
     pprintln(finalState)
     pprintln(rq)
   }

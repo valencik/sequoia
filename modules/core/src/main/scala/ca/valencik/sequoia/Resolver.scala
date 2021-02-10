@@ -72,6 +72,17 @@ object MonadSqlState extends App {
     s"Column '${col}' was not resolvable with relations: '${rs}' in catalog '${c}'"
   }
 
+  def logUnresolvedUsingColumn[I](
+      column: UsingColumn[I, RawName],
+      state: Resolver,
+      catalog: Catalog
+  ): String = {
+    val col = column.value.value
+    val rs  = state.r.mkString(",")
+    val c   = catalog.c.toString
+    s"Column '${col}' in 'JOIN USING' clause was not resolvable with relations: '${rs}' in catalog '${c}'"
+  }
+
   def preserveScope[A](modify: => EitherRes[A]): EitherRes[A] =
     for {
       old   <- EitherT.right(ReaderWriterState.get[Catalog, Log, Resolver])
@@ -116,6 +127,18 @@ object MonadSqlState extends App {
         (Chain(logUnresolvedColumn(col, res, cat)), res, Left(ResolutionError(col.value)))
     })
 
+  def resolveUsingColumn[I](uc: UsingColumn[I, RawName]): EitherRes[UsingColumn[I, ResolvedName]] =
+    EitherT(ReaderWriterState { (cat, res) =>
+      if (res.columnIsInScope(uc.value))
+        (
+          Chain(s"Resolved UsingColumn '${uc.value.value}'"),
+          res,
+          Right(UsingColumn(uc.info, ResolvedColumnName(uc.value.value)))
+        )
+      else
+        (Chain(logUnresolvedUsingColumn(uc, res, cat)), res, Left(ResolutionError(uc.value)))
+    })
+
   def resolveQuery[I](
       q: Query[I, RawName]
   ): EitherRes[Query[I, ResolvedName]] =
@@ -140,31 +163,70 @@ object MonadSqlState extends App {
         // Update Resolver with CTE and reset so we have an empty scope for the next query
         ReaderWriterState.modify[Catalog, Log, Resolver](_.addCTE(nq.name).resetRelationScope())
       )
+      // TODO column aliases
     } yield NamedQuery(nq.info, nq.name, None, q)
+
+  def resolveOrderBy[I](ob: OrderBy[I, RawName]): EitherRes[OrderBy[I, ResolvedName]] =
+    for {
+      sis <- ob.sortItems.traverse(resolveSortItem)
+    } yield OrderBy(ob.info, sis)
+
+  def resolveSortItem[I](si: SortItem[I, RawName]): EitherRes[SortItem[I, ResolvedName]] =
+    for {
+      e <- resolveExpression(si.exp)
+    } yield SortItem(si.info, e, si.ordering, si.nullOrdering)
 
   def resolveQueryNoWith[I](
       qnw: QueryNoWith[I, RawName]
   ): EitherRes[QueryNoWith[I, ResolvedName]] =
     for {
       qt <- resolveQueryTerm(qnw.queryTerm)
-      // TODO: OrderBy
-    } yield QueryNoWith(qnw.info, qt, None, None)
+      ob <- qnw.orderBy.traverse(resolveOrderBy)
+    } yield QueryNoWith(qnw.info, qt, ob, qnw.limit)
 
   def resolveQueryTerm[I](
       qt: QueryTerm[I, RawName]
   ): EitherRes[QueryTerm[I, ResolvedName]] =
     qt match {
       case qp: QueryPrimary[I, RawName] => resolveQueryPrimary(qp).widen
-      case _                            => ???
+      case so: SetOperation[I, RawName] => resolveSetOperation(so).widen
     }
+
+  def resolveSetOperation[I](
+      so: SetOperation[I, RawName]
+  ): EitherRes[SetOperation[I, ResolvedName]] =
+    for {
+      left  <- resolveQueryTerm(so.left)
+      right <- resolveQueryTerm(so.right)
+    } yield SetOperation(so.info, left, so.op, so.setQuantifier, right)
 
   def resolveQueryPrimary[I](
       qp: QueryPrimary[I, RawName]
   ): EitherRes[QueryPrimary[I, ResolvedName]] =
     qp match {
       case qs: QuerySpecification[I, RawName] => resolveQuerySpecification(qs).widen
-      case _                                  => ???
+      case qp: QueryPrimaryTable[I, RawName]  => resolveQueryPrimaryTable(qp).widen
+      case it: InlineTable[I, RawName]        => resolveInlineTable(it).widen
+      case sq: SubQuery[I, RawName]           => resolveSubQuery(sq).widen
     }
+
+  // TODO Does this need and state preservation business?
+  def resolveQueryPrimaryTable[I](
+      qpt: QueryPrimaryTable[I, RawName]
+  ): EitherRes[QueryPrimaryTable[I, ResolvedName]] =
+    for {
+      tr <- resolveTableRef(qpt.table)
+    } yield QueryPrimaryTable(qpt.info, tr)
+
+  def resolveInlineTable[I](it: InlineTable[I, RawName]): EitherRes[InlineTable[I, ResolvedName]] =
+    for {
+      es <- it.values.traverse(resolveExpression)
+    } yield InlineTable(it.info, es)
+
+  def resolveSubQuery[I](sq: SubQuery[I, RawName]): EitherRes[SubQuery[I, ResolvedName]] =
+    for {
+      qnw <- resolveQueryNoWith(sq.queryNoWith)
+    } yield SubQuery(sq.info, qnw)
 
   def resolveQuerySpecification[I](
       qs: QuerySpecification[I, RawName]
@@ -172,8 +234,54 @@ object MonadSqlState extends App {
     for {
       from <- qs.from.traverse(resolveRelation)
       sis  <- qs.selectItems.traverse(resolveSelectItem)
-      // TODO: QuerySpec
-    } yield QuerySpecification(qs.info, None, sis, from, None, None, None)
+      w    <- qs.where.traverse(resolveExpression)
+      g    <- qs.groupBy.traverse(resolveGroupBy)
+      h    <- qs.having.traverse(resolveExpression)
+    } yield QuerySpecification(qs.info, qs.setQuantifier, sis, from, w, g, h)
+
+  def resolveGroupBy[I](gb: GroupBy[I, RawName]): EitherRes[GroupBy[I, ResolvedName]] =
+    for {
+      ges <- gb.groupingElements.traverse(resolveGroupingElement)
+    } yield GroupBy(gb.info, gb.setQuantifier, ges)
+
+  def resolveGroupingElement[I](
+      ge: GroupingElement[I, RawName]
+  ): EitherRes[GroupingElement[I, ResolvedName]] =
+    ge match {
+      case sgs: SingleGroupingSet[I, RawName]    => resolveSingleGroupSet(sgs).widen
+      case r: Rollup[I, RawName]                 => resolveRollup(r).widen
+      case c: Cube[I, RawName]                   => resolveCube(c).widen
+      case mgs: MultipleGroupingSets[I, RawName] => resolveMultipleGroupingSets(mgs).widen
+    }
+
+  def resolveSingleGroupSet[I](
+      sgs: SingleGroupingSet[I, RawName]
+  ): EitherRes[SingleGroupingSet[I, ResolvedName]] =
+    for {
+      g <- resolveGroupSet(sgs.groupingSet)
+    } yield SingleGroupingSet(sgs.info, g)
+
+  def resolveRollup[I](c: Rollup[I, RawName]): EitherRes[Rollup[I, ResolvedName]] =
+    for {
+      es <- c.expressions.traverse(resolveExpression)
+    } yield Rollup(c.info, es)
+
+  def resolveCube[I](c: Cube[I, RawName]): EitherRes[Cube[I, ResolvedName]] =
+    for {
+      es <- c.expressions.traverse(resolveExpression)
+    } yield Cube(c.info, es)
+
+  def resolveMultipleGroupingSets[I](
+      mgs: MultipleGroupingSets[I, RawName]
+  ): EitherRes[MultipleGroupingSets[I, ResolvedName]] =
+    for {
+      gs <- mgs.groupingSets.traverse(resolveGroupSet)
+    } yield MultipleGroupingSets(mgs.info, gs)
+
+  def resolveGroupSet[I](g: GroupingSet[I, RawName]): EitherRes[GroupingSet[I, ResolvedName]] =
+    for {
+      es <- g.expressions.traverse(resolveExpression)
+    } yield GroupingSet(g.info, es)
 
   def resolveSelectItem[I](
       rel: SelectItem[I, RawName]
@@ -421,14 +529,43 @@ object MonadSqlState extends App {
       rel: RelationPrimary[I, RawName]
   ): EitherRes[RelationPrimary[I, ResolvedName]] =
     rel match {
-      case tn: TableName[I, RawName] => resolveTableName(tn).widen
-      case _                         => ???
+      case tn: TableName[I, RawName]             => resolveTableName(tn).widen
+      case sqr: SubQueryRelation[I, RawName]     => resolveSubQueryRelation(sqr).widen
+      case un: Unnest[I, RawName]                => resolveUnnest(un).widen
+      case lr: LateralRelation[I, RawName]       => resolveLateralRelation(lr).widen
+      case pr: ParenthesizedRelation[I, RawName] => resolveParenthesizedRelation(pr).widen
     }
 
   def resolveTableName[I](tn: TableName[I, RawName]): EitherRes[TableName[I, ResolvedName]] =
     for {
       tr <- resolveTableRef(tn.ref)
     } yield TableName(tn.info, tr)
+
+  def resolveSubQueryRelation[I](
+      sqr: SubQueryRelation[I, RawName]
+  ): EitherRes[SubQueryRelation[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(sqr.query)
+    } yield SubQueryRelation(sqr.info, q)
+
+  def resolveUnnest[I](un: Unnest[I, RawName]): EitherRes[Unnest[I, ResolvedName]] =
+    for {
+      es <- un.expressions.traverse(resolveExpression)
+    } yield Unnest(un.info, es, un.ordinality)
+
+  def resolveLateralRelation[I](
+      lr: LateralRelation[I, RawName]
+  ): EitherRes[LateralRelation[I, ResolvedName]] =
+    for {
+      q <- resolveQuery(lr.query)
+    } yield LateralRelation(lr.info, q)
+
+  def resolveParenthesizedRelation[I](
+      pr: ParenthesizedRelation[I, RawName]
+  ): EitherRes[ParenthesizedRelation[I, ResolvedName]] =
+    for {
+      r <- resolveRelation(pr.relation)
+    } yield ParenthesizedRelation(pr.info, r)
 
   def resolveJoinRelation[I](
       jr: JoinRelation[I, RawName]
@@ -444,8 +581,8 @@ object MonadSqlState extends App {
       jc: JoinCriteria[I, RawName]
   ): EitherRes[JoinCriteria[I, ResolvedName]] =
     jc match {
-      case jo: JoinOn[I, RawName] => resolveJoinOn(jo).widen
-      case _                      => ???
+      case jo: JoinOn[I, RawName]    => resolveJoinOn(jo).widen
+      case ju: JoinUsing[I, RawName] => resolveJoinUsing(ju).widen
     }
 
   def resolveJoinOn[I](
@@ -455,4 +592,13 @@ object MonadSqlState extends App {
       // Resolving a JoinOn expression shouldn't bring things into scope
       exp <- preserveScope(resolveExpression(jo.expr))
     } yield JoinOn(jo.info, exp)
+
+  def resolveJoinUsing[I](
+      ju: JoinUsing[I, RawName]
+  ): EitherRes[JoinUsing[I, ResolvedName]] =
+    for {
+      // TODO Check out JoinUsing's scope rules
+      ucs <- preserveScope(ju.cols.traverse(resolveUsingColumn))
+    } yield JoinUsing(ju.info, ucs)
+
 }

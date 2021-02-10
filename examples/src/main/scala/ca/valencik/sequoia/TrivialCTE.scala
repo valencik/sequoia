@@ -1,36 +1,50 @@
 import ca.valencik.sequoia.ParseBuddy
 import ca.valencik.sequoia.Pretty
 import ca.valencik.sequoia.Rewrite
-import ca.valencik.sequoia.RawName
+import ca.valencik.sequoia.Optics
+
+//import pprint.pprintln
 
 object TrivialCTE {
 
   import Pretty._
-  import Rewrite._
+  import Rewrite.setCTE
 
   def main(args: Array[String]): Unit = {
 
     val queryString = """
-    |select apple, banana
-    |from foo
-    |join bar on foo.a = bar.a
-    |where inventory >= 2 and x < 42 and largename = 666 and y != 27
-    |order by apple
+    |with fruits as (
+    |  select name, price
+    |  from foo
+    |  join bar on foo.name = bar.name
+    |  where inventory >= jfkld
+    |)
+    |select name, price from fruits
+    |order by price
     |limit 100
     """.stripMargin
 
-    val ifFoo         = ifTableName[RawName] { r => r.value == "foo" }
-    val ifQueryHasFoo = ifRelation(ifFoo)
+    val tableToFind   = "bar"
+    def ifQueryHasFoo[I] = Optics.tableNamesFromQuery[I].exist(_.value == tableToFind)
 
     val qD = ParseBuddy
       .parse(queryString)
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
-          println("Rewriting query...")
+          val tableNames = Optics.tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          val colNames = Optics.columnNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          //pprintln(pq, height = 10000)
+          tableNames.foreach { case r =>
+            println(s"Found table ${r.value}")
+          }
+          colNames.foreach { case r =>
+            println(s"Found col ${r.value}")
+          }
+          println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
-          prettyQuery(rewrittenQ).render(30)
+          prettyQuery(rewrittenQ).render(80)
         } else {
-          println("Not rewritting query...")
+          println(s"Did not find table '${tableToFind}', skipping...")
           prettyQuery(pq).render(80)
         }
       }
