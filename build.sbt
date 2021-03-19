@@ -44,9 +44,9 @@ lazy val rewrite = (project in file("modules/rewrite"))
   .settings(
     name := "sequoia-rewrite",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % catsVersion,
-      "com.github.julien-truffaut"  %%  "monocle-core" % monocleVersion,
-      "com.lihaoyi"   %% "pprint"    % pPrintVersion
+      "org.typelevel"              %% "cats-core"    % catsVersion,
+      "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
+      "com.lihaoyi"                %% "pprint"       % pPrintVersion
     )
   )
 
