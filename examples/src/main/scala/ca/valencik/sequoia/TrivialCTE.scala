@@ -24,7 +24,7 @@ object TrivialCTE {
     |limit 100
     """.stripMargin
 
-    val tableToFind   = "bar"
+    val tableToFind      = "bar"
     def ifQueryHasFoo[I] = Optics.tableNamesFromQuery[I].exist(_.value == tableToFind)
 
     val qD = ParseBuddy
@@ -32,13 +32,15 @@ object TrivialCTE {
       .map { pq =>
         if (ifQueryHasFoo(pq)) {
           val tableNames = Optics.tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
-          val colNames = Optics.columnNamesFromQuery[ParseBuddy.Info].getAll(pq)
+          val colNames   = Optics.columnNamesFromQuery[ParseBuddy.Info].getAll(pq)
           //pprintln(pq, height = 10000)
-          tableNames.foreach { case r =>
-            println(s"Found table ${r.value}")
+          tableNames.foreach {
+            case r =>
+              println(s"Found table ${r.value}")
           }
-          colNames.foreach { case r =>
-            println(s"Found col ${r.value}")
+          colNames.foreach {
+            case r =>
+              println(s"Found col ${r.value}")
           }
           println(s"Found table '${tableToFind}', rewriting query...")
           val rewrittenQ = setCTE(pq, "myCTE")
