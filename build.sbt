@@ -61,9 +61,9 @@ lazy val parse = (project in file("modules/parse"))
       "org.antlr"    % "antlr4-runtime" % antlrVersion,
       "com.lihaoyi" %% "pprint"         % pPrintVersion
     ),
-    antlr4GenListener in Antlr4 := false,
-    antlr4GenVisitor in Antlr4 := true,
-    antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia")
+    Antlr4 / antlr4GenListener := false,
+    Antlr4 / antlr4GenVisitor := true,
+    Antlr4 / antlr4PackageName := Some("ca.valencik.sequoia")
   )
 
 lazy val examples = (project in file("examples"))
