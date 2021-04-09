@@ -101,9 +101,8 @@ object Optics {
             val where  = qs.where.traverse(namesFromExpression.modifyF(f)(_))
             val group  = qs.groupBy.traverse(namesFromGroupBy.modifyF(f)(_))
             val having = qs.having.traverse(namesFromExpression.modifyF(f)(_))
-            (select, from, where, group, having).mapN {
-              case (s, f, w, g, h) =>
-                qs.copy(selectItems = s, from = f, where = w, groupBy = g, having = h)
+            (select, from, where, group, having).mapN { case (s, f, w, g, h) =>
+              qs.copy(selectItems = s, from = f, where = w, groupBy = g, having = h)
             }
           }
           case qp: QueryPrimaryTable[I, R] =>
@@ -310,8 +309,8 @@ object Optics {
             val lower = namesFromValueExpression.modifyF(f)(pe.lower)
             val upper = namesFromValueExpression.modifyF(f)(pe.upper)
             val value = namesFromValueExpression.modifyF(f)(pe.value)
-            lower.product(upper).product(value).map {
-              case ((l, u), v) => pe.copy(lower = l, upper = u, value = v)
+            lower.product(upper).product(value).map { case ((l, u), v) =>
+              pe.copy(lower = l, upper = u, value = v)
             }
           }
           case pe: InList[I, R] => {
@@ -328,8 +327,8 @@ object Optics {
             val escape  = pe.escape.traverse(namesFromValueExpression.modifyF(f)(_))
             val pattern = namesFromValueExpression.modifyF(f)(pe.pattern)
             val value   = namesFromValueExpression.modifyF(f)(pe.value)
-            escape.product(pattern).product(value).map {
-              case ((e, p), v) => pe.copy(escape = e, pattern = p, value = v)
+            escape.product(pattern).product(value).map { case ((e, p), v) =>
+              pe.copy(escape = e, pattern = p, value = v)
             }
           }
           case pe: NullPredicate[I, R] =>
@@ -380,15 +379,15 @@ object Optics {
             val exp  = namesFromValueExpression.modifyF(f)(pe.exp)
             val when = pe.whenClauses.traverse(namesFromWhenClause.modifyF(f)(_))
             val el   = pe.elseExpression.traverse(namesFromExpression.modifyF(f)(_))
-            exp.product(when).product(el).map {
-              case ((e, w), l) => pe.copy(exp = e, whenClauses = w, elseExpression = l)
+            exp.product(when).product(el).map { case ((e, w), l) =>
+              pe.copy(exp = e, whenClauses = w, elseExpression = l)
             }
           }
           case pe: SearchedCase[I, R] => {
             val when = pe.whenClauses.traverse(namesFromWhenClause.modifyF(f)(_))
             val el   = pe.elseExpression.traverse(namesFromExpression.modifyF(f)(_))
-            when.product(el).map {
-              case (w, l) => pe.copy(whenClauses = w, elseExpression = l)
+            when.product(el).map { case (w, l) =>
+              pe.copy(whenClauses = w, elseExpression = l)
             }
 
           }

@@ -3,8 +3,7 @@ package ca.valencik.sequoia
 import org.antlr.v4.runtime.{CharStream, IntStream}
 import org.antlr.v4.runtime.misc.Interval
 
-/**
-  * This string stream provides the lexer with upper case characters only.
+/** This string stream provides the lexer with upper case characters only.
   * This greatly simplifies lexing the stream, while we can maintain the original command.
   *
   * Originally taken from Spark's spark/sql/catalyst/parser/ParseDriver.scala
