@@ -160,6 +160,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       case SqlBaseLexer.INTERSECT => INTERSECT
       case SqlBaseLexer.UNION     => UNION
       case SqlBaseLexer.EXCEPT    => EXCEPT
+      case _ => throw new Exception("Impossible parse error")
     }
     SetOperation(nextId(), left, op, sq, right)
   }
@@ -340,6 +341,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val op: Sign = ctx.operator.getType match {
       case SqlBaseLexer.PLUS  => PLUS
       case SqlBaseLexer.MINUS => MINUS
+      case _ => throw new Exception("Impossible parse error")
     }
     val value = visit(ctx.valueExpression).asInstanceOf[RawValueExpression]
     ArithmeticUnary(nextId(), op, value)
@@ -357,6 +359,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       case SqlBaseLexer.ASTERISK => MULTIPLY
       case SqlBaseLexer.SLASH    => DIVIDE
       case SqlBaseLexer.PERCENT  => MODULUS
+      case _ => throw new Exception("Impossible parse error")
     }
     ArithmeticBinary(nextId(), left, op, right)
   }
@@ -604,6 +607,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val ft = ctx.frameType.getType match {
       case SqlBaseLexer.RANGE => RANGE
       case SqlBaseLexer.ROWS  => ROWS
+      case _ => throw new Exception("Impossible parse error")
     }
     val start = visit(ctx.start).asInstanceOf[FrameBound[Info, RawName]]
     val end =
@@ -618,6 +622,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val bound = ctx.boundType.getType match {
       case SqlBaseLexer.PRECEDING => PRECEDING
       case SqlBaseLexer.FOLLOWING => FOLLOWING
+      case _ => throw new Exception("Impossible parse error")
     }
     UnboundedFrame(nextId(), bound)
   }
@@ -629,6 +634,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     val bound = ctx.boundType.getType match {
       case SqlBaseLexer.PRECEDING => PRECEDING
       case SqlBaseLexer.FOLLOWING => FOLLOWING
+      case _ => throw new Exception("Impossible parse error")
     }
     val exp = visit(ctx.expression).asInstanceOf[RawExpression]
     BoundedFrame(nextId(), bound, exp)
@@ -666,6 +672,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         ctx.sign.getType match {
           case SqlBaseLexer.PLUS  => PLUS
           case SqlBaseLexer.MINUS => MINUS
+          case _ => throw new Exception("Impossible parse error")
         }
       else PLUS
     val value = visit(ctx.string).asInstanceOf[StringLiteral[Info, RawName]]
@@ -684,6 +691,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
       case SqlBaseLexer.CURRENT_TIMESTAMP => CURRENT_TIMESTAMP
       case SqlBaseLexer.LOCALTIME         => LOCALTIME
       case SqlBaseLexer.LOCALTIMESTAMP    => LOCALTIMESTAMP
+      case _ => throw new Exception("Impossible parse error")
     }
     val precision = if (ctx.precision != null) Some(ctx.precision.getText.toInt) else None
     SpecialDateTimeFunc(nextId(), name, precision)
