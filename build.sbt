@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.3"
+ThisBuild / scalaVersion := "2.13.5"
 
 val scalaTestVersion  = "3.2.7"
 val antlrVersion      = "4.7.2"
@@ -12,7 +12,7 @@ val monocleVersion    = "2.1.0"
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
   version := "0.1.0-SNAPSHOT",
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
 )
 
 lazy val root = (project in file("."))
@@ -21,6 +21,7 @@ lazy val root = (project in file("."))
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
   .settings(
+    scalacOptions ~= filterConsoleScalacOptions,
     name := "sequoia-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion
@@ -60,9 +61,9 @@ lazy val parse = (project in file("modules/parse"))
       "org.antlr"    % "antlr4-runtime" % antlrVersion,
       "com.lihaoyi" %% "pprint"         % pPrintVersion
     ),
-    antlr4GenListener in Antlr4 := false,
-    antlr4GenVisitor in Antlr4 := true,
-    antlr4PackageName in Antlr4 := Some("ca.valencik.sequoia")
+    Antlr4 / antlr4GenListener := false,
+    Antlr4 / antlr4GenVisitor := true,
+    Antlr4 / antlr4PackageName := Some("ca.valencik.sequoia")
   )
 
 lazy val examples = (project in file("examples"))
@@ -72,6 +73,7 @@ lazy val tests = (project in file("modules/tests"))
   .dependsOn(core, parse)
   .settings(commonSettings)
   .settings(
+    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime" % antlrVersion,
       "org.typelevel" %% "cats-core"      % catsVersion,
@@ -83,6 +85,7 @@ lazy val laws = (project in file("modules/laws"))
   .dependsOn(core, parse)
   .settings(commonSettings)
   .settings(
+    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
       "org.typelevel"  %% "cats-laws"            % catsVersion       % Test,

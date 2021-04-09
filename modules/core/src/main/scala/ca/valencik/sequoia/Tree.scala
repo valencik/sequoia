@@ -6,8 +6,8 @@ import cats.implicits._
 final case class TableRef[I, R](info: I, value: R)
 object TableRef {
   implicit def eqTableRef[I: Eq, R: Eq]: Eq[TableRef[I, R]] = Eq.fromUniversalEquals
-  implicit def tableRefInstances[I]: Traverse[TableRef[I, ?]] =
-    new Traverse[TableRef[I, ?]] {
+  implicit def tableRefInstances[I]: Traverse[TableRef[I, *]] =
+    new Traverse[TableRef[I, *]] {
       override def map[A, B](fa: TableRef[I, A])(f: A => B): TableRef[I, B] =
         fa.copy(value = f(fa.value))
       def foldLeft[A, B](fa: TableRef[I, A], b: B)(f: (B, A) => B): B = f(b, fa.value)
@@ -23,8 +23,8 @@ object TableRef {
 final case class ColumnRef[I, R](info: I, value: R)
 object ColumnRef {
   implicit def eqColumnRef[I: Eq, R: Eq]: Eq[ColumnRef[I, R]] = Eq.fromUniversalEquals
-  implicit def columnRefInstances[I]: Traverse[ColumnRef[I, ?]] =
-    new Traverse[ColumnRef[I, ?]] {
+  implicit def columnRefInstances[I]: Traverse[ColumnRef[I, *]] =
+    new Traverse[ColumnRef[I, *]] {
       override def map[A, B](fa: ColumnRef[I, A])(f: A => B): ColumnRef[I, B] =
         fa.copy(value = f(fa.value))
       def foldLeft[A, B](fa: ColumnRef[I, A], b: B)(f: (B, A) => B): B = f(b, fa.value)
@@ -40,8 +40,8 @@ object ColumnRef {
 final case class UsingColumn[I, R](info: I, value: R)
 object UsingColumn {
   implicit def eqUsingColumn[I: Eq, R: Eq]: Eq[UsingColumn[I, R]] = Eq.fromUniversalEquals
-  implicit def usingColumnInstances[I]: Traverse[UsingColumn[I, ?]] =
-    new Traverse[UsingColumn[I, ?]] {
+  implicit def usingColumnInstances[I]: Traverse[UsingColumn[I, *]] =
+    new Traverse[UsingColumn[I, *]] {
       override def map[A, B](fa: UsingColumn[I, A])(f: A => B): UsingColumn[I, B] =
         fa.copy(value = f(fa.value))
       def foldLeft[A, B](fa: UsingColumn[I, A], b: B)(f: (B, A) => B): B = f(b, fa.value)
@@ -67,8 +67,8 @@ final case class Query[I, R](info: I, cte: Option[With[I, R]], queryNoWith: Quer
     extends Node
 object Query {
   implicit def eqQuery[I: Eq, R: Eq]: Eq[Query[I, R]] = Eq.fromUniversalEquals
-  implicit def queryInstances[I]: Functor[Query[I, ?]] =
-    new Functor[Query[I, ?]] {
+  implicit def queryInstances[I]: Functor[Query[I, *]] =
+    new Functor[Query[I, *]] {
       def map[A, B](fa: Query[I, A])(f: A => B): Query[I, B] =
         fa.copy(cte = fa.cte.map(_.map(f)), queryNoWith = fa.queryNoWith.map(f))
     }
@@ -82,8 +82,8 @@ object Query {
 final case class With[I, R](info: I, namedQueries: List[NamedQuery[I, R]]) extends Node
 object With {
   implicit def eqWith[I: Eq, R: Eq]: Eq[With[I, R]] = Eq.fromUniversalEquals
-  implicit def withInstances[I]: Functor[With[I, ?]] =
-    new Functor[With[I, ?]] {
+  implicit def withInstances[I]: Functor[With[I, *]] =
+    new Functor[With[I, *]] {
       def map[A, B](fa: With[I, A])(f: A => B): With[I, B] =
         fa.copy(namedQueries = fa.namedQueries.map(_.map(f)))
     }
@@ -97,8 +97,8 @@ final case class QueryNoWith[I, R](
 ) extends Node
 object QueryNoWith {
   implicit def eqQueryNoWith[I: Eq, R: Eq]: Eq[QueryNoWith[I, R]] = Eq.fromUniversalEquals
-  implicit def queryNoWithInstances[I]: Functor[QueryNoWith[I, ?]] =
-    new Functor[QueryNoWith[I, ?]] {
+  implicit def queryNoWithInstances[I]: Functor[QueryNoWith[I, *]] =
+    new Functor[QueryNoWith[I, *]] {
       def map[A, B](fa: QueryNoWith[I, A])(f: A => B): QueryNoWith[I, B] =
         fa.copy(queryTerm = fa.queryTerm.map(f), orderBy = fa.orderBy.map(_.map(f)))
     }
@@ -107,8 +107,8 @@ object QueryNoWith {
 final case class OrderBy[I, R](info: I, sortItems: List[SortItem[I, R]])
 object OrderBy {
   implicit def eqOrderBy[I: Eq, R: Eq]: Eq[OrderBy[I, R]] = Eq.fromUniversalEquals
-  implicit def orderByInstances[I]: Functor[OrderBy[I, ?]] =
-    new Functor[OrderBy[I, ?]] {
+  implicit def orderByInstances[I]: Functor[OrderBy[I, *]] =
+    new Functor[OrderBy[I, *]] {
       def map[A, B](fa: OrderBy[I, A])(f: A => B): OrderBy[I, B] =
         fa.copy(sortItems = fa.sortItems.map(_.map(f)))
     }
@@ -134,8 +134,8 @@ object Limit {
 sealed trait QueryTerm[I, R] extends Node
 object QueryTerm {
   implicit def eqQueryTerm[I: Eq, R: Eq]: Eq[QueryTerm[I, R]] = Eq.fromUniversalEquals
-  implicit def queryTermInstances[I]: Functor[QueryTerm[I, ?]] =
-    new Functor[QueryTerm[I, ?]] {
+  implicit def queryTermInstances[I]: Functor[QueryTerm[I, *]] =
+    new Functor[QueryTerm[I, *]] {
       def map[A, B](fa: QueryTerm[I, A])(f: A => B): QueryTerm[I, B] =
         fa match {
           case q: QueryPrimary[I, _] => q.map(f)
@@ -153,8 +153,8 @@ final case class SetOperation[I, R](
 ) extends QueryTerm[I, R]
 object SetOperation {
   implicit def eqSetOperation[I: Eq, R: Eq]: Eq[SetOperation[I, R]] = Eq.fromUniversalEquals
-  implicit def querySetOperationInstances[I]: Functor[SetOperation[I, ?]] =
-    new Functor[SetOperation[I, ?]] {
+  implicit def querySetOperationInstances[I]: Functor[SetOperation[I, *]] =
+    new Functor[SetOperation[I, *]] {
       def map[A, B](fa: SetOperation[I, A])(f: A => B): SetOperation[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
     }
@@ -175,8 +175,8 @@ final case object ALL      extends SetQuantifier
 sealed trait QueryPrimary[I, R] extends QueryTerm[I, R]
 object QueryPrimary {
   implicit def eqQueryPrimary[I: Eq, R: Eq]: Eq[QueryPrimary[I, R]] = Eq.fromUniversalEquals
-  implicit def queryPrimaryInstances[I]: Functor[QueryPrimary[I, ?]] =
-    new Functor[QueryPrimary[I, ?]] {
+  implicit def queryPrimaryInstances[I]: Functor[QueryPrimary[I, *]] =
+    new Functor[QueryPrimary[I, *]] {
       def map[A, B](fa: QueryPrimary[I, A])(f: A => B): QueryPrimary[I, B] =
         fa match {
           // TODO Can I just say fa.map(f)?
@@ -192,8 +192,8 @@ final case class QueryPrimaryTable[I, R](info: I, table: TableRef[I, R]) extends
 object QueryPrimaryTable {
   implicit def eqQueryPrimaryTable[I: Eq, R: Eq]: Eq[QueryPrimaryTable[I, R]] =
     Eq.fromUniversalEquals
-  implicit def queryQueryPrimaryTableInstances[I]: Functor[QueryPrimaryTable[I, ?]] =
-    new Functor[QueryPrimaryTable[I, ?]] {
+  implicit def queryQueryPrimaryTableInstances[I]: Functor[QueryPrimaryTable[I, *]] =
+    new Functor[QueryPrimaryTable[I, *]] {
       def map[A, B](fa: QueryPrimaryTable[I, A])(f: A => B): QueryPrimaryTable[I, B] =
         fa.copy(table = fa.table.map(f))
     }
@@ -203,8 +203,8 @@ final case class InlineTable[I, R](info: I, values: List[Expression[I, R]])
     extends QueryPrimary[I, R]
 object InlineTable {
   implicit def eqInlineTable[I: Eq, R: Eq]: Eq[InlineTable[I, R]] = Eq.fromUniversalEquals
-  implicit def inlineTableInstances[I]: Functor[InlineTable[I, ?]] =
-    new Functor[InlineTable[I, ?]] {
+  implicit def inlineTableInstances[I]: Functor[InlineTable[I, *]] =
+    new Functor[InlineTable[I, *]] {
       def map[A, B](fa: InlineTable[I, A])(f: A => B): InlineTable[I, B] =
         fa.copy(values = fa.values.map(_.map(f)))
     }
@@ -213,8 +213,8 @@ object InlineTable {
 final case class SubQuery[I, R](info: I, queryNoWith: QueryNoWith[I, R]) extends QueryPrimary[I, R]
 object SubQuery {
   implicit def eqSubQuery[I: Eq, R: Eq]: Eq[SubQuery[I, R]] = Eq.fromUniversalEquals
-  implicit def subQueryInstances[I]: Functor[SubQuery[I, ?]] =
-    new Functor[SubQuery[I, ?]] {
+  implicit def subQueryInstances[I]: Functor[SubQuery[I, *]] =
+    new Functor[SubQuery[I, *]] {
       def map[A, B](fa: SubQuery[I, A])(f: A => B): SubQuery[I, B] =
         fa.copy(queryNoWith = fa.queryNoWith.map(f))
     }
@@ -228,8 +228,8 @@ final case class SortItem[I, R](
 ) extends Node
 object SortItem {
   implicit def eqSortItem[I: Eq, R: Eq]: Eq[SortItem[I, R]] = Eq.fromUniversalEquals
-  implicit def sortItemInstances[I]: Functor[SortItem[I, ?]] =
-    new Functor[SortItem[I, ?]] {
+  implicit def sortItemInstances[I]: Functor[SortItem[I, *]] =
+    new Functor[SortItem[I, *]] {
       def map[A, B](fa: SortItem[I, A])(f: A => B): SortItem[I, B] = fa.copy(exp = fa.exp.map(f))
     }
 }
@@ -246,8 +246,8 @@ final case class QuerySpecification[I, R](
 object QuerySpecification {
   implicit def eqQuerySpecification[I: Eq, R: Eq]: Eq[QuerySpecification[I, R]] =
     Eq.fromUniversalEquals
-  implicit def querySpecificationInstances[I]: Functor[QuerySpecification[I, ?]] =
-    new Functor[QuerySpecification[I, ?]] {
+  implicit def querySpecificationInstances[I]: Functor[QuerySpecification[I, *]] =
+    new Functor[QuerySpecification[I, *]] {
       def map[A, B](fa: QuerySpecification[I, A])(f: A => B): QuerySpecification[I, B] =
         fa.copy(
           selectItems = fa.selectItems.map(_.map(f)),
@@ -266,8 +266,8 @@ final case class GroupBy[I, R](
 ) extends Node
 object GroupBy {
   implicit def eqGroupBy[I: Eq, R: Eq]: Eq[GroupBy[I, R]] = Eq.fromUniversalEquals
-  implicit def groupByInstances[I]: Functor[GroupBy[I, ?]] =
-    new Functor[GroupBy[I, ?]] {
+  implicit def groupByInstances[I]: Functor[GroupBy[I, *]] =
+    new Functor[GroupBy[I, *]] {
       def map[A, B](fa: GroupBy[I, A])(f: A => B): GroupBy[I, B] =
         fa.copy(groupingElements = fa.groupingElements.map(_.map(f)))
     }
@@ -276,8 +276,8 @@ object GroupBy {
 sealed trait GroupingElement[I, R] extends Node
 object GroupingElement {
   implicit def eqGroupingElement[I: Eq, R: Eq]: Eq[GroupingElement[I, R]] = Eq.fromUniversalEquals
-  implicit def groupingElementInstances[I]: Functor[GroupingElement[I, ?]] =
-    new Functor[GroupingElement[I, ?]] {
+  implicit def groupingElementInstances[I]: Functor[GroupingElement[I, *]] =
+    new Functor[GroupingElement[I, *]] {
       def map[A, B](fa: GroupingElement[I, A])(f: A => B): GroupingElement[I, B] =
         fa match {
           case s: SingleGroupingSet[I, _]    => s.map(f)
@@ -293,8 +293,8 @@ final case class SingleGroupingSet[I, R](info: I, groupingSet: GroupingSet[I, R]
 object SingleGroupingSet {
   implicit def eqSingleGroupingSet[I: Eq, R: Eq]: Eq[SingleGroupingSet[I, R]] =
     Eq.fromUniversalEquals
-  implicit def singleGroupingSetInstances[I]: Functor[SingleGroupingSet[I, ?]] =
-    new Functor[SingleGroupingSet[I, ?]] {
+  implicit def singleGroupingSetInstances[I]: Functor[SingleGroupingSet[I, *]] =
+    new Functor[SingleGroupingSet[I, *]] {
       def map[A, B](fa: SingleGroupingSet[I, A])(f: A => B): SingleGroupingSet[I, B] =
         fa.copy(groupingSet = fa.groupingSet.map(f))
     }
@@ -304,8 +304,8 @@ final case class Rollup[I, R](info: I, expressions: List[Expression[I, R]])
     extends GroupingElement[I, R]
 object Rollup {
   implicit def eqRollup[I: Eq, R: Eq]: Eq[Rollup[I, R]] = Eq.fromUniversalEquals
-  implicit def rollupInstances[I]: Functor[Rollup[I, ?]] =
-    new Functor[Rollup[I, ?]] {
+  implicit def rollupInstances[I]: Functor[Rollup[I, *]] =
+    new Functor[Rollup[I, *]] {
       def map[A, B](fa: Rollup[I, A])(f: A => B): Rollup[I, B] =
         fa.copy(expressions = fa.expressions.map(_.map(f)))
     }
@@ -315,8 +315,8 @@ final case class Cube[I, R](info: I, expressions: List[Expression[I, R]])
     extends GroupingElement[I, R]
 object Cube {
   implicit def eqCube[I: Eq, R: Eq]: Eq[Cube[I, R]] = Eq.fromUniversalEquals
-  implicit def cubeInstances[I]: Functor[Cube[I, ?]] =
-    new Functor[Cube[I, ?]] {
+  implicit def cubeInstances[I]: Functor[Cube[I, *]] =
+    new Functor[Cube[I, *]] {
       def map[A, B](fa: Cube[I, A])(f: A => B): Cube[I, B] =
         fa.copy(expressions = fa.expressions.map(_.map(f)))
     }
@@ -327,8 +327,8 @@ final case class MultipleGroupingSets[I, R](info: I, groupingSets: List[Grouping
 object MultipleGroupingSets {
   implicit def eqMultipleGroupingSets[I: Eq, R: Eq]: Eq[MultipleGroupingSets[I, R]] =
     Eq.fromUniversalEquals
-  implicit def multipleGroupingSetsInstances[I]: Functor[MultipleGroupingSets[I, ?]] =
-    new Functor[MultipleGroupingSets[I, ?]] {
+  implicit def multipleGroupingSetsInstances[I]: Functor[MultipleGroupingSets[I, *]] =
+    new Functor[MultipleGroupingSets[I, *]] {
       def map[A, B](fa: MultipleGroupingSets[I, A])(f: A => B): MultipleGroupingSets[I, B] =
         fa.copy(groupingSets = fa.groupingSets.map(_.map(f)))
     }
@@ -337,8 +337,8 @@ object MultipleGroupingSets {
 final case class GroupingSet[I, R](info: I, expressions: List[Expression[I, R]]) extends Node
 object GroupingSet {
   implicit def eqGroupingSet[I: Eq, R: Eq]: Eq[GroupingSet[I, R]] = Eq.fromUniversalEquals
-  implicit def groupingSetInstances[I]: Functor[GroupingSet[I, ?]] =
-    new Functor[GroupingSet[I, ?]] {
+  implicit def groupingSetInstances[I]: Functor[GroupingSet[I, *]] =
+    new Functor[GroupingSet[I, *]] {
       def map[A, B](fa: GroupingSet[I, A])(f: A => B): GroupingSet[I, B] =
         fa.copy(expressions = fa.expressions.map(_.map(f)))
     }
@@ -352,8 +352,8 @@ final case class NamedQuery[I, R](
 ) extends Node
 object NamedQuery {
   implicit def eqNamedQuery[I: Eq, R: Eq]: Eq[NamedQuery[I, R]] = Eq.fromUniversalEquals
-  implicit def namedQueryInstances[I]: Functor[NamedQuery[I, ?]] =
-    new Functor[NamedQuery[I, ?]] {
+  implicit def namedQueryInstances[I]: Functor[NamedQuery[I, *]] =
+    new Functor[NamedQuery[I, *]] {
       def map[A, B](fa: NamedQuery[I, A])(f: A => B): NamedQuery[I, B] =
         fa.copy(query = fa.query.map(f))
     }
@@ -362,8 +362,8 @@ object NamedQuery {
 sealed trait SelectItem[I, R] extends Node
 object SelectItem {
   implicit def eqSelectItem[I: Eq, R: Eq]: Eq[SelectItem[I, R]] = Eq.fromUniversalEquals
-  implicit def selectItemInstances[I]: Functor[SelectItem[I, ?]] =
-    new Functor[SelectItem[I, ?]] {
+  implicit def selectItemInstances[I]: Functor[SelectItem[I, *]] =
+    new Functor[SelectItem[I, *]] {
       def map[A, B](fa: SelectItem[I, A])(f: A => B): SelectItem[I, B] =
         fa match {
           case s: SelectAll[I, _]    => s.map(f)
@@ -376,8 +376,8 @@ object SelectItem {
 final case class SelectAll[I, R](info: I, ref: Option[TableRef[I, R]]) extends SelectItem[I, R]
 object SelectAll {
   implicit def eqSelectAll[I: Eq, R: Eq]: Eq[SelectAll[I, R]] = Eq.fromUniversalEquals
-  implicit def selectAllInstances[I]: Functor[SelectAll[I, ?]] =
-    new Functor[SelectAll[I, ?]] {
+  implicit def selectAllInstances[I]: Functor[SelectAll[I, *]] =
+    new Functor[SelectAll[I, *]] {
       def map[A, B](fa: SelectAll[I, A])(f: A => B): SelectAll[I, B] =
         fa.copy(ref = fa.ref.map(_.map(f)))
     }
@@ -387,8 +387,8 @@ final case class SelectSingle[I, R](info: I, expr: Expression[I, R], alias: Opti
     extends SelectItem[I, R]
 object SelectSingle {
   implicit def eqSelectSingle[I: Eq, R: Eq]: Eq[SelectSingle[I, R]] = Eq.fromUniversalEquals
-  implicit def selectSingleInstances[I]: Functor[SelectSingle[I, ?]] =
-    new Functor[SelectSingle[I, ?]] {
+  implicit def selectSingleInstances[I]: Functor[SelectSingle[I, *]] =
+    new Functor[SelectSingle[I, *]] {
       def map[A, B](fa: SelectSingle[I, A])(f: A => B): SelectSingle[I, B] =
         fa.copy(expr = fa.expr.map(f))
     }
@@ -397,8 +397,8 @@ object SelectSingle {
 sealed trait Relation[I, R] extends Node
 object Relation {
   implicit def eqRelation[I: Eq, R: Eq]: Eq[Relation[I, R]] = Eq.fromUniversalEquals
-  implicit def relationInstance[I]: Functor[Relation[I, ?]] =
-    new Functor[Relation[I, ?]] {
+  implicit def relationInstance[I]: Functor[Relation[I, *]] =
+    new Functor[Relation[I, *]] {
       def map[A, B](fa: Relation[I, A])(f: A => B): Relation[I, B] =
         fa match {
           case t: JoinRelation[I, _]    => t.map(f)
@@ -417,8 +417,8 @@ final case class JoinRelation[I, R](
 ) extends Relation[I, R]
 object JoinRelation {
   implicit def eqJoinRelation[I: Eq, R: Eq]: Eq[JoinRelation[I, R]] = Eq.fromUniversalEquals
-  implicit def joinRelationInstances[I]: Functor[JoinRelation[I, ?]] =
-    new Functor[JoinRelation[I, ?]] {
+  implicit def joinRelationInstances[I]: Functor[JoinRelation[I, *]] =
+    new Functor[JoinRelation[I, *]] {
       def map[A, B](fa: JoinRelation[I, A])(f: A => B): JoinRelation[I, B] =
         fa.copy(
           left = fa.left.map(f),
@@ -438,8 +438,8 @@ final case object CrossJoin extends JoinType
 sealed trait JoinCriteria[I, R]
 object JoinCriteria {
   implicit def eqJoinCriteria[I: Eq, R: Eq]: Eq[JoinCriteria[I, R]] = Eq.fromUniversalEquals
-  implicit def joinCriteriaInstance[I]: Functor[JoinCriteria[I, ?]] =
-    new Functor[JoinCriteria[I, ?]] {
+  implicit def joinCriteriaInstance[I]: Functor[JoinCriteria[I, *]] =
+    new Functor[JoinCriteria[I, *]] {
       def map[A, B](fa: JoinCriteria[I, A])(f: A => B): JoinCriteria[I, B] =
         fa match {
           case t: JoinOn[I, _]    => t.map(f)
@@ -451,8 +451,8 @@ object JoinCriteria {
 final case class JoinOn[I, R](info: I, expr: Expression[I, R]) extends JoinCriteria[I, R]
 object JoinOn {
   implicit def eqJoinOn[I: Eq, R: Eq]: Eq[JoinOn[I, R]] = Eq.fromUniversalEquals
-  implicit def joinOnInstances[I]: Functor[JoinOn[I, ?]] =
-    new Functor[JoinOn[I, ?]] {
+  implicit def joinOnInstances[I]: Functor[JoinOn[I, *]] =
+    new Functor[JoinOn[I, *]] {
       def map[A, B](fa: JoinOn[I, A])(f: A => B): JoinOn[I, B] =
         fa.copy(expr = fa.expr.map(f))
     }
@@ -461,8 +461,8 @@ object JoinOn {
 final case class JoinUsing[I, R](info: I, cols: List[UsingColumn[I, R]]) extends JoinCriteria[I, R]
 object JoinUsing {
   implicit def eqJoinUsing[I: Eq, R: Eq]: Eq[JoinUsing[I, R]] = Eq.fromUniversalEquals
-  implicit def joinUsingInstances[I]: Functor[JoinUsing[I, ?]] =
-    new Functor[JoinUsing[I, ?]] {
+  implicit def joinUsingInstances[I]: Functor[JoinUsing[I, *]] =
+    new Functor[JoinUsing[I, *]] {
       def map[A, B](fa: JoinUsing[I, A])(f: A => B): JoinUsing[I, B] =
         fa.copy(cols = fa.cols.map(_.map(f)))
     }
@@ -475,8 +475,8 @@ final case class SampledRelation[I, R](
 ) extends Relation[I, R]
 object SampledRelation {
   implicit def eqSampledRelation[I: Eq, R: Eq]: Eq[SampledRelation[I, R]] = Eq.fromUniversalEquals
-  implicit def sampleRelationInstances[I]: Functor[SampledRelation[I, ?]] =
-    new Functor[SampledRelation[I, ?]] {
+  implicit def sampleRelationInstances[I]: Functor[SampledRelation[I, *]] =
+    new Functor[SampledRelation[I, *]] {
       def map[A, B](fa: SampledRelation[I, A])(f: A => B): SampledRelation[I, B] =
         fa.copy(
           aliasedRelation = fa.aliasedRelation.map(f),
@@ -488,8 +488,8 @@ object SampledRelation {
 final case class TableSample[I, R](info: I, sampleType: SampleType, percentage: Expression[I, R])
 object TableSample {
   implicit def eqTableSample[I: Eq, R: Eq]: Eq[TableSample[I, R]] = Eq.fromUniversalEquals
-  implicit def tableSampleInstances[I]: Functor[TableSample[I, ?]] =
-    new Functor[TableSample[I, ?]] {
+  implicit def tableSampleInstances[I]: Functor[TableSample[I, *]] =
+    new Functor[TableSample[I, *]] {
       def map[A, B](fa: TableSample[I, A])(f: A => B): TableSample[I, B] =
         fa.copy(percentage = fa.percentage.map(f))
     }
@@ -507,8 +507,8 @@ final case class AliasedRelation[I, R](
 ) extends Node
 object AliasedRelation {
   implicit def eqAliasedRelation[I: Eq, R: Eq]: Eq[AliasedRelation[I, R]] = Eq.fromUniversalEquals
-  implicit def aliasedRelationInstance[I]: Functor[AliasedRelation[I, ?]] =
-    new Functor[AliasedRelation[I, ?]] {
+  implicit def aliasedRelationInstance[I]: Functor[AliasedRelation[I, *]] =
+    new Functor[AliasedRelation[I, *]] {
       def map[A, B](fa: AliasedRelation[I, A])(f: A => B): AliasedRelation[I, B] =
         fa.copy(relationPrimary = fa.relationPrimary.map(f))
     }
@@ -523,8 +523,8 @@ object ColumnAliases {
 sealed trait RelationPrimary[I, R] extends Node
 object RelationPrimary {
   implicit def eqRelationPrimary[I: Eq, R: Eq]: Eq[RelationPrimary[I, R]] = Eq.fromUniversalEquals
-  implicit def relationPrimaryInstance[I]: Functor[RelationPrimary[I, ?]] =
-    new Functor[RelationPrimary[I, ?]] {
+  implicit def relationPrimaryInstance[I]: Functor[RelationPrimary[I, *]] =
+    new Functor[RelationPrimary[I, *]] {
       def map[A, B](fa: RelationPrimary[I, A])(f: A => B): RelationPrimary[I, B] =
         fa match {
           case r: TableName[I, _]             => r.map(f)
@@ -539,8 +539,8 @@ object RelationPrimary {
 final case class TableName[I, R](info: I, ref: TableRef[I, R]) extends RelationPrimary[I, R]
 object TableName {
   implicit def eqTableName[I: Eq, R: Eq]: Eq[TableName[I, R]] = Eq.fromUniversalEquals
-  implicit def tableNameInstances[I]: Traverse[TableName[I, ?]] =
-    new Traverse[TableName[I, ?]] {
+  implicit def tableNameInstances[I]: Traverse[TableName[I, *]] =
+    new Traverse[TableName[I, *]] {
       override def map[A, B](fa: TableName[I, A])(f: A => B): TableName[I, B] =
         fa.copy(ref = fa.ref.map(f))
       def foldLeft[A, B](fa: TableName[I, A], b: B)(f: (B, A) => B): B = f(b, fa.ref.value)
@@ -558,8 +558,8 @@ object TableName {
 final case class SubQueryRelation[I, R](info: I, query: Query[I, R]) extends RelationPrimary[I, R]
 object SubQueryRelation {
   implicit def eqSubQueryRelation[I: Eq, R: Eq]: Eq[SubQueryRelation[I, R]] = Eq.fromUniversalEquals
-  implicit def subQueryRelationInstances[I]: Functor[SubQueryRelation[I, ?]] =
-    new Functor[SubQueryRelation[I, ?]] {
+  implicit def subQueryRelationInstances[I]: Functor[SubQueryRelation[I, *]] =
+    new Functor[SubQueryRelation[I, *]] {
       def map[A, B](fa: SubQueryRelation[I, A])(f: A => B): SubQueryRelation[I, B] =
         fa.copy(query = fa.query.map(f))
     }
@@ -569,8 +569,8 @@ final case class Unnest[I, R](info: I, expressions: List[Expression[I, R]], ordi
     extends RelationPrimary[I, R]
 object Unnest {
   implicit def eqUnnest[I: Eq, R: Eq]: Eq[Unnest[I, R]] = Eq.fromUniversalEquals
-  implicit def unnestInstances[I]: Functor[Unnest[I, ?]] =
-    new Functor[Unnest[I, ?]] {
+  implicit def unnestInstances[I]: Functor[Unnest[I, *]] =
+    new Functor[Unnest[I, *]] {
       def map[A, B](fa: Unnest[I, A])(f: A => B): Unnest[I, B] =
         fa.copy(expressions = fa.expressions.map(_.map(f)))
     }
@@ -579,8 +579,8 @@ object Unnest {
 final case class LateralRelation[I, R](info: I, query: Query[I, R]) extends RelationPrimary[I, R]
 object LateralRelation {
   implicit def eqLateralRelation[I: Eq, R: Eq]: Eq[LateralRelation[I, R]] = Eq.fromUniversalEquals
-  implicit def lateralRelationInstances[I]: Functor[LateralRelation[I, ?]] =
-    new Functor[LateralRelation[I, ?]] {
+  implicit def lateralRelationInstances[I]: Functor[LateralRelation[I, *]] =
+    new Functor[LateralRelation[I, *]] {
       def map[A, B](fa: LateralRelation[I, A])(f: A => B): LateralRelation[I, B] =
         fa.copy(query = fa.query.map(f))
     }
@@ -591,8 +591,8 @@ final case class ParenthesizedRelation[I, R](info: I, relation: Relation[I, R])
 object ParenthesizedRelation {
   implicit def eqParenthesizedRelation[I: Eq, R: Eq]: Eq[ParenthesizedRelation[I, R]] =
     Eq.fromUniversalEquals
-  implicit def parenthesizedRelationInstances[I]: Functor[ParenthesizedRelation[I, ?]] =
-    new Functor[ParenthesizedRelation[I, ?]] {
+  implicit def parenthesizedRelationInstances[I]: Functor[ParenthesizedRelation[I, *]] =
+    new Functor[ParenthesizedRelation[I, *]] {
       def map[A, B](fa: ParenthesizedRelation[I, A])(f: A => B): ParenthesizedRelation[I, B] =
         fa.copy(relation = fa.relation.map(f))
     }
@@ -601,8 +601,8 @@ object ParenthesizedRelation {
 sealed trait Expression[I, R] extends Node
 object Expression {
   implicit def eqExpression[I: Eq, R: Eq]: Eq[Expression[I, R]] = Eq.fromUniversalEquals
-  implicit def expressionInstances[I]: Functor[Expression[I, ?]] =
-    new Functor[Expression[I, ?]] {
+  implicit def expressionInstances[I]: Functor[Expression[I, *]] =
+    new Functor[Expression[I, *]] {
       def map[A, B](fa: Expression[I, A])(f: A => B): Expression[I, B] =
         fa match {
           case e: LogicalBinary[I, _]   => e.map(f)
@@ -620,8 +620,8 @@ final case class LogicalBinary[I, R](
 ) extends Expression[I, R]
 object LogicalBinary {
   implicit def eqLogicalBinary[I: Eq, R: Eq]: Eq[LogicalBinary[I, R]] = Eq.fromUniversalEquals
-  implicit def LogicalBinaryInstances[I]: Functor[LogicalBinary[I, ?]] =
-    new Functor[LogicalBinary[I, ?]] {
+  implicit def LogicalBinaryInstances[I]: Functor[LogicalBinary[I, *]] =
+    new Functor[LogicalBinary[I, *]] {
       def map[A, B](fa: LogicalBinary[I, A])(f: A => B): LogicalBinary[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
     }
@@ -630,8 +630,8 @@ object LogicalBinary {
 sealed trait Predicate[I, R] extends Expression[I, R]
 object Predicate {
   implicit def eqPredicate[I: Eq, R: Eq]: Eq[Predicate[I, R]] = Eq.fromUniversalEquals
-  implicit def predicateInstances[I]: Functor[Predicate[I, ?]] =
-    new Functor[Predicate[I, ?]] {
+  implicit def predicateInstances[I]: Functor[Predicate[I, *]] =
+    new Functor[Predicate[I, *]] {
       def map[A, B](fa: Predicate[I, A])(f: A => B): Predicate[I, B] =
         fa match {
           case p: NotPredicate[I, _]         => p.map(f)
@@ -650,8 +650,8 @@ object Predicate {
 final case class NotPredicate[I, R](info: I, exp: Expression[I, R]) extends Predicate[I, R]
 object NotPredicate {
   implicit def eqNotPredicate[I: Eq, R: Eq]: Eq[NotPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NotPredicate[I, ?]] =
-    new Functor[NotPredicate[I, ?]] {
+  implicit def nullPredicateInstances[I]: Functor[NotPredicate[I, *]] =
+    new Functor[NotPredicate[I, *]] {
       def map[A, B](fa: NotPredicate[I, A])(f: A => B): NotPredicate[I, B] =
         fa.copy(exp = fa.exp.map(f))
     }
@@ -665,8 +665,8 @@ final case class ComparisonExpr[I, R](
 ) extends Predicate[I, R]
 object ComparisonExpr {
   implicit def eqComparisonExpr[I: Eq, R: Eq]: Eq[ComparisonExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def comparisonExprInstances[I]: Functor[ComparisonExpr[I, ?]] =
-    new Functor[ComparisonExpr[I, ?]] {
+  implicit def comparisonExprInstances[I]: Functor[ComparisonExpr[I, *]] =
+    new Functor[ComparisonExpr[I, *]] {
       def map[A, B](fa: ComparisonExpr[I, A])(f: A => B): ComparisonExpr[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
     }
@@ -682,8 +682,8 @@ final case class QuantifiedComparison[I, R](
 object QuantifiedComparison {
   implicit def eqQuantifiedComparison[I: Eq, R: Eq]: Eq[QuantifiedComparison[I, R]] =
     Eq.fromUniversalEquals
-  implicit def quantifiedComparisonInstances[I]: Functor[QuantifiedComparison[I, ?]] =
-    new Functor[QuantifiedComparison[I, ?]] {
+  implicit def quantifiedComparisonInstances[I]: Functor[QuantifiedComparison[I, *]] =
+    new Functor[QuantifiedComparison[I, *]] {
       def map[A, B](fa: QuantifiedComparison[I, A])(f: A => B): QuantifiedComparison[I, B] =
         fa.copy(value = fa.value.map(f), query = fa.query.map(f))
     }
@@ -702,8 +702,8 @@ final case class Between[I, R](
 ) extends Predicate[I, R]
 object Between {
   implicit def eqBetween[I: Eq, R: Eq]: Eq[Between[I, R]] = Eq.fromUniversalEquals
-  implicit def betweenInstances[I]: Functor[Between[I, ?]] =
-    new Functor[Between[I, ?]] {
+  implicit def betweenInstances[I]: Functor[Between[I, *]] =
+    new Functor[Between[I, *]] {
       def map[A, B](fa: Between[I, A])(f: A => B): Between[I, B] =
         fa.copy(value = fa.value.map(f), lower = fa.lower.map(f), upper = fa.upper.map(f))
     }
@@ -716,8 +716,8 @@ final case class InList[I, R](
 ) extends Predicate[I, R]
 object InList {
   implicit def eqInList[I: Eq, R: Eq]: Eq[InList[I, R]] = Eq.fromUniversalEquals
-  implicit def inListInstances[I]: Functor[InList[I, ?]] =
-    new Functor[InList[I, ?]] {
+  implicit def inListInstances[I]: Functor[InList[I, *]] =
+    new Functor[InList[I, *]] {
       def map[A, B](fa: InList[I, A])(f: A => B): InList[I, B] =
         fa.copy(value = fa.value.map(f), exps = fa.exps.map(_.map(f)))
     }
@@ -727,8 +727,8 @@ final case class InSubQuery[I, R](info: I, value: ValueExpression[I, R], query: 
     extends Predicate[I, R]
 object InSubQuery {
   implicit def eqInSubQuery[I: Eq, R: Eq]: Eq[InSubQuery[I, R]] = Eq.fromUniversalEquals
-  implicit def inSubQueryInstances[I]: Functor[InSubQuery[I, ?]] =
-    new Functor[InSubQuery[I, ?]] {
+  implicit def inSubQueryInstances[I]: Functor[InSubQuery[I, *]] =
+    new Functor[InSubQuery[I, *]] {
       def map[A, B](fa: InSubQuery[I, A])(f: A => B): InSubQuery[I, B] =
         fa.copy(value = fa.value.map(f), query = fa.query.map(f))
     }
@@ -742,8 +742,8 @@ final case class Like[I, R](
 ) extends Predicate[I, R]
 object Like {
   implicit def eqLike[I: Eq, R: Eq]: Eq[Like[I, R]] = Eq.fromUniversalEquals
-  implicit def likeInstances[I]: Functor[Like[I, ?]] =
-    new Functor[Like[I, ?]] {
+  implicit def likeInstances[I]: Functor[Like[I, *]] =
+    new Functor[Like[I, *]] {
       def map[A, B](fa: Like[I, A])(f: A => B): Like[I, B] =
         fa.copy(
           value = fa.value.map(f),
@@ -756,8 +756,8 @@ object Like {
 final case class NullPredicate[I, R](info: I, value: ValueExpression[I, R]) extends Predicate[I, R]
 object NullPredicate {
   implicit def eqNullPredicate[I: Eq, R: Eq]: Eq[NullPredicate[I, R]] = Eq.fromUniversalEquals
-  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, ?]] =
-    new Functor[NullPredicate[I, ?]] {
+  implicit def nullPredicateInstances[I]: Functor[NullPredicate[I, *]] =
+    new Functor[NullPredicate[I, *]] {
       def map[A, B](fa: NullPredicate[I, A])(f: A => B): NullPredicate[I, B] =
         fa.copy(value = fa.value.map(f))
     }
@@ -770,8 +770,8 @@ final case class DistinctFrom[I, R](
 ) extends Predicate[I, R]
 object DistinctFrom {
   implicit def eqDistinctFrom[I: Eq, R: Eq]: Eq[DistinctFrom[I, R]] = Eq.fromUniversalEquals
-  implicit def distinctFromInstances[I]: Functor[DistinctFrom[I, ?]] =
-    new Functor[DistinctFrom[I, ?]] {
+  implicit def distinctFromInstances[I]: Functor[DistinctFrom[I, *]] =
+    new Functor[DistinctFrom[I, *]] {
       def map[A, B](fa: DistinctFrom[I, A])(f: A => B): DistinctFrom[I, B] =
         fa.copy(value = fa.value.map(f), right = fa.right.map(f))
     }
@@ -780,8 +780,8 @@ object DistinctFrom {
 sealed trait ValueExpression[I, R] extends Expression[I, R]
 object ValueExpression {
   implicit def eqValueExpression[I: Eq, R: Eq]: Eq[ValueExpression[I, R]] = Eq.fromUniversalEquals
-  implicit def valueExpressionInstances[I]: Functor[ValueExpression[I, ?]] =
-    new Functor[ValueExpression[I, ?]] {
+  implicit def valueExpressionInstances[I]: Functor[ValueExpression[I, *]] =
+    new Functor[ValueExpression[I, *]] {
       def map[A, B](fa: ValueExpression[I, A])(f: A => B): ValueExpression[I, B] =
         fa match {
           case e: PrimaryExpression[I, _] => e.map(f)
@@ -795,8 +795,8 @@ final case class ArithmeticUnary[I, R](info: I, sign: Sign, value: ValueExpressi
     extends ValueExpression[I, R]
 object ArithmeticUnary {
   implicit def eqArithmeticUnary[I: Eq, R: Eq]: Eq[ArithmeticUnary[I, R]] = Eq.fromUniversalEquals
-  implicit def arithmeticUnaryInstances[I]: Functor[ArithmeticUnary[I, ?]] =
-    new Functor[ArithmeticUnary[I, ?]] {
+  implicit def arithmeticUnaryInstances[I]: Functor[ArithmeticUnary[I, *]] =
+    new Functor[ArithmeticUnary[I, *]] {
       def map[A, B](fa: ArithmeticUnary[I, A])(f: A => B): ArithmeticUnary[I, B] =
         fa.copy(value = fa.value.map(f))
     }
@@ -810,8 +810,8 @@ final case class ArithmeticBinary[I, R](
 ) extends ValueExpression[I, R]
 object ArithmeticBinary {
   implicit def eqArithmeticBinary[I: Eq, R: Eq]: Eq[ArithmeticBinary[I, R]] = Eq.fromUniversalEquals
-  implicit def arithmeticBinaryInstances[I]: Functor[ArithmeticBinary[I, ?]] =
-    new Functor[ArithmeticBinary[I, ?]] {
+  implicit def arithmeticBinaryInstances[I]: Functor[ArithmeticBinary[I, *]] =
+    new Functor[ArithmeticBinary[I, *]] {
       def map[A, B](fa: ArithmeticBinary[I, A])(f: A => B): ArithmeticBinary[I, B] =
         fa.copy(left = fa.left.map(f), right = fa.right.map(f))
     }
@@ -821,8 +821,8 @@ sealed trait PrimaryExpression[I, R] extends ValueExpression[I, R]
 object PrimaryExpression {
   implicit def eqPrimaryExpression[I: Eq, R: Eq]: Eq[PrimaryExpression[I, R]] =
     Eq.fromUniversalEquals
-  implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, ?]] =
-    new Functor[PrimaryExpression[I, ?]] {
+  implicit def primaryExpressionInstances[I]: Functor[PrimaryExpression[I, *]] =
+    new Functor[PrimaryExpression[I, *]] {
       def map[A, B](fa: PrimaryExpression[I, A])(f: A => B): PrimaryExpression[I, B] =
         fa match {
           case e: LiteralExpr[I, _]         => e.map(f)
@@ -846,8 +846,8 @@ object PrimaryExpression {
 sealed trait LiteralExpr[I, R] extends PrimaryExpression[I, R]
 object LiteralExpr {
   implicit def eqLiteralExpr[I: Eq, R: Eq]: Eq[LiteralExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def literalExprInstances[I]: Functor[LiteralExpr[I, ?]] =
-    new Functor[LiteralExpr[I, ?]] {
+  implicit def literalExprInstances[I]: Functor[LiteralExpr[I, *]] =
+    new Functor[LiteralExpr[I, *]] {
       def map[A, B](fa: LiteralExpr[I, A])(f: A => B): LiteralExpr[I, B] =
         fa.asInstanceOf[LiteralExpr[I, B]]
     }
@@ -862,8 +862,8 @@ final case class BooleanLiteral[I, R](info: I, value: Boolean) extends LiteralEx
 final case class ColumnExpr[I, R](info: I, col: ColumnRef[I, R]) extends PrimaryExpression[I, R]
 object ColumnExpr {
   implicit def eqColumnExpr[I: Eq, R: Eq]: Eq[ColumnExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def columnExprInstances[I]: Traverse[ColumnExpr[I, ?]] =
-    new Traverse[ColumnExpr[I, ?]] {
+  implicit def columnExprInstances[I]: Traverse[ColumnExpr[I, *]] =
+    new Traverse[ColumnExpr[I, *]] {
       override def map[A, B](fa: ColumnExpr[I, A])(f: A => B): ColumnExpr[I, B] =
         fa.copy(col = fa.col.map(f))
       def foldLeft[A, B](fa: ColumnExpr[I, A], b: B)(f: (B, A) => B): B = f(b, fa.col.value)
@@ -881,8 +881,8 @@ object ColumnExpr {
 final case class SubQueryExpr[I, R](info: I, query: Query[I, R]) extends PrimaryExpression[I, R]
 object SubQueryExpr {
   implicit def eqSubQueryExpr[I: Eq, R: Eq]: Eq[SubQueryExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def subQueryExprInstances[I]: Functor[SubQueryExpr[I, ?]] =
-    new Functor[SubQueryExpr[I, ?]] {
+  implicit def subQueryExprInstances[I]: Functor[SubQueryExpr[I, *]] =
+    new Functor[SubQueryExpr[I, *]] {
       def map[A, B](fa: SubQueryExpr[I, A])(f: A => B): SubQueryExpr[I, B] =
         fa.copy(query = fa.query.map(f))
     }
@@ -891,8 +891,8 @@ object SubQueryExpr {
 final case class ExistsExpr[I, R](info: I, query: Query[I, R]) extends PrimaryExpression[I, R]
 object ExistsExpr {
   implicit def eqExistsExpr[I: Eq, R: Eq]: Eq[ExistsExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def existsExprInstances[I]: Functor[ExistsExpr[I, ?]] =
-    new Functor[ExistsExpr[I, ?]] {
+  implicit def existsExprInstances[I]: Functor[ExistsExpr[I, *]] =
+    new Functor[ExistsExpr[I, *]] {
       def map[A, B](fa: ExistsExpr[I, A])(f: A => B): ExistsExpr[I, B] =
         fa.copy(query = fa.query.map(f))
     }
@@ -906,8 +906,8 @@ final case class SimpleCase[I, R](
 ) extends PrimaryExpression[I, R]
 object SimpleCase {
   implicit def eqSimpleCase[I: Eq, R: Eq]: Eq[SimpleCase[I, R]] = Eq.fromUniversalEquals
-  implicit def simpleCaseInstances[I]: Functor[SimpleCase[I, ?]] =
-    new Functor[SimpleCase[I, ?]] {
+  implicit def simpleCaseInstances[I]: Functor[SimpleCase[I, *]] =
+    new Functor[SimpleCase[I, *]] {
       def map[A, B](fa: SimpleCase[I, A])(f: A => B): SimpleCase[I, B] =
         fa.copy(
           exp = fa.exp.map(f),
@@ -924,8 +924,8 @@ final case class SearchedCase[I, R](
 ) extends PrimaryExpression[I, R]
 object SearchedCase {
   implicit def eqSearchedCase[I: Eq, R: Eq]: Eq[SearchedCase[I, R]] = Eq.fromUniversalEquals
-  implicit def searchedCaseInstances[I]: Functor[SearchedCase[I, ?]] =
-    new Functor[SearchedCase[I, ?]] {
+  implicit def searchedCaseInstances[I]: Functor[SearchedCase[I, *]] =
+    new Functor[SearchedCase[I, *]] {
       def map[A, B](fa: SearchedCase[I, A])(f: A => B): SearchedCase[I, B] =
         fa.copy(
           whenClauses = fa.whenClauses.map(_.map(f)),
@@ -938,8 +938,8 @@ final case class WhenClause[I, R](info: I, condition: Expression[I, R], result: 
     extends Node
 object WhenClause {
   implicit def eqWhenClause[I: Eq, R: Eq]: Eq[WhenClause[I, R]] = Eq.fromUniversalEquals
-  implicit def whenClauseInstances[I]: Functor[WhenClause[I, ?]] =
-    new Functor[WhenClause[I, ?]] {
+  implicit def whenClauseInstances[I]: Functor[WhenClause[I, *]] =
+    new Functor[WhenClause[I, *]] {
       def map[A, B](fa: WhenClause[I, A])(f: A => B): WhenClause[I, B] =
         fa.copy(condition = fa.condition.map(f), result = fa.result.map(f))
     }
@@ -952,8 +952,8 @@ final case class Subscript[I, R](
 ) extends PrimaryExpression[I, R]
 object Subscript {
   implicit def eqSubscript[I: Eq, R: Eq]: Eq[Subscript[I, R]] = Eq.fromUniversalEquals
-  implicit def subscriptInstances[I]: Functor[Subscript[I, ?]] =
-    new Functor[Subscript[I, ?]] {
+  implicit def subscriptInstances[I]: Functor[Subscript[I, *]] =
+    new Functor[Subscript[I, *]] {
       def map[A, B](fa: Subscript[I, A])(f: A => B): Subscript[I, B] =
         fa.copy(value = fa.value.map(f), index = fa.index.map(f))
     }
@@ -963,8 +963,8 @@ final case class DereferenceExpr[I, R](info: I, base: PrimaryExpression[I, R], f
     extends PrimaryExpression[I, R]
 object DereferenceExpr {
   implicit def eqDereferenceExpr[I: Eq, R: Eq]: Eq[DereferenceExpr[I, R]] = Eq.fromUniversalEquals
-  implicit def dereferenceExprInstances[I]: Functor[DereferenceExpr[I, ?]] =
-    new Functor[DereferenceExpr[I, ?]] {
+  implicit def dereferenceExprInstances[I]: Functor[DereferenceExpr[I, *]] =
+    new Functor[DereferenceExpr[I, *]] {
       def map[A, B](fa: DereferenceExpr[I, A])(f: A => B): DereferenceExpr[I, B] =
         fa.copy(base = fa.base.map(f))
     }
@@ -973,8 +973,8 @@ object DereferenceExpr {
 final case class Row[I, R](info: I, exps: List[Expression[I, R]]) extends PrimaryExpression[I, R]
 object Row {
   implicit def eqRow[I: Eq, R: Eq]: Eq[Row[I, R]] = Eq.fromUniversalEquals
-  implicit def rowInstances[I]: Functor[Row[I, ?]] =
-    new Functor[Row[I, ?]] {
+  implicit def rowInstances[I]: Functor[Row[I, *]] =
+    new Functor[Row[I, *]] {
       def map[A, B](fa: Row[I, A])(f: A => B): Row[I, B] =
         fa.copy(exps = fa.exps.map(_.map(f)))
     }
@@ -991,8 +991,8 @@ final case class FunctionCall[I, R](
 ) extends PrimaryExpression[I, R]
 object FunctionCall {
   implicit def eqFunctionCall[I: Eq, R: Eq]: Eq[FunctionCall[I, R]] = Eq.fromUniversalEquals
-  implicit def functionCallInstances[I]: Functor[FunctionCall[I, ?]] =
-    new Functor[FunctionCall[I, ?]] {
+  implicit def functionCallInstances[I]: Functor[FunctionCall[I, *]] =
+    new Functor[FunctionCall[I, *]] {
       def map[A, B](fa: FunctionCall[I, A])(f: A => B): FunctionCall[I, B] =
         fa.copy(
           exprs = fa.exprs.map(_.map(f)),
@@ -1006,8 +1006,8 @@ object FunctionCall {
 final case class FunctionFilter[I, R](info: I, exp: Expression[I, R]) extends Node
 object FunctionFilter {
   implicit def eqFunctionFilter[I: Eq, R: Eq]: Eq[FunctionFilter[I, R]] = Eq.fromUniversalEquals
-  implicit def functionFilterInstances[I]: Functor[FunctionFilter[I, ?]] =
-    new Functor[FunctionFilter[I, ?]] {
+  implicit def functionFilterInstances[I]: Functor[FunctionFilter[I, *]] =
+    new Functor[FunctionFilter[I, *]] {
       def map[A, B](fa: FunctionFilter[I, A])(f: A => B): FunctionFilter[I, B] =
         fa.copy(exp = fa.exp.map(f))
     }
@@ -1021,8 +1021,8 @@ final case class FunctionOver[I, R](
 ) extends Node
 object FunctionOver {
   implicit def eqFunctionOver[I: Eq, R: Eq]: Eq[FunctionOver[I, R]] = Eq.fromUniversalEquals
-  implicit def functionOverInstances[I]: Functor[FunctionOver[I, ?]] =
-    new Functor[FunctionOver[I, ?]] {
+  implicit def functionOverInstances[I]: Functor[FunctionOver[I, *]] =
+    new Functor[FunctionOver[I, *]] {
       def map[A, B](fa: FunctionOver[I, A])(f: A => B): FunctionOver[I, B] =
         fa.copy(
           partitionBy = fa.partitionBy.map(_.map(f)),
@@ -1040,8 +1040,8 @@ final case class WindowFrame[I, R](
 ) extends Node
 object WindowFrame {
   implicit def eqWindowFrame[I: Eq, R: Eq]: Eq[WindowFrame[I, R]] = Eq.fromUniversalEquals
-  implicit def windowFrameInstances[I]: Functor[WindowFrame[I, ?]] =
-    new Functor[WindowFrame[I, ?]] {
+  implicit def windowFrameInstances[I]: Functor[WindowFrame[I, *]] =
+    new Functor[WindowFrame[I, *]] {
       def map[A, B](fa: WindowFrame[I, A])(f: A => B): WindowFrame[I, B] =
         fa.copy(start = fa.start.map(f), end = fa.end.map(_.map(f)))
     }
@@ -1050,8 +1050,8 @@ object WindowFrame {
 sealed trait FrameBound[I, R] extends Node
 object FrameBound {
   implicit def eqFrameBound[I: Eq, R: Eq]: Eq[FrameBound[I, R]] = Eq.fromUniversalEquals
-  implicit def frameBoundInstances[I]: Functor[FrameBound[I, ?]] =
-    new Functor[FrameBound[I, ?]] {
+  implicit def frameBoundInstances[I]: Functor[FrameBound[I, *]] =
+    new Functor[FrameBound[I, *]] {
       def map[A, B](fa: FrameBound[I, A])(f: A => B): FrameBound[I, B] =
         fa match {
           case e: UnboundedFrame[I, _]  => e.map(f)
@@ -1064,8 +1064,8 @@ object FrameBound {
 final case class UnboundedFrame[I, R](info: I, boundType: BoundType) extends FrameBound[I, R]
 object UnboundedFrame {
   implicit def eqUnboundedFrame[I: Eq, R: Eq]: Eq[UnboundedFrame[I, R]] = Eq.fromUniversalEquals
-  implicit def unboundedFrameInstances[I]: Functor[UnboundedFrame[I, ?]] =
-    new Functor[UnboundedFrame[I, ?]] {
+  implicit def unboundedFrameInstances[I]: Functor[UnboundedFrame[I, *]] =
+    new Functor[UnboundedFrame[I, *]] {
       def map[A, B](fa: UnboundedFrame[I, A])(f: A => B): UnboundedFrame[I, B] =
         fa.asInstanceOf[UnboundedFrame[I, B]]
     }
@@ -1074,8 +1074,8 @@ object UnboundedFrame {
 final case class CurrentRowBound[I, R](info: I) extends FrameBound[I, R]
 object CurrentRowBound {
   implicit def eqCurrentRowBound[I: Eq, R: Eq]: Eq[CurrentRowBound[I, R]] = Eq.fromUniversalEquals
-  implicit def currentRowBoundInstances[I]: Functor[CurrentRowBound[I, ?]] =
-    new Functor[CurrentRowBound[I, ?]] {
+  implicit def currentRowBoundInstances[I]: Functor[CurrentRowBound[I, *]] =
+    new Functor[CurrentRowBound[I, *]] {
       def map[A, B](fa: CurrentRowBound[I, A])(f: A => B): CurrentRowBound[I, B] =
         fa.asInstanceOf[CurrentRowBound[I, B]]
     }
@@ -1086,8 +1086,8 @@ final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: Expressi
     extends FrameBound[I, R]
 object BoundedFrame {
   implicit def eqBoundedFrame[I: Eq, R: Eq]: Eq[BoundedFrame[I, R]] = Eq.fromUniversalEquals
-  implicit def boundedFrameInstances[I]: Functor[BoundedFrame[I, ?]] =
-    new Functor[BoundedFrame[I, ?]] {
+  implicit def boundedFrameInstances[I]: Functor[BoundedFrame[I, *]] =
+    new Functor[BoundedFrame[I, *]] {
       def map[A, B](fa: BoundedFrame[I, A])(f: A => B): BoundedFrame[I, B] =
         fa.copy(exp = fa.exp.map(f))
     }
@@ -1110,8 +1110,8 @@ final case class IntervalLiteral[I, R](
 ) extends PrimaryExpression[I, R]
 object IntervalLiteral {
   implicit def eqIntervalLiteral[I: Eq, R: Eq]: Eq[IntervalLiteral[I, R]] = Eq.fromUniversalEquals
-  implicit def intervalLiteralInstances[I]: Functor[IntervalLiteral[I, ?]] =
-    new Functor[IntervalLiteral[I, ?]] {
+  implicit def intervalLiteralInstances[I]: Functor[IntervalLiteral[I, *]] =
+    new Functor[IntervalLiteral[I, *]] {
       def map[A, B](fa: IntervalLiteral[I, A])(f: A => B): IntervalLiteral[I, B] =
         fa.asInstanceOf[IntervalLiteral[I, B]]
     }
@@ -1133,8 +1133,8 @@ final case class Cast[I, R](info: I, exp: Expression[I, R], `type`: String, isTr
     extends PrimaryExpression[I, R]
 object Cast {
   implicit def eqCast[I: Eq, R: Eq]: Eq[Cast[I, R]] = Eq.fromUniversalEquals
-  implicit def castInstances[I]: Functor[Cast[I, ?]] =
-    new Functor[Cast[I, ?]] {
+  implicit def castInstances[I]: Functor[Cast[I, *]] =
+    new Functor[Cast[I, *]] {
       def map[A, B](fa: Cast[I, A])(f: A => B): Cast[I, B] =
         fa.copy(exp = fa.exp.map(f))
     }
@@ -1145,8 +1145,8 @@ final case class SpecialDateTimeFunc[I, R](info: I, name: CurrentTime, precision
 object SpecialDateTimeFunc {
   implicit def eqSpecialDateTimeFunc[I: Eq, R: Eq]: Eq[SpecialDateTimeFunc[I, R]] =
     Eq.fromUniversalEquals
-  implicit def specialDateTimeFuncInstances[I]: Functor[SpecialDateTimeFunc[I, ?]] =
-    new Functor[SpecialDateTimeFunc[I, ?]] {
+  implicit def specialDateTimeFuncInstances[I]: Functor[SpecialDateTimeFunc[I, *]] =
+    new Functor[SpecialDateTimeFunc[I, *]] {
       def map[A, B](fa: SpecialDateTimeFunc[I, A])(f: A => B): SpecialDateTimeFunc[I, B] =
         fa.asInstanceOf[SpecialDateTimeFunc[I, B]]
     }
@@ -1156,8 +1156,8 @@ final case class Extract[I, R](info: I, field: String, exp: ValueExpression[I, R
     extends PrimaryExpression[I, R]
 object Extract {
   implicit def eqExtract[I: Eq, R: Eq]: Eq[Extract[I, R]] = Eq.fromUniversalEquals
-  implicit def extractInstances[I]: Functor[Extract[I, ?]] =
-    new Functor[Extract[I, ?]] {
+  implicit def extractInstances[I]: Functor[Extract[I, *]] =
+    new Functor[Extract[I, *]] {
       def map[A, B](fa: Extract[I, A])(f: A => B): Extract[I, B] =
         fa.copy(exp = fa.exp.map(f))
     }
