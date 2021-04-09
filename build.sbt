@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.4"
+ThisBuild / scalaVersion := "2.13.5"
 
 val scalaTestVersion  = "3.2.7"
 val antlrVersion      = "4.7.2"
@@ -21,6 +21,7 @@ lazy val root = (project in file("."))
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
   .settings(
+    scalacOptions ~= filterConsoleScalacOptions,
     name := "sequoia-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion
@@ -72,6 +73,7 @@ lazy val tests = (project in file("modules/tests"))
   .dependsOn(core, parse)
   .settings(commonSettings)
   .settings(
+    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime" % antlrVersion,
       "org.typelevel" %% "cats-core"      % catsVersion,
@@ -83,6 +85,7 @@ lazy val laws = (project in file("modules/laws"))
   .dependsOn(core, parse)
   .settings(commonSettings)
   .settings(
+    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
       "org.typelevel"  %% "cats-laws"            % catsVersion       % Test,
