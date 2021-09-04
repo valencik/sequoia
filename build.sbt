@@ -12,7 +12,7 @@ val monocleVersion    = "2.1.0"
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
   version := "0.1.0-SNAPSHOT",
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full)
 )
 
 lazy val root = (project in file("."))
