@@ -74,9 +74,8 @@ object Query {
     }
 }
 
-/**  Constructor for the WITH clause containing named common table expressions.
-  *  Note: Despite being in the SqlBase.g4 grammar, we ignore the RECURSIVE term
-  *  as it is not supported.
+/** Constructor for the WITH clause containing named common table expressions. Note: Despite being
+  * in the SqlBase.g4 grammar, we ignore the RECURSIVE term as it is not supported.
   */
 final case class With[I, R](info: I, namedQueries: List[NamedQuery[I, R]]) extends Node
 object With {
@@ -127,7 +126,7 @@ object Limit {
   // TODO Override constructor and do checking on whether it is a integer value or 'all' text?
 }
 
-/**  Product type for queryTerm containing a setOperation or falling through to queryPrimary
+/** Product type for queryTerm containing a setOperation or falling through to queryPrimary
   */
 sealed trait QueryTerm[I, R] extends Node
 object QueryTerm {
@@ -167,7 +166,7 @@ sealed trait SetQuantifier
 final case object DISTINCT extends SetQuantifier
 final case object ALL      extends SetQuantifier
 
-/**  Product type for queryPrimary
+/** Product type for queryPrimary
   */
 sealed trait QueryPrimary[I, R] extends QueryTerm[I, R]
 object QueryPrimary {

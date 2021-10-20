@@ -11,7 +11,7 @@ val monocleVersion    = "2.1.0"
 
 lazy val commonSettings = Seq(
   organization := "ca.valencik",
-  version := "0.1.0-SNAPSHOT",
+  version      := "0.1.0-SNAPSHOT",
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full)
 )
 
@@ -62,7 +62,7 @@ lazy val parse = (project in file("modules/parse"))
       "com.lihaoyi" %% "pprint"         % pPrintVersion
     ),
     Antlr4 / antlr4GenListener := false,
-    Antlr4 / antlr4GenVisitor := true,
+    Antlr4 / antlr4GenVisitor  := true,
     Antlr4 / antlr4PackageName := Some("ca.valencik.sequoia")
   )
 
