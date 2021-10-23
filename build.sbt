@@ -6,7 +6,7 @@ val catsVersion       = "2.5.0"
 val scalaCheckVersion = "1.15.3"
 val pPrintVersion     = "0.6.4"
 val disciplineVersion = "2.1.3"
-val paigesVersion     = "0.4.1"
+val paigesVersion     = "0.4.2"
 val monocleVersion    = "2.1.0"
 
 lazy val commonSettings = Seq(
