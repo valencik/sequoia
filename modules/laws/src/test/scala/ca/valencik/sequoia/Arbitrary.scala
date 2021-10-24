@@ -533,7 +533,7 @@ object arbitrary {
       f <- getArbitrary[String]
     } yield DereferenceExpr(i, b, f))
 
-  implicit def arbLiteralExpr[I: Arbitrary, R: Arbitrary]: Arbitrary[LiteralExpr[I, R]] = {
+  implicit def arbLiteralExpr[I: Arbitrary, R]: Arbitrary[LiteralExpr[I, R]] = {
     def nullLiteral =
       for { i <- getArbitrary[I] } yield NullLiteral(i).asInstanceOf[LiteralExpr[I, R]]
     def intLiteral =
@@ -612,13 +612,13 @@ object arbitrary {
       )
     )
 
-  implicit def arbUnboundedFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[UnboundedFrame[I, R]] =
+  implicit def arbUnboundedFrame[I: Arbitrary, R]: Arbitrary[UnboundedFrame[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       b <- getArbitrary[BoundType]
     } yield UnboundedFrame(i, b))
 
-  implicit def arbCurrentRowBound[I: Arbitrary, R: Arbitrary]: Arbitrary[CurrentRowBound[I, R]] =
+  implicit def arbCurrentRowBound[I: Arbitrary, R]: Arbitrary[CurrentRowBound[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
     } yield CurrentRowBound(i))
@@ -636,7 +636,7 @@ object arbitrary {
   implicit def arbFrameType: Arbitrary[FrameType] =
     Arbitrary(Gen.oneOf(Gen.const(RANGE), Gen.const(ROWS)))
 
-  implicit def arbIntervalLiteral[I: Arbitrary, R: Arbitrary]: Arbitrary[IntervalLiteral[I, R]] = {
+  implicit def arbIntervalLiteral[I: Arbitrary, R]: Arbitrary[IntervalLiteral[I, R]] = {
     def stringLiteral =
       for { i <- getArbitrary[I]; v <- getArbitrary[String] } yield StringLiteral(i, v)
         .asInstanceOf[StringLiteral[I, R]]
@@ -671,8 +671,7 @@ object arbitrary {
       e <- getArbitrary[ValueExpression[I, R]]
     } yield Extract(i, f, e))
 
-  implicit def arbSpecialDateTimeFunc[I: Arbitrary, R: Arbitrary]
-      : Arbitrary[SpecialDateTimeFunc[I, R]] = {
+  implicit def arbSpecialDateTimeFunc[I: Arbitrary, R]: Arbitrary[SpecialDateTimeFunc[I, R]] = {
     Arbitrary(for {
       i <- getArbitrary[I]
       n <- getArbitrary[CurrentTime]
