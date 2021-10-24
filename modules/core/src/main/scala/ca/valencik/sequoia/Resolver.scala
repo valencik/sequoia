@@ -306,7 +306,7 @@ object MonadSqlState extends App {
           }
         }
       )
-    } yield SelectAll(sa.info, ref)
+    } yield SelectAll(sa.info, ref, sa.aliases)
 
   def resolveSelectSingle[I](
       ss: SelectSingle[I, RawName]

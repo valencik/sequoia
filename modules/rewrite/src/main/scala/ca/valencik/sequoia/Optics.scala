@@ -376,7 +376,7 @@ object Optics {
           case pe: ExistsExpr[I, R] =>
             namesFromQuery.modifyF(f)(pe.query).map(q => pe.copy(query = q))
           case pe: SimpleCase[I, R] => {
-            val exp  = namesFromValueExpression.modifyF(f)(pe.exp)
+            val exp  = namesFromExpression.modifyF(f)(pe.exp)
             val when = pe.whenClauses.traverse(namesFromWhenClause.modifyF(f)(_))
             val el   = pe.elseExpression.traverse(namesFromExpression.modifyF(f)(_))
             exp.product(when).product(el).map { case ((e, w), l) =>

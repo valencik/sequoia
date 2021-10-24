@@ -163,7 +163,7 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     val expected = emptyState
       .addRelationToScope("db", List("a"))
       .addColumnToProjection("a")
-      .addColumnAlias("apple")
+      .aliasPreviousColumnInScope("apple")
       .addCTE("justA")
       .resetRelationScope()
       .addRelationToScope("justA", List("apple"))

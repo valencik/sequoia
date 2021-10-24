@@ -254,10 +254,34 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): SelectAll[Info, RawName] = {
-    val ref: Option[TableRef[Info, RawName]] =
-      if (ctx.qualifiedName != null) Some(TableRef(nextId(), getTableName(ctx.qualifiedName)))
-      else None
-    SelectAll(nextId(), ref)
+    val colAs =
+      if (ctx.columnAliases != null)
+        Some(visitColumnAliases(ctx.columnAliases))
+      else
+        None
+    if (ctx.primaryExpression != null) {
+      val name: Option[TableRef[Info, RawName]] = visit(ctx.primaryExpression()) match {
+        case Identifier(value) =>
+          Some(TableRef(nextId(), RawTableName(value)))
+        case e: Expression[_, _] =>
+          e match {
+            case DereferenceExpr(_, _, _) => ???
+            //TODO this seems very fishy
+            case c: ColumnExpr[_, _] => {
+              val cr = c.col.value.asInstanceOf[RawColumnName]
+              Some(TableRef(nextId(), RawTableName(cr.value)))
+            }
+            case x                        => {println(x); ???}
+          }
+        case _ => ???
+      }
+      SelectAll(
+        nextId(),
+        name,
+        colAs
+      )
+    } else None
+    SelectAll(nextId(), None, colAs)
   }
 
   override def visitJoinRelation(
@@ -499,7 +523,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   override def visitSimpleCase(ctx: SqlBaseParser.SimpleCaseContext): SimpleCase[Info, RawName] = {
     if (verbose) println(s"-------visitSimpleCase called: ${ctx.getText}-------------")
-    val exp         = visit(ctx.valueExpression).asInstanceOf[ValueExpression[Info, RawName]]
+    val exp         = visit(ctx.operand).asInstanceOf[RawExpression]
     val whenClauses = ctx.whenClause.asScala.map(visitWhenClause).toList
     val elseExpression =
       if (ctx.elseExpression != null) Some(visit(ctx.elseExpression).asInstanceOf[RawExpression])
@@ -587,8 +611,18 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
     FunctionFilter(nextId(), exp)
   }
 
-  override def visitOver(ctx: SqlBaseParser.OverContext): FunctionOver[Info, RawName] = {
-    if (verbose) println(s"-------visitFunctionOver called: ${ctx.getText}-------------")
+  override def visitWindowDefinition(
+      ctx: SqlBaseParser.WindowDefinitionContext
+  ): WindowDefinition[Info, RawName] = {
+    if (verbose) println(s"-------visitWindowDefinition called: ${ctx.getText}-------------")
+    val spec = visitWindowSpecification(ctx.windowSpecification)
+    WindowDefinition(nextId(), ctx.name.getText(), spec)
+  }
+
+  override def visitWindowSpecification(
+      ctx: SqlBaseParser.WindowSpecificationContext
+  ): WindowSpecification[Info, RawName] = {
+    if (verbose) println(s"-------visitWindowSpecification called: ${ctx.getText}-------------")
     val partitionBy = ctx.partition.asScala.map(visit(_).asInstanceOf[RawExpression]).toList
     val orderBy = {
       if (ctx.sortItem.size > 0)
@@ -597,7 +631,15 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         None
     }
     val window = if (ctx.windowFrame != null) Some(visitWindowFrame(ctx.windowFrame)) else None
-    FunctionOver(nextId(), partitionBy, orderBy, window)
+    WindowSpecification(nextId(), partitionBy, orderBy, window)
+  }
+
+  override def visitOver(ctx: SqlBaseParser.OverContext): FunctionOver[Info, RawName] = {
+    if (verbose) println(s"-------visitFunctionOver called: ${ctx.getText}-------------")
+    if (ctx.windowName != null)
+      WindowReference(nextId(), Identifier(ctx.windowName.getText()))
+    else
+      visitWindowSpecification(ctx.windowSpecification())
   }
 
   override def visitWindowFrame(

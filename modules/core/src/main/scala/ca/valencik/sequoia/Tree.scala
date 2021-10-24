@@ -171,7 +171,11 @@ final case class NamedQuery[I, R](
 sealed trait SelectItem[I, R] extends Node
 
 // TODO support qualified select all
-final case class SelectAll[I, R](info: I, ref: Option[TableRef[I, R]]) extends SelectItem[I, R]
+final case class SelectAll[I, R](
+    info: I,
+    ref: Option[TableRef[I, R]],
+    aliases: Option[ColumnAliases[I]]
+) extends SelectItem[I, R]
 
 final case class SelectSingle[I, R](info: I, expr: Expression[I, R], alias: Option[ColumnAlias[I]])
     extends SelectItem[I, R]
@@ -332,7 +336,7 @@ final case class ExistsExpr[I, R](info: I, query: Query[I, R]) extends PrimaryEx
 
 final case class SimpleCase[I, R](
     info: I,
-    exp: ValueExpression[I, R],
+    exp: Expression[I, R],
     whenClauses: List[WhenClause[I, R]],
     elseExpression: Option[Expression[I, R]]
 ) extends PrimaryExpression[I, R]
@@ -369,12 +373,21 @@ final case class FunctionCall[I, R](
 
 final case class FunctionFilter[I, R](info: I, exp: Expression[I, R]) extends Node
 
-final case class FunctionOver[I, R](
+final case class WindowDefinition[I, R](
+    info: I,
+    name: String,
+    spec: WindowSpecification[I, R]
+) extends Node
+
+sealed trait FunctionOver[I, R] extends Node
+final case class WindowReference[I, R](info: I, name: Identifier) extends FunctionOver[I, R]
+
+final case class WindowSpecification[I, R](
     info: I,
     partitionBy: List[Expression[I, R]],
     orderBy: Option[OrderBy[I, R]],
     window: Option[WindowFrame[I, R]]
-) extends Node
+) extends FunctionOver[I, R]
 
 final case class WindowFrame[I, R](
     info: I,
@@ -429,6 +442,10 @@ final case class SpecialDateTimeFunc[I, R](info: I, name: CurrentTime, precision
 
 final case class Extract[I, R](info: I, field: String, exp: ValueExpression[I, R])
     extends PrimaryExpression[I, R]
+
+sealed trait NullTreatment
+final case object IgnoreNulls  extends NullTreatment
+final case object RespectNulls extends NullTreatment
 
 sealed trait CurrentTime
 final case object CURRENT_DATE      extends CurrentTime
