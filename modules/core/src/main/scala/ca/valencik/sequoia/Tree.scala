@@ -5,7 +5,7 @@ import cats.implicits._
 
 final case class TableRef[I, R](info: I, value: R)
 object TableRef {
-  implicit def eqTableRef[I: Eq, R: Eq]: Eq[TableRef[I, R]] = Eq.fromUniversalEquals
+  implicit def eqTableRef[I, R]: Eq[TableRef[I, R]] = Eq.fromUniversalEquals
   implicit def tableRefInstances[I]: Traverse[TableRef[I, *]] =
     new Traverse[TableRef[I, *]] {
       override def map[A, B](fa: TableRef[I, A])(f: A => B): TableRef[I, B] =
@@ -22,7 +22,7 @@ object TableRef {
 
 final case class ColumnRef[I, R](info: I, value: R)
 object ColumnRef {
-  implicit def eqColumnRef[I: Eq, R: Eq]: Eq[ColumnRef[I, R]] = Eq.fromUniversalEquals
+  implicit def eqColumnRef[I, R]: Eq[ColumnRef[I, R]] = Eq.fromUniversalEquals
   implicit def columnRefInstances[I]: Traverse[ColumnRef[I, *]] =
     new Traverse[ColumnRef[I, *]] {
       override def map[A, B](fa: ColumnRef[I, A])(f: A => B): ColumnRef[I, B] =
@@ -39,7 +39,7 @@ object ColumnRef {
 
 final case class UsingColumn[I, R](info: I, value: R)
 object UsingColumn {
-  implicit def eqUsingColumn[I: Eq, R: Eq]: Eq[UsingColumn[I, R]] = Eq.fromUniversalEquals
+  implicit def eqUsingColumn[I, R]: Eq[UsingColumn[I, R]] = Eq.fromUniversalEquals
   implicit def usingColumnInstances[I]: Traverse[UsingColumn[I, *]] =
     new Traverse[UsingColumn[I, *]] {
       override def map[A, B](fa: UsingColumn[I, A])(f: A => B): UsingColumn[I, B] =
