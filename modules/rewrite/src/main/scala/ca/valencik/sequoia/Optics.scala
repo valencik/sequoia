@@ -221,9 +221,9 @@ object Optics {
               relationFromParenthesized.composeTraversal(namesFromRelation)
             lens.modifyF(f)(pr).widen
           }
-          case _: SubQueryRelation[I, R] => ??? //TODO Requires Query support
-          case _: Unnest[I, R]           => ??? //TODO Requires Expression support
-          case _: LateralRelation[I, R]  => ??? //TODO Requires Query support
+          case _: SubQueryRelation[I, R] => ??? // TODO Requires Query support
+          case _: Unnest[I, R]           => ??? // TODO Requires Expression support
+          case _: LateralRelation[I, R]  => ??? // TODO Requires Query support
         }
       }
     }
@@ -409,7 +409,7 @@ object Optics {
             exps.map(es => pe.copy(exprs = es))
           }
           case pe: IntervalLiteral[I, R] =>
-            pe.pure[F].widen //TODO there is a string literal in here
+            pe.pure[F].widen // TODO there is a string literal in here
           case pe: SpecialDateTimeFunc[I, R] => pe.pure[F].widen
           case pe: Extract[I, R] =>
             namesFromValueExpression.modifyF(f)(pe.exp).map(e => pe.copy(exp = e))

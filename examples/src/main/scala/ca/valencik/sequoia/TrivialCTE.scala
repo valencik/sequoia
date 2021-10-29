@@ -33,7 +33,7 @@ object TrivialCTE {
         if (ifQueryHasFoo(pq)) {
           val tableNames = Optics.tableNamesFromQuery[ParseBuddy.Info].getAll(pq)
           val colNames   = Optics.columnNamesFromQuery[ParseBuddy.Info].getAll(pq)
-          //pprintln(pq, height = 10000)
+          // pprintln(pq, height = 10000)
           tableNames.foreach { case r =>
             println(s"Found table ${r.value}")
           }
