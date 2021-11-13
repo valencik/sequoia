@@ -316,6 +316,39 @@ object MonadSqlState extends App {
       _ <- EitherT.right(resolveColumnAlias(e, ss.alias))
     } yield SelectSingle(ss.info, e, ss.alias)
 
+  // def resolveColumnAlias[I](
+  //     exp: Expression[I, ResolvedName],
+  //     colAlias: Option[ColumnAlias[I]]
+  // ): EitherRes[Unit] =
+  //   EitherT(ReaderWriterState { (_, res) =>
+  //     (exp, colAlias) match {
+  //       case (_: ColumnExpr[I, ResolvedName], Some(alias)) =>
+  //         (
+  //           Chain(s"Aliasing previous column '${res.s.head}' to '${alias.value}'"),
+  //           res.aliasPreviousColumnInScope(alias.value),
+  //           Right(())
+  //         )
+  //       case (_: ColumnExpr[I, ResolvedName], None) =>
+  //         (
+  //           Chain(s"No alias for column '${res.s.head}'"),
+  //           res,
+  //           Right(())
+  //         )
+  //       case (_, Some(alias)) =>
+  //         (
+  //           Chain(s"Expr with alias '${alias.value}' added to projection"),
+  //           res.addColumnAlias(alias.value),
+  //           Right(())
+  //         )
+  //       case (_, None) =>
+  //         (
+  //           Chain(s"No alias for expr, assigning one"),
+  //           res.assignColAlias(),
+  //           Right(())
+  //         )
+  //     }
+  //   })
+
   def resolveColumnAlias[I](
       exp: Expression[I, ResolvedName],
       colAlias: Option[ColumnAlias[I]]
