@@ -379,7 +379,7 @@ final case class WindowDefinition[I, R](
     spec: WindowSpecification[I, R]
 ) extends Node
 
-sealed trait FunctionOver[I, R] extends Node
+sealed trait FunctionOver[I, R]                                   extends Node
 final case class WindowReference[I, R](info: I, name: Identifier) extends FunctionOver[I, R]
 
 final case class WindowSpecification[I, R](

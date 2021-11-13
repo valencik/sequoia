@@ -190,7 +190,8 @@ object arbitrary {
     Arbitrary(for {
       i <- getArbitrary[I]
       r <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[TableRef[I, R]])))
-    } yield SelectAll(i, r))
+      c <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[ColumnAliases[I]])))
+    } yield SelectAll(i, r, c))
 
   implicit def arbSelectSingle[I: Arbitrary, R: Arbitrary]: Arbitrary[SelectSingle[I, R]] =
     Arbitrary(for {
@@ -588,12 +589,27 @@ object arbitrary {
     } yield FunctionFilter(i, e))
 
   implicit def arbFunctionOver[I: Arbitrary, R: Arbitrary]: Arbitrary[FunctionOver[I, R]] =
+    Arbitrary(
+      Gen.frequency(
+        (5, getArbitrary[WindowReference[I, R]]),
+        (1, getArbitrary[WindowSpecification[I, R]])
+      )
+    )
+
+  implicit def arbWindowReference[I: Arbitrary, R: Arbitrary]: Arbitrary[WindowReference[I, R]] =
+    Arbitrary(for {
+      i <- getArbitrary[I]
+      n <- getArbitrary[String].map(Identifier(_))
+    } yield WindowReference(i, n))
+
+  implicit def arbWindowSpecification[I: Arbitrary, R: Arbitrary]
+      : Arbitrary[WindowSpecification[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       e <- Gen.resize(1, getArbitrary[List[Expression[I, R]]])
       o <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[OrderBy[I, R]])))
       w <- Gen.frequency((9, Gen.const(None)), (1, Gen.some(getArbitrary[WindowFrame[I, R]])))
-    } yield FunctionOver(i, e, o, w))
+    } yield WindowSpecification(i, e, o, w))
 
   implicit def arbWindowFrame[I: Arbitrary, R: Arbitrary]: Arbitrary[WindowFrame[I, R]] =
     Arbitrary(for {

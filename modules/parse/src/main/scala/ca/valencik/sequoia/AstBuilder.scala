@@ -266,12 +266,12 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         case e: Expression[_, _] =>
           e match {
             case DereferenceExpr(_, _, _) => ???
-            //TODO this seems very fishy
+            // TODO this seems very fishy
             case c: ColumnExpr[_, _] => {
               val cr = c.col.value.asInstanceOf[RawColumnName]
               Some(TableRef(nextId(), RawTableName(cr.value)))
             }
-            case x                        => {println(x); ???}
+            case x => { println(x); ??? }
           }
         case _ => ???
       }

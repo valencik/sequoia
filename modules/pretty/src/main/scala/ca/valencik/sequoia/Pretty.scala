@@ -138,7 +138,7 @@ object Pretty {
 
   def prettySelectItem[I](si: SelectItem[I, RawName]): Doc =
     si match {
-      //TODO aliases
+      // TODO aliases
       case SelectAll(_, _, _) => Doc.text("*")
       case SelectSingle(_, expr, alias) =>
         alias match {
