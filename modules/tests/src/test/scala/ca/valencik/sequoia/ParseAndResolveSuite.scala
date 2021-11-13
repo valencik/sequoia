@@ -22,6 +22,19 @@ class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
     rq.isRight shouldBe true
   }
 
+  it should "resolve simple queries from catalog with alias" in {
+    val parsedQuery = ParseBuddy.parse("select a apple from db")
+    val (log, finalState, rq) =
+      parsedQuery.map(resolveQuery).toOption.get.value.run(catalog, emptyState).value
+
+    val expected = emptyState
+      .addRelationToScope("db", List("a"))
+      .addColumnToProjection("apple")
+    log.isEmpty shouldBe false
+    finalState shouldBe expected
+    rq.isRight shouldBe true
+  }
+
   it should "not resolve simple queries not from catalog" in {
     val parsedQuery = ParseBuddy.parse("select a from foo")
     val (log, finalState, rq) =
