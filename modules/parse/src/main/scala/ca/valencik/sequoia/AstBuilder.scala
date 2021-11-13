@@ -280,8 +280,7 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
         name,
         colAs
       )
-    } else None
-    SelectAll(nextId(), None, colAs)
+    } else SelectAll(nextId(), None, colAs)
   }
 
   override def visitJoinRelation(
