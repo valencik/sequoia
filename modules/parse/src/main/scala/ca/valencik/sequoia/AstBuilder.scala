@@ -254,33 +254,11 @@ class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
   }
 
   override def visitSelectAll(ctx: SqlBaseParser.SelectAllContext): SelectAll[Info, RawName] = {
-    val colAs =
-      if (ctx.columnAliases != null)
-        Some(visitColumnAliases(ctx.columnAliases))
-      else
-        None
-    if (ctx.primaryExpression != null) {
-      val name: Option[TableRef[Info, RawName]] = visit(ctx.primaryExpression()) match {
-        case Identifier(value) =>
-          Some(TableRef(nextId(), RawTableName(value)))
-        case e: Expression[_, _] =>
-          e match {
-            case DereferenceExpr(_, _, _) => ???
-            // TODO this seems very fishy
-            case c: ColumnExpr[_, _] => {
-              val cr = c.col.value.asInstanceOf[RawColumnName]
-              Some(TableRef(nextId(), RawTableName(cr.value)))
-            }
-            case x => { println(x); ??? }
-          }
-        case _ => ???
-      }
-      SelectAll(
-        nextId(),
-        name,
-        colAs
-      )
-    } else SelectAll(nextId(), None, colAs)
+    val colAs = Option(ctx.columnAliases()).map(visitColumnAliases)
+    val target: Option[TableRef[Info, RawName]] = Option(ctx.primaryExpression())
+      .map(visit(_).asInstanceOf[ColumnExpr[Info, RawName]])
+      .map(ce => TableRef(nextId(), RawTableName(ce.col.value.value)))
+    SelectAll(nextId(), target, colAs)
   }
 
   override def visitJoinRelation(
