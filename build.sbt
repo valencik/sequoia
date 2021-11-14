@@ -1,7 +1,7 @@
 ThisBuild / scalaVersion := "2.13.6"
 
 val scalaTestVersion  = "3.2.10"
-val antlrVersion      = "4.9.2"
+val antlrVersion      = "4.9.3"
 val catsVersion       = "2.6.1"
 val scalaCheckVersion = "1.15.4"
 val pPrintVersion     = "0.6.6"
