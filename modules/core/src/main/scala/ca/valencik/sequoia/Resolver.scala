@@ -23,32 +23,34 @@ case class Catalog(c: Map[String, List[String]]) {
 }
 case class Resolver private (
     // TODO perhaps Resolver has a stack of Resolvers?
-    t: Map[String, List[String]], // temps and ctes in scope
-    r: List[String],              // relations in scope
-    s: List[String]               // projection in current scope's SELECT clause
+    tableS: Map[String, List[String]], // temps and ctes in scope
+    relationS: List[String],           // relations in scope
+    selectionS: List[String]           // projection in current scope's SELECT clause
 ) {
-  def addRelationToScope(k: String, v: List[String]): Resolver =
-    this.copy(t = t.updated(k, v), r = k :: r)
-  def relationIsAlias(rt: RawName): Boolean  = t.contains(rt.value)
-  def addAliasToScope(rt: RawName): Resolver = this.copy(r = rt.value :: r)
+  def addRelationToScope(name: String, cols: List[String]): Resolver =
+    this.copy(tableS = tableS.updated(name, cols), relationS = name :: relationS)
+  def relationIsAlias(rt: RawName): Boolean  = tableS.contains(rt.value)
+  def addAliasToScope(rt: RawName): Resolver = this.copy(relationS = rt.value :: relationS)
 
-  def addColumnToProjection(rc: String): Resolver = this.copy(s = rc :: s)
+  def addColumnToProjection(rc: String): Resolver = this.copy(selectionS = rc :: selectionS)
   // TODO this unsafe get feels wrong
   def addAllColumnsFromRelationToProjection(rel: String): Resolver =
-    this.copy(s = t.get(rel).get ::: s)
-  def addAllColumnsToProjection: Resolver = this.copy(s = t.values.flatten.toList ::: s)
+    this.copy(selectionS = tableS.get(rel).get ::: selectionS)
+  def addAllColumnsToProjection: Resolver =
+    this.copy(selectionS = tableS.values.flatten.toList ::: selectionS)
   // TODO why is the "previous column" at the head?
-  def addColumnAlias(alias: String): Resolver             = this.copy(s = alias :: s)
-  def aliasPreviousColumnInScope(alias: String): Resolver = this.copy(s = alias :: s.tail)
+  def addColumnAlias(alias: String): Resolver = this.copy(selectionS = alias :: selectionS)
+  def aliasPreviousColumnInScope(alias: String): Resolver =
+    this.copy(selectionS = alias :: selectionS.tail)
   // NEXT TIME: I now believe we should handle `_col` naming as a seperate step from name resolution
   // Furthermore it's likely time we refactor Resolve to be simpler, we also need some way to say where in the SQL
   // source code we ran into an issue, i.e. linking the AST node type I info.
-  def assignColAlias(): Resolver = this.copy(s = s"_col${s.length}" :: s)
+  def assignColAlias(): Resolver = this.copy(selectionS = s"_col${selectionS.length}" :: selectionS)
   def columnIsInScope(rc: RawName): Boolean =
-    r.exists(rr => t.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
+    relationS.exists(rr => tableS.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
 
-  def addCTE(alias: String): Resolver = this.copy(t = t.updated(alias, s))
-  def resetRelationScope(): Resolver  = this.copy(r = List.empty, s = List.empty)
+  def addCTE(alias: String): Resolver = this.copy(tableS = tableS.updated(alias, selectionS))
+  def resetRelationScope(): Resolver  = this.copy(relationS = List.empty, selectionS = List.empty)
 }
 object Resolver {
   def apply(): Resolver = new Resolver(Map.empty, List.empty, List.empty)
@@ -67,7 +69,7 @@ object MonadSqlState extends App {
       catalog: Catalog
   ): String = {
     val col = column.value.value
-    val rs  = state.r.mkString(",")
+    val rs  = state.relationS.mkString(",")
     val c   = catalog.c.toString
     s"Column '${col}' was not resolvable with relations: '${rs}' in catalog '${c}'"
   }
@@ -78,7 +80,7 @@ object MonadSqlState extends App {
       catalog: Catalog
   ): String = {
     val col = column.value.value
-    val rs  = state.r.mkString(",")
+    val rs  = state.relationS.mkString(",")
     val c   = catalog.c.toString
     s"Column '${col}' in 'JOIN USING' clause was not resolvable with relations: '${rs}' in catalog '${c}'"
   }

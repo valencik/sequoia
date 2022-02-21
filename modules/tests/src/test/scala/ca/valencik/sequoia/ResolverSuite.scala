@@ -17,7 +17,7 @@ class ResolverSpec extends AnyFlatSpec with Matchers {
       resolveColumnRef(ColumnRef((), RawColumnName("a"))).value.run(catalog, initialState).value
 
     log.isEmpty shouldBe false
-    finalState shouldBe initialState.copy(s = List("a"))
+    finalState shouldBe initialState.copy(selectionS = List("a"))
     rq shouldBe Right(ColumnRef((), ResolvedColumnName("a")))
   }
 
