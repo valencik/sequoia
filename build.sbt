@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.7"
+ThisBuild / scalaVersion := "2.13.8"
 
 val scalaTestVersion  = "3.2.11"
 val antlrVersion      = "4.9.3"
