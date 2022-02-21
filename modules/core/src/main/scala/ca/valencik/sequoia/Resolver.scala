@@ -22,8 +22,7 @@ case class Catalog(c: Map[String, List[String]]) {
     c.get(r.value).map(cs => (r.value, cs))
 }
 case class Resolver private (
-    // TODO perhaps Resolver has a stack of Resolvers?
-    tableS: Map[String, List[String]], // temps and ctes in scope
+    tableS: Map[String, List[String]], // temps and CTEs in scope
     relationS: List[String],           // relations in scope
     selectionS: List[String]           // projection in current scope's SELECT clause
 ) {
@@ -33,11 +32,13 @@ case class Resolver private (
   def addAliasToScope(rt: RawName): Resolver = this.copy(relationS = rt.value :: relationS)
 
   def addColumnToProjection(rc: String): Resolver = this.copy(selectionS = rc :: selectionS)
-  // TODO this unsafe get feels wrong
+
+  // TODO What happens on a 'select tb.*...' when tb is not in scope or doesn't exist?
   def addAllColumnsFromRelationToProjection(rel: String): Resolver =
     this.copy(selectionS = tableS.get(rel).get ::: selectionS)
   def addAllColumnsToProjection: Resolver =
     this.copy(selectionS = tableS.values.flatten.toList ::: selectionS)
+
   // TODO why is the "previous column" at the head?
   def addColumnAlias(alias: String): Resolver = this.copy(selectionS = alias :: selectionS)
   def aliasPreviousColumnInScope(alias: String): Resolver =
@@ -303,6 +304,7 @@ object MonadSqlState extends App {
           case res => {
             ref match {
               case None     => res.addAllColumnsToProjection
+              // TODO We could perhaps check if 'tr' is in scope here, and error if not
               case Some(tr) => res.addAllColumnsFromRelationToProjection(tr.value.value)
             }
           }
