@@ -1,4 +1,30 @@
-ThisBuild / scalaVersion := "2.13.8"
+// https://typelevel.org/sbt-typelevel/faq.html#what-is-a-base-version-anyway
+ThisBuild / tlBaseVersion := "0.0" // your current series x.y
+
+ThisBuild / organization     := "io.pig"
+ThisBuild / organizationName := "Pig.io"
+ThisBuild / startYear        := Some(2022)
+ThisBuild / licenses         := Seq(License.Apache2)
+ThisBuild / developers := List(
+  // your GitHub handle and name
+  tlGitHubDev("valencik", "Andrew Valencik")
+)
+
+// publish to s01.oss.sonatype.org (set to true to publish to oss.sonatype.org instead)
+ThisBuild / tlSonatypeUseLegacyHost := false
+
+// publish website from this branch
+ThisBuild / tlSitePublishBranch := Some("main")
+
+// publish snapshots from main branch
+ThisBuild / tlCiReleaseBranches := Seq("main")
+
+// use JDK 11
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"))
+
+val Scala213 = "2.13.8"
+ThisBuild / crossScalaVersions := Seq(Scala213, "3.2.0")
+ThisBuild / scalaVersion       := Scala213 // the default Scala
 
 val scalaTestVersion  = "3.2.11"
 val antlrVersion      = "4.9.3"
@@ -7,30 +33,23 @@ val scalaCheckVersion = "1.15.4"
 val pPrintVersion     = "0.7.1"
 val disciplineVersion = "2.1.5"
 val paigesVersion     = "0.4.2"
-val monocleVersion    = "2.1.0"
+val monocleVersion    = "3.1.0"
 
-lazy val commonSettings = Seq(
-  organization := "ca.valencik",
-  version      := "0.1.0-SNAPSHOT",
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full)
-)
+lazy val root = tlCrossRootProject
+  .aggregate(core, pretty, rewrite, parse, examples, tests, laws)
 
-lazy val root = (project in file("."))
-  .aggregate(core, pretty, rewrite, parse, tests, laws)
-
-lazy val core = (project in file("modules/core"))
-  .settings(commonSettings)
+lazy val core = project
+  .in(file("modules/core"))
   .settings(
-    scalacOptions ~= filterConsoleScalacOptions,
     name := "sequoia-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion
     )
   )
 
-lazy val pretty = (project in file("modules/pretty"))
+lazy val pretty = project
+  .in(file("modules/pretty"))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(
     name := "sequoia-pretty",
     libraryDependencies ++= Seq(
@@ -39,22 +58,22 @@ lazy val pretty = (project in file("modules/pretty"))
     )
   )
 
-lazy val rewrite = (project in file("modules/rewrite"))
+lazy val rewrite = project
+  .in(file("modules/rewrite"))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(
     name := "sequoia-rewrite",
     libraryDependencies ++= Seq(
-      "org.typelevel"              %% "cats-core"    % catsVersion,
-      "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
-      "com.lihaoyi"                %% "pprint"       % pPrintVersion
+      "org.typelevel" %% "cats-core"    % catsVersion,
+      "dev.optics"    %% "monocle-core" % monocleVersion,
+      "com.lihaoyi"   %% "pprint"       % pPrintVersion
     )
   )
 
-lazy val parse = (project in file("modules/parse"))
+lazy val parse = project
+  .in(file("modules/parse"))
   .dependsOn(core)
   .enablePlugins(Antlr4Plugin)
-  .settings(commonSettings)
   .settings(
     name := "sequoia-parse",
     libraryDependencies ++= Seq(
@@ -64,17 +83,17 @@ lazy val parse = (project in file("modules/parse"))
     Antlr4 / antlr4Version     := antlrVersion,
     Antlr4 / antlr4GenListener := false,
     Antlr4 / antlr4GenVisitor  := true,
-    Antlr4 / antlr4PackageName := Some("ca.valencik.sequoia")
+    Antlr4 / antlr4PackageName := Some("io.pig.sequoia")
   )
 
-lazy val examples = (project in file("examples"))
+lazy val examples = project
+  .in(file("examples"))
   .dependsOn(core, pretty, rewrite, parse)
 
-lazy val tests = (project in file("modules/tests"))
+lazy val tests = project
+  .in(file("modules/tests"))
   .dependsOn(core, parse)
-  .settings(commonSettings)
   .settings(
-    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.antlr"      % "antlr4-runtime" % antlrVersion,
       "org.typelevel" %% "cats-core"      % catsVersion,
@@ -82,11 +101,10 @@ lazy val tests = (project in file("modules/tests"))
     )
   )
 
-lazy val laws = (project in file("modules/laws"))
+lazy val laws = project
+  .in(file("modules/laws"))
   .dependsOn(core, parse)
-  .settings(commonSettings)
   .settings(
-    Test / scalacOptions ~= filterConsoleScalacOptions,
     libraryDependencies ++= Seq(
       "org.typelevel"  %% "cats-core"            % catsVersion,
       "org.typelevel"  %% "cats-laws"            % catsVersion       % Test,

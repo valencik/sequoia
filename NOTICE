@@ -1,0 +1,13 @@
+sequoia
+Copyright 2018-2022 io.pig
+Licensed under Apache License 2.0 (see LICENSE)
+
+This software contains portions of code derived from trino
+https://github.com/trinodb/trino
+Copyright (C) 2022 Trino Software Foundation
+Licensed under Apache License 2.0 (see LICENSE)
+
+This software contains portions of code derived from Apache Spark
+https://spark.apache.org/
+Copyright 2014 and onwards The Apache Software Foundation.
+Licensed under Apache License 2.0 (see LICENSE)
