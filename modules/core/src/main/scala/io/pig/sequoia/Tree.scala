@@ -96,12 +96,12 @@ final case class QueryNoWith[I, R](
 final case class OrderBy[I, R](info: I, sortItems: List[SortItem[I, R]])
 
 sealed trait Ordering
-final case object ASC  extends Ordering
-final case object DESC extends Ordering
+case object ASC  extends Ordering
+case object DESC extends Ordering
 
 sealed trait NullOrdering
-final case object FIRST extends NullOrdering
-final case object LAST  extends NullOrdering
+case object FIRST extends NullOrdering
+case object LAST  extends NullOrdering
 
 final case class Limit[I](info: I, value: String)
 
@@ -118,13 +118,13 @@ final case class SetOperation[I, R](
 ) extends QueryTerm[I, R]
 
 sealed trait SetOperator
-final case object INTERSECT extends SetOperator
-final case object UNION     extends SetOperator
-final case object EXCEPT    extends SetOperator
+case object INTERSECT extends SetOperator
+case object UNION     extends SetOperator
+case object EXCEPT    extends SetOperator
 
 sealed trait SetQuantifier
-final case object DISTINCT extends SetQuantifier
-final case object ALL      extends SetQuantifier
+case object DISTINCT extends SetQuantifier
+case object ALL      extends SetQuantifier
 
 /** Product type for queryPrimary
   */
@@ -207,11 +207,11 @@ final case class JoinRelation[I, R](
 ) extends Relation[I, R]
 
 sealed trait JoinType
-final case object InnerJoin extends JoinType
-final case object LeftJoin  extends JoinType
-final case object RightJoin extends JoinType
-final case object FullJoin  extends JoinType
-final case object CrossJoin extends JoinType
+case object InnerJoin extends JoinType
+case object LeftJoin  extends JoinType
+case object RightJoin extends JoinType
+case object FullJoin  extends JoinType
+case object CrossJoin extends JoinType
 
 sealed trait JoinCriteria[I, R]
 
@@ -228,8 +228,8 @@ final case class SampledRelation[I, R](
 final case class TableSample[I, R](info: I, sampleType: SampleType, percentage: Expression[I, R])
 
 sealed trait SampleType
-final case object BERNOULLI extends SampleType
-final case object SYSTEM    extends SampleType
+case object BERNOULLI extends SampleType
+case object SYSTEM    extends SampleType
 
 final case class AliasedRelation[I, R](
     info: I,
@@ -285,9 +285,9 @@ final case class QuantifiedComparison[I, R](
 ) extends Predicate[I, R]
 
 sealed trait Quantifier
-final case object ALLQ extends Quantifier
-final case object SOME extends Quantifier
-final case object ANY  extends Quantifier
+case object ALLQ extends Quantifier
+case object SOME extends Quantifier
+case object ANY  extends Quantifier
 
 final case class Between[I, R](
     info: I,
@@ -422,12 +422,12 @@ final case class BoundedFrame[I, R](info: I, boundType: BoundType, exp: Expressi
     extends FrameBound[I, R]
 
 sealed trait BoundType
-final case object PRECEDING extends BoundType
-final case object FOLLOWING extends BoundType
+case object PRECEDING extends BoundType
+case object FOLLOWING extends BoundType
 
 sealed trait FrameType
-final case object RANGE extends FrameType
-final case object ROWS  extends FrameType
+case object RANGE extends FrameType
+case object ROWS  extends FrameType
 
 final case class IntervalLiteral[I, R](
     info: I,
@@ -438,16 +438,16 @@ final case class IntervalLiteral[I, R](
 ) extends PrimaryExpression[I, R]
 
 sealed trait IntervalField extends Node
-final case object YEAR     extends IntervalField
-final case object MONTH    extends IntervalField
-final case object DAY      extends IntervalField
-final case object HOUR     extends IntervalField
-final case object MINUTE   extends IntervalField
-final case object SECOND   extends IntervalField
+case object YEAR           extends IntervalField
+case object MONTH          extends IntervalField
+case object DAY            extends IntervalField
+case object HOUR           extends IntervalField
+case object MINUTE         extends IntervalField
+case object SECOND         extends IntervalField
 
 sealed trait Sign
-final case object PLUS  extends Sign
-final case object MINUS extends Sign
+case object PLUS  extends Sign
+case object MINUS extends Sign
 
 final case class Cast[I, R](info: I, exp: Expression[I, R], `type`: String, isTry: Boolean)
     extends PrimaryExpression[I, R]
@@ -459,31 +459,31 @@ final case class Extract[I, R](info: I, field: String, exp: ValueExpression[I, R
     extends PrimaryExpression[I, R]
 
 sealed trait NullTreatment
-final case object IgnoreNulls  extends NullTreatment
-final case object RespectNulls extends NullTreatment
+case object IgnoreNulls  extends NullTreatment
+case object RespectNulls extends NullTreatment
 
 sealed trait CurrentTime
-final case object CURRENT_DATE      extends CurrentTime
-final case object CURRENT_TIME      extends CurrentTime
-final case object CURRENT_TIMESTAMP extends CurrentTime
-final case object LOCALTIME         extends CurrentTime
-final case object LOCALTIMESTAMP    extends CurrentTime
+case object CURRENT_DATE      extends CurrentTime
+case object CURRENT_TIME      extends CurrentTime
+case object CURRENT_TIMESTAMP extends CurrentTime
+case object LOCALTIME         extends CurrentTime
+case object LOCALTIMESTAMP    extends CurrentTime
 
 sealed trait ArithmeticOperator
-final case object ADD      extends ArithmeticOperator
-final case object SUBTRACT extends ArithmeticOperator
-final case object MULTIPLY extends ArithmeticOperator
-final case object DIVIDE   extends ArithmeticOperator
-final case object MODULUS  extends ArithmeticOperator
+case object ADD      extends ArithmeticOperator
+case object SUBTRACT extends ArithmeticOperator
+case object MULTIPLY extends ArithmeticOperator
+case object DIVIDE   extends ArithmeticOperator
+case object MODULUS  extends ArithmeticOperator
 
 sealed trait BooleanOperator
-final case object AND extends BooleanOperator
-final case object OR  extends BooleanOperator
+case object AND extends BooleanOperator
+case object OR  extends BooleanOperator
 
 sealed trait Comparison
-final case object EQ  extends Comparison
-final case object NEQ extends Comparison
-final case object LT  extends Comparison
-final case object LTE extends Comparison
-final case object GT  extends Comparison
-final case object GTE extends Comparison
+case object EQ  extends Comparison
+case object NEQ extends Comparison
+case object LT  extends Comparison
+case object LTE extends Comparison
+case object GT  extends Comparison
+case object GTE extends Comparison
