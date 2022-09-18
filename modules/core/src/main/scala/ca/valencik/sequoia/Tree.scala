@@ -1,7 +1,6 @@
 package ca.valencik.sequoia
 
-import cats.{Applicative, Eq, Eval, Functor, Traverse}
-import cats.implicits._
+import cats.{Applicative, Eq, Eval, Traverse}
 
 final case class TableRef[I, R](info: I, value: R)
 object TableRef {
