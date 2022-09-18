@@ -56,10 +56,10 @@ object ParseBuddy {
     val parser = new SqlBaseParser(tokens)
     parser.removeErrorListeners()
     parser.addErrorListener(ParseErrorListener)
-    val prestoVisitor = new PrestoSqlVisitorApp()
+    val trinoVisitor = new TrinoSqlVisitorApp()
 
     try {
-      val node: Node = prestoVisitor.visit(parser.singleStatement)
+      val node: Node = trinoVisitor.visit(parser.singleStatement)
       val qnw        = node.asInstanceOf[Query[Info, RawName]]
       if (qnw == null) Left(ParseFailure("Parser returned null")) else Right(qnw)
     } catch {

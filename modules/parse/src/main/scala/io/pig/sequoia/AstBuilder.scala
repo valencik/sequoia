@@ -18,7 +18,7 @@ package io.pig.sequoia
 
 import scala.jdk.CollectionConverters._
 
-class PrestoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
+class TrinoSqlVisitorApp extends SqlBaseBaseVisitor[Node] {
 
   type Info                 = Int
   type RawExpression        = Expression[Info, RawName]
