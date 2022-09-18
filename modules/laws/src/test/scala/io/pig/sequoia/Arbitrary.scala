@@ -612,7 +612,7 @@ object arbitrary {
       )
     )
 
-  implicit def arbWindowReference[I: Arbitrary, R: Arbitrary]: Arbitrary[WindowReference[I, R]] =
+  implicit def arbWindowReference[I: Arbitrary, R]: Arbitrary[WindowReference[I, R]] =
     Arbitrary(for {
       i <- getArbitrary[I]
       n <- getArbitrary[String].map(Identifier(_))
