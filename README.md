@@ -9,7 +9,7 @@ Sequoia is motivated by the desire to better understand data warehouses with man
 thousands of tables, columns, and SQL reports (queries). Sequoia will parse SQL,
 perform analysis on the resulting tree, and emit statistics on what data
 resources that query used. Currently the analysis part has been removed while we
-finish work on complete grammar support for parsing Presto queries. Note that
+finish work on complete grammar support for parsing Trino queries. Note that
 currently we are focusing just on "queries" and not "statements" that might
 create or update the underlying data.
 
@@ -71,7 +71,7 @@ Query(
 - determining column lineage
 
 ## Stack
-Sequoia uses the original [Presto SQL grammar][presto-grammar] and
+Sequoia uses the original [Trino SQL grammar][trino-grammar] and
 [ANTLR4][antlr] to generate a parse-tree visitor interface. The generated
 visitor interface is then used to build a typed AST out of Scala case classes.
 The resulting tree for a SQL query is of type `Query[Info, RawName]`, if the
@@ -79,4 +79,4 @@ query passes name resolution validation it is then of type `Query[Info,
 ResolvedName]`. Further analysis can be run on these resolved queries.
 
 [antlr]:https://www.antlr.org
-[presto-grammar]: https://github.com/prestodb/presto/blob/b88174803cf4a1d3b36918ac91db2465b350ac90/presto-parser/src/main/antlr4/com/facebook/presto/sql/parser/SqlBase.g4
+[trino-grammar]: https://github.com/trinodb/trino/blob/355/core/trino-parser/src/main/antlr4/io/trino/sql/parser/SqlBase.g4
