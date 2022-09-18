@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import monocle.Lens
 import monocle.Traversal

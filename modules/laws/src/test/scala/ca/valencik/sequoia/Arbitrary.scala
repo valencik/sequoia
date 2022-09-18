@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}

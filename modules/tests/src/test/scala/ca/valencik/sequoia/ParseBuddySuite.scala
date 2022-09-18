@@ -1,9 +1,9 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.flatspec.AnyFlatSpec
-import ca.valencik.sequoia.ParseBuddy._
+import io.pig.sequoia.ParseBuddy._
 
 class ParseBuddySpec extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
 

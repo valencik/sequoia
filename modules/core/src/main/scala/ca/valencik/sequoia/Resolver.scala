@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import cats.data.{Chain, EitherT, ReaderWriterState}
 import cats.implicits._

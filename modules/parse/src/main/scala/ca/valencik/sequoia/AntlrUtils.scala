@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import org.antlr.v4.runtime.{CharStream, IntStream}
 import org.antlr.v4.runtime.misc.Interval

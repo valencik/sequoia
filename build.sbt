@@ -83,7 +83,7 @@ lazy val parse = project
     Antlr4 / antlr4Version     := antlrVersion,
     Antlr4 / antlr4GenListener := false,
     Antlr4 / antlr4GenVisitor  := true,
-    Antlr4 / antlr4PackageName := Some("ca.valencik.sequoia")
+    Antlr4 / antlr4PackageName := Some("io.pig.sequoia")
   )
 
 lazy val examples = project

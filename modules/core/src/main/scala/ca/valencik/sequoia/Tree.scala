@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import cats.{Applicative, Eq, Eval, Traverse}
 

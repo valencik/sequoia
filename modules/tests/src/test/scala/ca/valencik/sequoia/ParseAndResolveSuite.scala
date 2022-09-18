@@ -1,13 +1,13 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ParseAndResolveSuite extends AnyFlatSpec with Matchers {
 
-  import ca.valencik.sequoia.ParseBuddy
-  import ca.valencik.sequoia.MonadSqlState._
-  import ca.valencik.sequoia._
+  import io.pig.sequoia.ParseBuddy
+  import io.pig.sequoia.MonadSqlState._
+  import io.pig.sequoia._
 
   val catalog    = Catalog(Map("db" -> List("a"), "db2" -> List("a2", "b2")))
   val emptyState = Resolver()

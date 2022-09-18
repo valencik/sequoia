@@ -1,7 +1,7 @@
-import ca.valencik.sequoia.ParseBuddy
-import ca.valencik.sequoia.Pretty
-import ca.valencik.sequoia.Rewrite
-import ca.valencik.sequoia.Optics
+import io.pig.sequoia.ParseBuddy
+import io.pig.sequoia.Pretty
+import io.pig.sequoia.Rewrite
+import io.pig.sequoia.Optics
 
 //import pprint.pprintln
 

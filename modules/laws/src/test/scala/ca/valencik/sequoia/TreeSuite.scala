@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import cats.implicits._
 import cats.{Functor, Traverse}
@@ -7,7 +7,7 @@ import org.scalatestplus.scalacheck.Checkers
 import org.typelevel.discipline.scalatest.FunSuiteDiscipline
 import cats.laws.discipline.{FunctorTests, SerializableTests, TraverseTests}
 
-import ca.valencik.sequoia.arbitrary._
+import io.pig.sequoia.arbitrary._
 
 class TableRefLawTests extends AnyFunSuite with FunSuiteDiscipline with Checkers {
   checkAll(

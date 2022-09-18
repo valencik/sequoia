@@ -1,4 +1,4 @@
-package ca.valencik.sequoia
+package io.pig.sequoia
 
 import org.antlr.v4.runtime.{
   BaseErrorListener,
@@ -82,8 +82,8 @@ object ParseBuddy {
 }
 
 object ParseBuddyApp {
-  import ca.valencik.sequoia.ParseBuddy._
-  import ca.valencik.sequoia.MonadSqlState._
+  import io.pig.sequoia.ParseBuddy._
+  import io.pig.sequoia.MonadSqlState._
 
   private val exitCommands                  = Seq("exit", ":q", "q")
   def exitCommand(command: String): Boolean = exitCommands.contains(command.toLowerCase)
