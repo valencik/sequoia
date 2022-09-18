@@ -39,13 +39,10 @@ case class Resolver private (
   def addAllColumnsToProjection: Resolver =
     this.copy(selectionS = tableS.values.flatten.toList ::: selectionS)
 
-  // TODO why is the "previous column" at the head?
   def addColumnAlias(alias: String): Resolver = this.copy(selectionS = alias :: selectionS)
   def aliasPreviousColumnInScope(alias: String): Resolver =
     this.copy(selectionS = alias :: selectionS.tail)
-  // NEXT TIME: I now believe we should handle `_col` naming as a seperate step from name resolution
-  // Furthermore it's likely time we refactor Resolve to be simpler, we also need some way to say where in the SQL
-  // source code we ran into an issue, i.e. linking the AST node type I info.
+
   def assignColAlias(): Resolver = this.copy(selectionS = s"_col${selectionS.length}" :: selectionS)
   def columnIsInScope(rc: RawName): Boolean =
     relationS.exists(rr => tableS.get(rr).map(cols => cols.contains(rc.value)).getOrElse(false))
@@ -303,7 +300,7 @@ object MonadSqlState extends App {
         ReaderWriterState.modify[Catalog, Log, Resolver] {
           case res => {
             ref match {
-              case None     => res.addAllColumnsToProjection
+              case None => res.addAllColumnsToProjection
               // TODO We could perhaps check if 'tr' is in scope here, and error if not
               case Some(tr) => res.addAllColumnsFromRelationToProjection(tr.value.value)
             }
@@ -327,6 +324,7 @@ object MonadSqlState extends App {
     ReaderWriterState.modify[Catalog, Log, Resolver] { res =>
       (exp, colAlias) match {
         case (_: ColumnExpr[I, ResolvedName], Some(alias)) =>
+          // This shadows the previous col
           res.aliasPreviousColumnInScope(alias.value)
         case (_: ColumnExpr[I, ResolvedName], None) =>
           res
