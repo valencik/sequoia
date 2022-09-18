@@ -31,7 +31,7 @@ val antlrVersion      = "4.9.3"
 val catsVersion       = "2.8.0"
 val scalaCheckVersion = "1.17.0"
 val pPrintVersion     = "0.7.3"
-val disciplineVersion = "2.1.5"
+val disciplineVersion = "2.2.0"
 val paigesVersion     = "0.4.2"
 val monocleVersion    = "3.1.0"
 
