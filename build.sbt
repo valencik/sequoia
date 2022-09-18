@@ -33,7 +33,7 @@ val scalaCheckVersion = "1.15.4"
 val pPrintVersion     = "0.7.1"
 val disciplineVersion = "2.1.5"
 val paigesVersion     = "0.4.2"
-val monocleVersion    = "2.1.0"
+val monocleVersion    = "3.1.0"
 
 lazy val root = tlCrossRootProject
   .aggregate(core, pretty, rewrite, parse, examples, tests, laws)
@@ -64,9 +64,9 @@ lazy val rewrite = project
   .settings(
     name := "sequoia-rewrite",
     libraryDependencies ++= Seq(
-      "org.typelevel"              %% "cats-core"    % catsVersion,
-      "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
-      "com.lihaoyi"                %% "pprint"       % pPrintVersion
+      "org.typelevel" %% "cats-core"    % catsVersion,
+      "dev.optics"    %% "monocle-core" % monocleVersion,
+      "com.lihaoyi"   %% "pprint"       % pPrintVersion
     )
   )
 
