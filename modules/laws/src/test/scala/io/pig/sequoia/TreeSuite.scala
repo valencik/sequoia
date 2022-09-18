@@ -17,11 +17,11 @@
 package io.pig.sequoia
 
 import cats.implicits._
-import cats.{Functor, Traverse}
+import cats.Traverse
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.scalacheck.Checkers
 import org.typelevel.discipline.scalatest.FunSuiteDiscipline
-import cats.laws.discipline.{FunctorTests, SerializableTests, TraverseTests}
+import cats.laws.discipline.{SerializableTests, TraverseTests}
 
 import io.pig.sequoia.arbitrary._
 
