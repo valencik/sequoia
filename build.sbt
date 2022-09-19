@@ -88,10 +88,12 @@ lazy val parse = project
 
 lazy val examples = project
   .in(file("examples"))
+  .enablePlugins(NoPublishPlugin)
   .dependsOn(core, pretty, rewrite, parse)
 
 lazy val tests = project
   .in(file("modules/tests"))
+  .enablePlugins(NoPublishPlugin)
   .dependsOn(core, parse)
   .settings(
     libraryDependencies ++= Seq(
@@ -103,6 +105,7 @@ lazy val tests = project
 
 lazy val laws = project
   .in(file("modules/laws"))
+  .enablePlugins(NoPublishPlugin)
   .dependsOn(core, parse)
   .settings(
     libraryDependencies ++= Seq(
